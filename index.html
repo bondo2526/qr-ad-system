@@ -278,63 +278,68 @@
         }
         
         // === UI FUNCTIONS ===
-        function showSuccessPage(data) {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('success').classList.remove('hidden');
-            
-            document.getElementById('couponCode').textContent = data.couponCode;
-            document.getElementById('claimTime').textContent = new Date().toLocaleTimeString();
-            
-            // Setup refresh protection
-            setupRefreshProtection();
+function showSuccessPage(data) {
+    // HIDE everything first
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+    document.getElementById('blocked').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+    
+    document.getElementById('couponCode').textContent = data.couponCode;
+    document.getElementById('claimTime').textContent = new Date().toLocaleTimeString();
+}
+
+function showBlockedPage(existingClaim) {
+    // HIDE everything first
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('success').style.display = 'none';
+    document.getElementById('blocked').style.display = 'block';
+    document.getElementById('error').style.display = 'none';
+    
+    const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
+    document.getElementById('blockedTime').textContent = claimedTime.toLocaleTimeString();
+    
+    const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
+    startCountdown(nextAvailable);
+}
+
+function showError(message) {
+    // HIDE everything first
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('success').style.display = 'none';
+    document.getElementById('blocked').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('errorMessage').textContent = message;
+}
+       function startCountdown(targetTime) {
+    function updateCountdown() {
+        const now = new Date();
+        const diff = targetTime - now;
+        
+        if (diff <= 0) {
+            document.getElementById('countdown').innerHTML = 
+                '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
+            return;
         }
         
-        function showBlockedPage(existingClaim) {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('blocked').classList.remove('hidden');
-            
-            // Show when it was claimed
-            const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
-            document.getElementById('blockedTime').textContent = claimedTime.toLocaleTimeString();
-            
-            // Calculate when next claim is available
-            const nextAvailable = new Date(claimedTime.getTime() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000));
-            startCountdown(nextAvailable);
-        }
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
         
-        function showError(message) {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('error').classList.remove('hidden');
-            document.getElementById('errorMessage').textContent = message;
-        }
+        document.getElementById('countdown').innerHTML = 
+            `<div style="font-size: 28px;">
+                ${hours.toString().padStart(2, '0')}:
+                ${minutes.toString().padStart(2, '0')}:
+                ${seconds.toString().padStart(2, '0')}
+            </div>`;
         
-        function startCountdown(targetTime) {
-            function update() {
-                const now = new Date();
-                const diff = targetTime - now;
-                
-                if (diff <= 0) {
-                    document.getElementById('countdown').innerHTML = 
-                        '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
-                    clearInterval(timer);
-                    return;
-                }
-                
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                
-                document.getElementById('countdown').innerHTML = 
-                    `<div style="font-size: 28px;">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</div>` +
-                    `<div style="font-size: 14px; color: #666;">hours : minutes : seconds</div>`;
-                    
-                document.getElementById('nextClaimTime').textContent = 
-                    targetTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            }
-            
-            update();
-            const timer = setInterval(update, 1000);
-        }
+        // Continue updating every second
+        setTimeout(updateCountdown, 1000);
+    }
+    
+    // Start the countdown
+    updateCountdown();
+}
         
         function setupRefreshProtection() {
             // Replace URL to prevent re-submission
