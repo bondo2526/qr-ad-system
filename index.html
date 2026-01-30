@@ -348,14 +348,19 @@
             window.onbeforeunload = function() {
                 return "Your coupon has been saved. Do not refresh or you'll lose it!";
             };
-            
-            // Check if page was already loaded
-            if (performance.navigation.type === 1) { // Type 1 = page reload
-                const stored = localStorage.getItem(`claimed_${currentAd}_${currentUser.uid}`);
-                if (stored) {
-                    showBlockedPage(JSON.parse(stored));
-                }
-            }
+             // Check if page was already loaded 
+if (performance.navigation.type === 1) { // Type 1 = page reload
+    const stored = localStorage.getItem(`claimed_${currentAd}_${currentUser.uid}`);
+    if (stored) {
+        // Create a mock claim object from localStorage
+        const storedData = JSON.parse(stored);
+        const mockClaim = {
+            claimedAt: { toDate: () => new Date(storedData.time) }
+        };
+        showBlockedPage(mockClaim);
+        return; // ⬅️ ADD THIS to stop further processing
+    }
+}
         }
     </script>
 </body>
