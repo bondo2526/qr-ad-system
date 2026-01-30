@@ -74,9 +74,7 @@
                 <p>❌ <strong>This same ad</strong> at any location (until tomorrow)</p>
             </div>
             
-            <div style="margin-top: 20px; font-size: 12px; color: #666;">
-                <p>User ID: <span id="userId"></span></p>
-            </div>
+            
         </div>
         
         <!-- Error -->
@@ -142,7 +140,7 @@
                 
                 // Generate user fingerprint
                 userFingerprint = await generateUserFingerprint();
-                document.getElementById('userId').textContent = userFingerprint.substring(0, 12) + '...';
+             
                 
                 // Check if user already claimed this ad TODAY
                 await checkIfAlreadyClaimed();
