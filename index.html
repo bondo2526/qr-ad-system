@@ -73,8 +73,6 @@
                 <p>✅ <strong>Different ads</strong> at any location</p>
                 <p>❌ <strong>This same ad</strong> at any location (until tomorrow)</p>
             </div>
-            
-            
         </div>
         
         <!-- Error -->
@@ -87,297 +85,545 @@
         </div>
     </div>
 
-    <script>
-        // === CONFIGURATION ===
-        const CONFIG = {
-            BLOCK_HOURS: 24,
-            MAX_CLAIMS_PER_AD_PER_DAY: 1 // Per ad (any location)
-        };
+   <script>
+    // === CONFIGURATION ===
+    const CONFIG = {
+        BLOCK_HOURS: 24,
+        MAX_CLAIMS_PER_AD_PER_DAY: 1
+    };
 
-        // === FIREBASE CONFIG ===
-       const firebaseConfig = {
-  apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
-  authDomain: "ad-coupon-system.firebaseapp.com",
-  projectId: "ad-coupon-system",
-  storageBucket: "ad-coupon-system.firebasestorage.app",
-  messagingSenderId: "1030272051491",
-  appId: "1:1030272051491:web:4ec6ce21336cf511cac496",
-  measurementId: "G-PR9E37ZYE2"
-};
+    // === FIREBASE CONFIG ===
+    const firebaseConfig = {
+        apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
+        authDomain: "ad-coupon-system.firebaseapp.com",
+        projectId: "ad-coupon-system",
+        storageBucket: "ad-coupon-system.firebasestorage.app",
+        messagingSenderId: "1030272051491",
+        appId: "1:1030272051491:web:4ec6ce21336cf511cac496",
+        measurementId: "G-PR9E37ZYE2"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    
+    // Global variables
+    let currentUser = null;
+    let currentAd = null;
+    let currentHost = null;
+    let userFingerprint = null;
+    
+    // === TIME PROTECTION SYSTEM ===
+    const TimeGuard = {
+        // Store server time to detect clock changes
+        serverTimeOffset: 0,
         
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        // Get current REAL time (immune to system clock changes)
+        getRealTime: function() {
+            return Date.now() + this.serverTimeOffset;
+        },
         
-        // Global variables
-        let currentUser = null;
-        let currentAd = null;
-        let currentHost = null;
-        let userFingerprint = null;
-        
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', async function() {
+        // Fetch server time to detect clock tampering
+        syncServerTime: async function() {
             try {
-                // Get URL parameters
-                const urlParams = new URLSearchParams(window.location.search);
-                currentAd = urlParams.get('ad') || 'unknown_ad';
-                currentHost = urlParams.get('host') || 'unknown_location';
+                const start = Date.now();
+                // Use multiple time sources
+                const timeSources = [
+                    'https://worldtimeapi.org/api/timezone/Etc/UTC',
+                    'https://timeapi.io/api/Time/current/zone?timeZone=UTC',
+                    'https://www.timeapi.io/api/Time/current/zone?timeZone=UTC'
+                ];
                 
-                // Decode ad name for display
-                const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
-                const displayHostName = decodeURIComponent(currentHost).replace(/_/g, ' ');
-                
-                document.getElementById('adName').textContent = displayAdName;
-                document.getElementById('hostName').textContent = displayHostName;
-                document.getElementById('locationName').textContent = displayHostName;
-                document.getElementById('blockedAdName').textContent = displayAdName;
-                document.getElementById('blockedLocation').textContent = displayHostName;
-                
-                // Initialize Firebase Auth (anonymous)
-                const userCredential = await auth.signInAnonymously();
-                currentUser = userCredential.user;
-                
-                // Generate user fingerprint
-                userFingerprint = await generateUserFingerprint();
-             
-                
-                // Check if user already claimed this ad TODAY
-                await checkIfAlreadyClaimed();
-                
+                for (const source of timeSources) {
+                    try {
+                        const response = await fetch(source, { 
+                            signal: AbortSignal.timeout(3000) 
+                        });
+                        const data = await response.json();
+                        const serverTime = new Date(data.utcDateTime || data.currentDateTime || data.datetime).getTime();
+                        const clientTime = Date.now();
+                        const roundTrip = Date.now() - start;
+                        
+                        // Calculate offset (accounting for network delay)
+                        this.serverTimeOffset = serverTime - clientTime + (roundTrip / 2);
+                        
+                        // Store for later verification
+                        localStorage.setItem('time_offset', this.serverTimeOffset.toString());
+                        localStorage.setItem('time_synced', Date.now().toString());
+                        
+                        return true;
+                    } catch (e) {
+                        continue;
+                    }
+                }
+                return false;
             } catch (error) {
-                showError('Initialization error: ' + error.message);
+                return false;
             }
-        });
+        },
         
-        // === CORE LOGIC ===
-        async function checkIfAlreadyClaimed() {
-  try {
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+        // Check if user changed their clock
+        detectClockTampering: function() {
+            const lastSync = parseInt(localStorage.getItem('time_synced') || '0');
+            const storedOffset = parseFloat(localStorage.getItem('time_offset') || '0');
+            
+            if (Date.now() - lastSync > 3600000) { // Older than 1 hour
+                return false; // Need fresh sync
+            }
+            
+            // Check if current offset differs significantly from stored
+            const currentOffset = this.serverTimeOffset;
+            const diff = Math.abs(currentOffset - storedOffset);
+            
+            // If difference > 5 minutes, likely clock tampering
+            if (diff > 300000) {
+                console.warn('Clock tampering detected! Offset diff:', diff);
+                return true;
+            }
+            
+            return false;
+        },
+        
+        // Get 24 hours ago in REAL time
+        get24HoursAgo: function() {
+            return new Date(this.getRealTime() - (24 * 60 * 60 * 1000));
+        }
+    };
     
-    // OPTIMIZED QUERY: Query by userId ONLY, then filter
-    const claimsRef = db.collection('claims');
-  const querySnapshot = await claimsRef
-    .where('userFingerprint', '==', userFingerprint)  // Check fingerprint
-    .orderBy('claimedAt', 'desc')
-    .limit(10)
-    .get();
+    // === STORAGE PROTECTION ===
+    const SecureStorage = {
+        // Encrypt data before storing
+        encrypt: function(text, key = 'coupon_system_2024') {
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+                result += String.fromCharCode(charCode);
+            }
+            return btoa(result);
+        },
+        
+        decrypt: function(encrypted, key = 'coupon_system_2024') {
+            try {
+                const text = atob(encrypted);
+                let result = '';
+                for (let i = 0; i < text.length; i++) {
+                    const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+                    result += String.fromCharCode(charCode);
+                }
+                return result;
+            } catch (e) {
+                return null;
+            }
+        },
+        
+        // Store with multiple layers
+        setClaim: function(adId, fingerprint, data) {
+            const key = `claim_${adId}_${fingerprint}`;
+            const encrypted = this.encrypt(JSON.stringify({
+                ...data,
+                _timestamp: TimeGuard.getRealTime(),
+                _hash: this.hash(JSON.stringify(data) + TimeGuard.getRealTime())
+            }));
+            
+            // Store in multiple places
+            localStorage.setItem(key, encrypted);
+            sessionStorage.setItem(key, encrypted);
+            
+            // Also store in IndexedDB (harder to clear)
+            this.storeInIndexedDB(key, encrypted);
+            
+            // Store verification signature
+            const verifyKey = `v_${key}`;
+            localStorage.setItem(verifyKey, this.hash(encrypted + TimeGuard.getRealTime()));
+        },
+        
+        getClaim: function(adId, fingerprint) {
+            const key = `claim_${adId}_${fingerprint}`;
+            const verifyKey = `v_${key}`;
+            
+            // Check verification first
+            const encrypted = localStorage.getItem(key);
+            const verification = localStorage.getItem(verifyKey);
+            
+            if (!encrypted || !verification) return null;
+            
+            // Verify integrity
+            if (verification !== this.hash(encrypted + TimeGuard.getRealTime())) {
+                console.warn('Tampered claim data detected');
+                return null;
+            }
+            
+            const decrypted = this.decrypt(encrypted);
+            if (!decrypted) return null;
+            
+            try {
+                const data = JSON.parse(decrypted);
+                // Verify hash
+                if (data._hash !== this.hash(JSON.stringify({
+                    coupon: data.coupon,
+                    time: data.time,
+                    expires: data.expires
+                }) + data._timestamp)) {
+                    return null;
+                }
+                return data;
+            } catch (e) {
+                return null;
+            }
+        },
+        
+        hash: function(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(36);
+        },
+        
+        storeInIndexedDB: function(key, value) {
+            if (!window.indexedDB) return;
+            
+            try {
+                const request = indexedDB.open('CouponDB', 1);
+                request.onupgradeneeded = function(e) {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('claims')) {
+                        db.createObjectStore('claims', { keyPath: 'key' });
+                    }
+                };
+                request.onsuccess = function(e) {
+                    const db = e.target.result;
+                    const transaction = db.transaction(['claims'], 'readwrite');
+                    const store = transaction.objectStore('claims');
+                    store.put({ key: key, value: value, timestamp: Date.now() });
+                };
+            } catch (e) {
+                // Silent fail
+            }
+        }
+    };
     
-    let alreadyClaimed = false;
-    let existingClaim = null;
-    
-    querySnapshot.forEach(doc => {
-      const claim = doc.data();
-      const claimTime = claim.claimedAt?.toDate();
-      
-      // Check BOTH conditions: same ad AND within 24h
-      const isSameAd = claim.adId === currentAd;
-      const isWithin24h = claimTime >= twentyFourHoursAgo;
-      
-      if (isSameAd && isWithin24h) {
-        alreadyClaimed = true;
-        existingClaim = claim;
-      }
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            currentAd = urlParams.get('ad') || 'unknown_ad';
+            currentHost = urlParams.get('host') || 'unknown_location';
+            
+            // Decode ad name for display
+            const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
+            const displayHostName = decodeURIComponent(currentHost).replace(/_/g, ' ');
+            
+            document.getElementById('adName').textContent = displayAdName;
+            document.getElementById('hostName').textContent = displayHostName;
+            document.getElementById('locationName').textContent = displayHostName;
+            document.getElementById('blockedAdName').textContent = displayAdName;
+            document.getElementById('blockedLocation').textContent = displayHostName;
+            
+            // Initialize Firebase Auth (anonymous)
+            const userCredential = await auth.signInAnonymously();
+            currentUser = userCredential.user;
+            
+            // Generate user fingerprint
+            userFingerprint = await generateUserFingerprint();
+            
+            // Sync time with server to prevent clock cheating
+            await TimeGuard.syncServerTime();
+            
+            // Check for clock tampering
+            if (TimeGuard.detectClockTampering()) {
+                showError('System clock inconsistency detected. Please check your system time.');
+                return;
+            }
+            
+            // Check if user already claimed this ad TODAY
+            await checkIfAlreadyClaimed();
+            
+        } catch (error) {
+            showError('Initialization error: ' + error.message);
+        }
     });
     
-    if (alreadyClaimed) {
-      showBlockedPage(existingClaim);
-      return true;
-    }
-    
-    // No recent claim found - generate new coupon
-    await generateNewCoupon();
-    return false;
-    
-  } catch (error) {
-    console.error("Check error:", error);
-    showError('Database error: ' + error.message);
-    return false;
-  }
-}
-        
-        async function generateNewCoupon() {
-            try {
-                // Generate unique coupon code
-                const couponCode = 'SAVE' + 
-                    Math.floor(Math.random() * 9000 + 1000) + 
-                    String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    // === CORE LOGIC WITH CLOCK PROTECTION ===
+    async function checkIfAlreadyClaimed() {
+        try {
+            // 1. Check secure local storage (with REAL time check)
+            const storedClaim = SecureStorage.getClaim(currentAd, userFingerprint);
+            if (storedClaim) {
+                const claimTime = new Date(storedClaim.time);
+                const twentyFourHoursAgo = TimeGuard.get24HoursAgo();
                 
-                // Get client IP
-                const clientIP = await getClientIP();
-                
-                // Prepare claim data
-                const claimData = {
-                    userId: currentUser.uid,
-                    userFingerprint: userFingerprint,
-                    userIP: clientIP,                  // Store IP separately
-                    adId: currentAd,
-                    adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
-                    hostId: currentHost,
-                    hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
-                    couponCode: couponCode,
-                    claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
-                    clientIP: clientIP,
-                    userAgent: navigator.userAgent,
-                    status: 'active'
-                };
-                
-                // Save to Firestore
-                await db.collection('claims').add(claimData);
-                
-                // Store in localStorage to prevent refresh abuse
-                localStorage.setItem(`claimed_${currentAd}_${currentUser.uid}`, 
-                    JSON.stringify({
-                        coupon: couponCode,
-                        time: new Date().toISOString(),
-                        expires: claimData.expiresAt
-                    }));
-                
-                // Show success page
-                showSuccessPage(claimData);
-                
-            } catch (error) {
-                showError('Failed to generate coupon: ' + error.message);
+                if (claimTime >= twentyFourHoursAgo) {
+                    showBlockedPage({
+                        claimedAt: { toDate: () => claimTime },
+                        hostName: storedClaim.hostName || 'Unknown'
+                    });
+                    return true;
+                }
             }
-        }
-        
-        // === UTILITY FUNCTIONS ===
-      async function generateUserFingerprint() {
-    try {
-        // Get client IP
-        const ipResponse = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipResponse.json();
-        const clientIP = ipData.ip;
-        
-        // Create fingerprint from multiple stable sources
-        const fingerprintData = {
-            ip: clientIP,
-            userAgent: navigator.userAgent,
-            language: navigator.language,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            screen: `${screen.width}x${screen.height}`,
-            cookiesEnabled: navigator.cookieEnabled
-        };
-        
-        // Generate stable hash
-        const dataString = JSON.stringify(fingerprintData);
-        let hash = 0;
-        for (let i = 0; i < dataString.length; i++) {
-            const char = dataString.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        
-        return `fp_${Math.abs(hash).toString(36)}`;
-        
-    } catch (error) {
-        // Fallback to simpler fingerprint
-        return `fallback_${navigator.userAgent.substring(0, 50)}_${navigator.language}`;
-    }
-}
-        
-        async function getClientIP() {
-            try {
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                return data.ip;
-            } catch (error) {
-                return 'unknown';
-            }
-        }
-        
-        // === UI FUNCTIONS ===
-function showSuccessPage(data) {
-    // HIDE everything first
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('success').style.display = 'block';
-    document.getElementById('blocked').style.display = 'none';
-    document.getElementById('error').style.display = 'none';
-    
-    document.getElementById('couponCode').textContent = data.couponCode;
-    document.getElementById('claimTime').textContent = new Date().toLocaleTimeString();
-}
-
-function showBlockedPage(existingClaim) {
-    // HIDE everything first
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('success').style.display = 'none';
-    document.getElementById('blocked').style.display = 'block';
-    document.getElementById('error').style.display = 'none';
-    
-    const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
-    document.getElementById('blockedTime').textContent = claimedTime.toLocaleTimeString();
-    
-    const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
-    startCountdown(nextAvailable);
-}
-
-function showError(message) {
-    // HIDE everything first
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('success').style.display = 'none';
-    document.getElementById('blocked').style.display = 'none';
-    document.getElementById('error').style.display = 'block';
-    document.getElementById('errorMessage').textContent = message;
-}
-       function startCountdown(targetTime) {
-    function updateCountdown() {
-        const now = new Date();
-        const diff = targetTime - now;
-        
-        if (diff <= 0) {
-            document.getElementById('countdown').innerHTML = 
-                '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
-            return;
-        }
-        
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        
-        document.getElementById('countdown').innerHTML = 
-            `<div style="font-size: 28px;">
-                ${hours.toString().padStart(2, '0')}:
-                ${minutes.toString().padStart(2, '0')}:
-                ${seconds.toString().padStart(2, '0')}
-            </div>`;
-        
-        // Continue updating every second
-        setTimeout(updateCountdown, 1000);
-    }
-    
-    // Start the countdown
-    updateCountdown();
-}
-        
-        function setupRefreshProtection() {
-            // Replace URL to prevent re-submission
-            const newUrl = window.location.origin + window.location.pathname + 
-                '?ad=' + encodeURIComponent(currentAd) + 
-                '&host=' + encodeURIComponent(currentHost) + 
-                '&claimed=true&t=' + Date.now();
-            history.replaceState(null, null, newUrl);
             
-            // Block refresh attempts
-            window.onbeforeunload = function() {
-                return "Your coupon has been saved. Do not refresh or you'll lose it!";
-            };
-             // Check if page was already loaded 
-if (performance.navigation.type === 1) { // Type 1 = page reload
-    const stored = localStorage.getItem(`claimed_${currentAd}_${currentUser.uid}`);
-    if (stored) {
-        // Create a mock claim object from localStorage
-        const storedData = JSON.parse(stored);
-        const mockClaim = {
-            claimedAt: { toDate: () => new Date(storedData.time) }
-        };
-        showBlockedPage(mockClaim);
-        return; // ⬅️ ADD THIS to stop further processing
-    }
-}
+            // 2. Check Firestore (server time - can't be faked)
+            const firestoreBlocked = await checkFirestoreClaims();
+            if (firestoreBlocked.blocked) {
+                showBlockedPage(firestoreBlocked.data);
+                
+                // Store in secure storage
+                if (firestoreBlocked.data) {
+                    SecureStorage.setClaim(currentAd, userFingerprint, {
+                        coupon: firestoreBlocked.data.couponCode,
+                        time: firestoreBlocked.data.claimedAt?.toDate() || new Date(),
+                        expires: firestoreBlocked.data.expiresAt,
+                        hostName: firestoreBlocked.data.hostName
+                    });
+                }
+                return true;
+            }
+            
+            // 3. Generate new coupon
+            await generateNewCoupon();
+            return false;
+            
+        } catch (error) {
+            console.error("Check error:", error);
+            showError('Verification error: ' + error.message);
+            return false;
         }
-    </script>
+    }
+    
+    async function checkFirestoreClaims() {
+        try {
+            // Use REAL time for calculation
+            const twentyFourHoursAgo = TimeGuard.get24HoursAgo();
+            
+            const claimsSnapshot = await db.collection('claims')
+                .where('userFingerprint', '==', userFingerprint)
+                .where('adId', '==', currentAd)
+                .orderBy('claimedAt', 'desc')
+                .limit(1)
+                .get();
+            
+            if (!claimsSnapshot.empty) {
+                const claim = claimsSnapshot.docs[0].data();
+                const claimTime = claim.claimedAt?.toDate();
+                
+                // Compare with REAL time
+                if (claimTime >= twentyFourHoursAgo) {
+                    return { blocked: true, data: claim };
+                }
+            }
+            
+            return { blocked: false, data: null };
+            
+        } catch (error) {
+            console.error('Firestore check error:', error);
+            return { blocked: false, data: null };
+        }
+    }
+    
+    async function generateNewCoupon() {
+        try {
+            // Generate unique coupon code
+            const couponCode = 'SAVE' + 
+                Math.floor(Math.random() * 9000 + 1000) + 
+                String.fromCharCode(65 + Math.floor(Math.random() * 26));
+            
+            // Get client IP
+            const clientIP = await getClientIP();
+            
+            // Prepare claim data with REAL timestamp
+            const claimData = {
+                userId: currentUser.uid,
+                userFingerprint: userFingerprint,
+                userIP: clientIP,
+                adId: currentAd,
+                adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
+                hostId: currentHost,
+                hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
+                couponCode: couponCode,
+                claimedAt: firebase.firestore.FieldValue.serverTimestamp(), // SERVER TIME!
+                expiresAt: new Date(TimeGuard.getRealTime() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
+                clientIP: clientIP,
+                userAgent: navigator.userAgent,
+                status: 'active'
+            };
+            
+            // Save to Firestore (server time - can't be faked)
+            await db.collection('claims').add(claimData);
+            
+            // Store in secure local storage
+            SecureStorage.setClaim(currentAd, userFingerprint, {
+                coupon: couponCode,
+                time: new Date(TimeGuard.getRealTime()), // REAL time
+                expires: claimData.expiresAt,
+                hostName: claimData.hostName
+            });
+            
+            // Show success page
+            showSuccessPage(claimData);
+            
+            // Setup refresh protection
+            setupRefreshProtection();
+            
+        } catch (error) {
+            showError('Failed to generate coupon: ' + error.message);
+        }
+    }
+    
+    // === UTILITY FUNCTIONS ===
+    async function generateUserFingerprint() {
+        try {
+            const clientIP = await getClientIP();
+            const fingerprintData = {
+                ip: clientIP,
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                screen: `${screen.width}x${screen.height}`,
+                cookiesEnabled: navigator.cookieEnabled
+            };
+            
+            const dataString = JSON.stringify(fingerprintData);
+            let hash = 0;
+            for (let i = 0; i < dataString.length; i++) {
+                const char = dataString.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            
+            return `fp_${Math.abs(hash).toString(36)}`;
+            
+        } catch (error) {
+            return `fallback_${navigator.userAgent.substring(0, 50)}_${navigator.language}`;
+        }
+    }
+    
+    async function getClientIP() {
+        try {
+            const response = await fetch('https://api.ipify.org?format=json');
+            const data = await response.json();
+            return data.ip;
+        } catch (error) {
+            return 'unknown';
+        }
+    }
+    
+    // === UI FUNCTIONS ===
+    function showSuccessPage(data) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('success').classList.remove('hidden');
+        document.getElementById('blocked').classList.add('hidden');
+        document.getElementById('error').classList.add('hidden');
+        
+        document.getElementById('couponCode').textContent = data.couponCode;
+        document.getElementById('claimTime').textContent = new Date().toLocaleTimeString();
+        
+        // Add copy functionality
+        addCopyFunctionality(data.couponCode);
+    }
+    
+    function showBlockedPage(existingClaim) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('success').classList.add('hidden');
+        document.getElementById('blocked').classList.remove('hidden');
+        document.getElementById('error').classList.add('hidden');
+        
+        const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
+        document.getElementById('blockedTime').textContent = claimedTime.toLocaleTimeString();
+        
+        // Calculate next available time using REAL time
+        const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
+        startCountdown(nextAvailable);
+    }
+    
+    function showError(message) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('success').classList.add('hidden');
+        document.getElementById('blocked').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+        document.getElementById('errorMessage').textContent = message;
+    }
+    
+    function startCountdown(targetTime) {
+        function updateCountdown() {
+            const now = new Date();
+            const diff = targetTime - now;
+            
+            if (diff <= 0) {
+                document.getElementById('countdown').innerHTML = 
+                    '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
+                return;
+            }
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            document.getElementById('countdown').innerHTML = 
+                `<div style="font-size: 28px;">
+                    ${hours.toString().padStart(2, '0')}:
+                    ${minutes.toString().padStart(2, '0')}:
+                    ${seconds.toString().padStart(2, '0')}
+                </div>`;
+            
+            setTimeout(updateCountdown, 1000);
+        }
+        
+        updateCountdown();
+    }
+    
+    function addCopyFunctionality(couponCode) {
+        const couponElement = document.getElementById('couponCode');
+        couponElement.style.cursor = 'pointer';
+        couponElement.title = 'Click to copy';
+        
+        couponElement.onclick = function() {
+            navigator.clipboard.writeText(couponCode).then(() => {
+                const originalText = couponElement.textContent;
+                couponElement.textContent = '✅ Copied!';
+                couponElement.style.color = '#4CAF50';
+                
+                setTimeout(() => {
+                    couponElement.textContent = originalText;
+                    couponElement.style.color = '#D32F2F';
+                }, 2000);
+            });
+        };
+    }
+    
+    function setupRefreshProtection() {
+        const newUrl = window.location.origin + window.location.pathname + 
+            '?ad=' + encodeURIComponent(currentAd) + 
+            '&host=' + encodeURIComponent(currentHost) + 
+            '&claimed=true&t=' + Date.now();
+        history.replaceState(null, null, newUrl);
+        
+        window.onbeforeunload = function() {
+            return "Your coupon has been saved. Do not refresh or you'll lose it!";
+        };
+        
+        if (performance.navigation.type === 1) {
+            const stored = SecureStorage.getClaim(currentAd, userFingerprint);
+            if (stored) {
+                const mockClaim = {
+                    claimedAt: { toDate: () => new Date(stored.time) },
+                    hostName: stored.hostName
+                };
+                showBlockedPage(mockClaim);
+                return;
+            }
+        }
+    }
+    
+    // Periodically verify time sync
+    setInterval(async () => {
+        await TimeGuard.syncServerTime();
+        if (TimeGuard.detectClockTampering()) {
+            console.warn('Clock tampering detected during session');
+        }
+    }, 30 * 60 * 1000); // Every 30 minutes
+</script>
 </body>
 </html>
