@@ -160,11 +160,11 @@
     
     // OPTIMIZED QUERY: Query by userId ONLY, then filter
     const claimsRef = db.collection('claims');
-    const querySnapshot = await claimsRef
-      .where('userId', '==', currentUser.uid)
-      .orderBy('claimedAt', 'desc')  // Get newest first
-      .limit(10)  // Only check last 10 claims (more than enough)
-      .get();
+  const querySnapshot = await claimsRef
+    .where('userFingerprint', '==', userFingerprint)  // Check fingerprint
+    .orderBy('claimedAt', 'desc')
+    .limit(10)
+    .get();
     
     let alreadyClaimed = false;
     let existingClaim = null;
@@ -213,6 +213,7 @@
                 const claimData = {
                     userId: currentUser.uid,
                     userFingerprint: userFingerprint,
+                    userIP: clientIP,                  // Store IP separately
                     adId: currentAd,
                     adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
                     hostId: currentHost,
@@ -245,27 +246,39 @@
         }
         
         // === UTILITY FUNCTIONS ===
-        async function generateUserFingerprint() {
-            // Create a fingerprint from available data
-            const components = [
-                currentUser.uid,
-                await getClientIP(),
-                navigator.userAgent,
-                navigator.language,
-                screen.width + 'x' + screen.height
-            ];
-            
-            // Create a hash-like string
-            const combined = components.join('|');
-            let hash = 0;
-            for (let i = 0; i < combined.length; i++) {
-                const char = combined.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
-            }
-            
-            return 'user_' + Math.abs(hash).toString(36) + '_' + currentUser.uid.substring(0, 8);
+      async function generateUserFingerprint() {
+    try {
+        // Get client IP
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        const clientIP = ipData.ip;
+        
+        // Create fingerprint from multiple stable sources
+        const fingerprintData = {
+            ip: clientIP,
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            screen: `${screen.width}x${screen.height}`,
+            cookiesEnabled: navigator.cookieEnabled
+        };
+        
+        // Generate stable hash
+        const dataString = JSON.stringify(fingerprintData);
+        let hash = 0;
+        for (let i = 0; i < dataString.length; i++) {
+            const char = dataString.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
         }
+        
+        return `fp_${Math.abs(hash).toString(36)}`;
+        
+    } catch (error) {
+        // Fallback to simpler fingerprint
+        return `fallback_${navigator.userAgent.substring(0, 50)}_${navigator.language}`;
+    }
+}
         
         async function getClientIP() {
             try {
