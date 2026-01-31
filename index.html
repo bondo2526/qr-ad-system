@@ -4,7 +4,8 @@
     <title>Claim Your Coupon</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script> 
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
@@ -592,62 +593,77 @@
 // === SIMPLE BARCODE DISPLAY ===
 // === SIMPLE UPC-STYLE BARCODE ===
 // === CLEAN UPC BARCODE DISPLAY ===
+// === WORKING QR CODE GENERATOR ===
 function generateQRCode(elementId, text) {
     const element = document.getElementById(elementId);
+    
+    // Clear previous content
     element.innerHTML = '';
     
-    // Format text for display (add spaces for readability)
-    const displayText = formatUPC(text);
+    // Create container for QR code
+    const qrContainer = document.createElement('div');
+    qrContainer.id = elementId + '_container';
+    qrContainer.style.textAlign = 'center';
+    qrContainer.style.padding = '10px';
     
-    element.innerHTML = `
-        <div style="text-align: center; padding: 15px;">
-            <div style="display: inline-block; padding: 20px; background: white; 
-                 border-radius: 12px; border: 2px solid #ddd; margin: 10px 0;
-                 min-width: 300px; position: relative;">
-                
-                <!-- Barcode Container -->
-                <div style="background: white; padding: 15px 20px; border-radius: 8px; 
-                     border: 1px solid #eee; margin-bottom: 15px;">
-                    
-                    <!-- Guard Bars (Start/Stop) -->
-                    <div style="display: flex; margin-bottom: 5px;">
-                        <div style="width: 10px; height: 60px; background: #000; margin-right: 5px;"></div>
-                        <div style="flex: 1; display: flex; justify-content: center;">
-                            ${generateSimpleBarcode(text)}
+    // Add loading text
+    qrContainer.innerHTML = '<p>Generating QR code...</p>';
+    element.appendChild(qrContainer);
+    
+    // Generate QR code with a small delay to ensure library is loaded
+    setTimeout(() => {
+        try {
+            // Clear container
+            qrContainer.innerHTML = '';
+            
+            // Check if QRCode library is available
+            if (typeof QRCode === 'undefined') {
+                throw new Error('QRCode library not loaded. Check CDN link.');
+            }
+            
+            // Create new QR code
+            new QRCode(qrContainer, {
+                text: text,
+                width: 180,
+                height: 180,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // Add text below QR code
+            const codeText = document.createElement('div');
+            codeText.style.marginTop = '10px';
+            codeText.style.fontFamily = "'Courier New', monospace";
+            codeText.style.fontSize = '16px';
+            codeText.style.color = '#666';
+            codeText.innerHTML = `Code: <strong>${text}</strong>`;
+            
+            qrContainer.appendChild(codeText);
+            
+        } catch (error) {
+            console.error('QR Code error:', error);
+            
+            // Fallback display
+            qrContainer.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="color: #f44336; margin-bottom: 10px;">
+                        ⚠️ QR Code generator error
+                    </div>
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; 
+                         border: 2px dashed #ddd; margin: 10px 0;">
+                        <div style="font-family: 'Courier New', monospace; 
+                             font-size: 24px; font-weight: bold; color: #2E7D32;">
+                            ${text}
                         </div>
-                        <div style="width: 10px; height: 60px; background: #000; margin-left: 5px;"></div>
                     </div>
-                    
-                    <!-- Numbers below barcode -->
-                    <div style="display: flex; justify-content: center; margin-top: 10px; 
-                         font-family: 'OCR A', 'Courier New', monospace;">
-                        <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px; color: #333;">
-                            ${displayText}
-                        </div>
+                    <div style="color: #666; font-size: 14px; margin-top: 10px;">
+                        Please enter this code manually
                     </div>
                 </div>
-                
-                <!-- Coupon Info -->
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                    <div style="color: #666; font-size: 12px; margin-bottom: 5px;">COUPON CODE</div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; 
-                         color: #2E7D32; letter-spacing: 3px;">
-                        ${text}
-                    </div>
-                    <div style="color: #666; font-size: 11px; margin-top: 10px;">
-                        Valid for 24 hours • One-time use
-                    </div>
-                </div>
-                
-                <!-- Scan Guide -->
-                <div style="position: absolute; top: -8px; right: 20px; background: #4CAF50; 
-                     color: white; padding: 3px 10px; border-radius: 10px; font-size: 10px; 
-                     font-weight: bold;">
-                    SCAN
-                </div>
-            </div>
-        </div>
-    `;
+            `;
+        }
+    }, 100);
 }
 
 function generateSimpleBarcode(text) {
