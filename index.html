@@ -591,60 +591,106 @@
        // === QR CODE FUNCTIONS ===
 // === SIMPLE BARCODE DISPLAY ===
 // === SIMPLE UPC-STYLE BARCODE ===
+// === CLEAN UPC BARCODE DISPLAY ===
 function generateQRCode(elementId, text) {
     const element = document.getElementById(elementId);
     element.innerHTML = '';
     
-    // Create UPC-like barcode display
+    // Format text for display (add spaces for readability)
+    const displayText = formatUPC(text);
+    
     element.innerHTML = `
         <div style="text-align: center; padding: 15px;">
-            <div style="display: inline-block; padding: 25px; background: white; 
-                 border-radius: 15px; border: 2px solid #E0E0E0; margin: 10px 0;
-                 box-shadow: 0 5px 15px rgba(0,0,0,0.05); min-width: 280px;">
+            <div style="display: inline-block; padding: 20px; background: white; 
+                 border-radius: 12px; border: 2px solid #ddd; margin: 10px 0;
+                 min-width: 300px; position: relative;">
                 
-                <!-- UPC Label -->
-                <div style="color: #666; font-size: 12px; font-weight: bold; margin-bottom: 10px; 
-                     text-transform: uppercase; letter-spacing: 1px;">
-                    Digital Coupon
+                <!-- Barcode Container -->
+                <div style="background: white; padding: 15px 20px; border-radius: 8px; 
+                     border: 1px solid #eee; margin-bottom: 15px;">
+                    
+                    <!-- Guard Bars (Start/Stop) -->
+                    <div style="display: flex; margin-bottom: 5px;">
+                        <div style="width: 10px; height: 60px; background: #000; margin-right: 5px;"></div>
+                        <div style="flex: 1; display: flex; justify-content: center;">
+                            ${generateSimpleBarcode(text)}
+                        </div>
+                        <div style="width: 10px; height: 60px; background: #000; margin-left: 5px;"></div>
+                    </div>
+                    
+                    <!-- Numbers below barcode -->
+                    <div style="display: flex; justify-content: center; margin-top: 10px; 
+                         font-family: 'OCR A', 'Courier New', monospace;">
+                        <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px; color: #333;">
+                            ${displayText}
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- UPC Barcode Lines -->
-                <div style="display: flex; justify-content: center; align-items: flex-end; 
-                     height: 70px; margin: 15px 0; padding: 10px; background: #f9f9f9; 
-                     border-radius: 8px; border: 1px solid #ddd;">
-                    ${generateUPCLines(text)}
-                </div>
-                
-                <!-- Start/Stop Markers -->
-                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                    <div style="width: 10px; height: 15px; background: #000; border-radius: 2px;"></div>
-                    <div style="width: 10px; height: 15px; background: #000; border-radius: 2px;"></div>
-                </div>
-                
-                <!-- Coupon Code Display -->
-                <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 10px;">
-                    <div style="font-family: 'Courier New', monospace; font-size: 22px; font-weight: bold; 
-                         color: #2E7D32; letter-spacing: 3px; text-align: center;">
+                <!-- Coupon Info -->
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <div style="color: #666; font-size: 12px; margin-bottom: 5px;">COUPON CODE</div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; 
+                         color: #2E7D32; letter-spacing: 3px;">
                         ${text}
                     </div>
-                    <div style="color: #666; font-size: 12px; margin-top: 8px;">
-                        Code: ${text}
+                    <div style="color: #666; font-size: 11px; margin-top: 10px;">
+                        Valid for 24 hours • One-time use
                     </div>
                 </div>
                 
-                <!-- Scan Instructions -->
-                <div style="margin-top: 15px; padding: 10px; background: #E8F5E9; border-radius: 8px;">
-                    <div style="color: #2E7D32; font-size: 13px; font-weight: bold;">
-                        📱 Advertiser Instructions:
-                    </div>
-                    <div style="color: #666; font-size: 11px; margin-top: 5px;">
-                        1. Scan barcode pattern OR<br>
-                        2. Enter code: <strong>${text}</strong>
-                    </div>
+                <!-- Scan Guide -->
+                <div style="position: absolute; top: -8px; right: 20px; background: #4CAF50; 
+                     color: white; padding: 3px 10px; border-radius: 10px; font-size: 10px; 
+                     font-weight: bold;">
+                    SCAN
                 </div>
             </div>
         </div>
     `;
+}
+
+function generateSimpleBarcode(text) {
+    let barcodeHTML = '';
+    
+    // Simple binary pattern based on characters
+    for (let i = 0; i < Math.min(text.length, 12); i++) {
+        const charCode = text.charCodeAt(i);
+        const binary = charCode.toString(2).padStart(8, '0');
+        
+        // Take first 4 bits for pattern
+        const pattern = binary.substring(0, 4);
+        
+        barcodeHTML += '<div style="display: inline-block;">';
+        
+        for (let j = 0; j < 4; j++) {
+            const bit = pattern[j];
+            const isBlack = bit === '1';
+            const height = 50 + (j * 5);
+            
+            barcodeHTML += `
+                <div style="
+                    display: inline-block;
+                    width: 3px;
+                    height: ${height}px;
+                    background: ${isBlack ? '#000' : '#fff'};
+                    margin: 0 1px;
+                    vertical-align: bottom;
+                "></div>
+            `;
+        }
+        
+        barcodeHTML += '</div>';
+    }
+    
+    return barcodeHTML;
+}
+
+function formatUPC(text) {
+    // Format as XXX-XXX-XXX
+    if (text.length <= 6) return text;
+    if (text.length <= 9) return text.replace(/(.{3})(.{3})(.{3})/, '$1 $2 $3');
+    return text.replace(/(.{4})(.{4})(.{4})/, '$1 $2 $3');
 }
 
 // Helper function to generate UPC-like lines
