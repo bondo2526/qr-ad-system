@@ -53,6 +53,21 @@
             border-radius: 10px; 
             border: 2px dashed #4CAF50; 
             text-align: center;
+            word-break: break-all;
+        }
+        
+        .coupon-blocked {
+            font-size: 36px;
+            font-weight: bold;
+            color: #c62828;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            background: #FFEBEE;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px dashed #c62828;
+            text-align: center;
+            word-break: break-all;
         }
         
         .info { 
@@ -108,6 +123,37 @@
         h3 { color: #555; margin: 10px 0; }
         p { margin: 10px 0; color: #555; }
         
+        .instruction-box {
+            background: #F5F5F5;
+            border: 2px solid #E0E0E0;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .instruction-box h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .screenshot-instruction {
+            background: #FFF8E1;
+            border: 2px dashed #FFB300;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            color: #E65100;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
         button {
             padding: 12px 24px;
             background: #2196F3;
@@ -117,12 +163,27 @@
             cursor: pointer;
             font-weight: bold;
             font-size: 16px;
-            margin-top: 20px;
-            width: 100%;
+            flex: 1;
         }
         
         button:hover {
             background: #1976D2;
+        }
+        
+        button.secondary {
+            background: #757575;
+        }
+        
+        button.secondary:hover {
+            background: #616161;
+        }
+        
+        .coupon-section {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #F9F9F9;
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -141,8 +202,15 @@
             <p><strong>Product:</strong> <span id="productName"></span></p>
             <p><strong>Location:</strong> <span id="hostName"></span></p>
             
-            <div class="coupon" id="couponCode"></div>
-            <p style="text-align: center; font-weight: bold;">Show this code at checkout</p>
+            <div class="coupon-section">
+                <div class="coupon" id="couponCode"></div>
+                <p style="text-align: center; font-weight: bold; margin-top: 10px;">Show this code at checkout</p>
+            </div>
+            
+            <div class="screenshot-instruction">
+                📸 TAKE A SCREENSHOT NOW!<br>
+                This page will not be available again
+            </div>
             
             <div class="info">
                 <p><strong>✅ Valid:</strong> 24 hours from now</p>
@@ -156,9 +224,12 @@
                 <p>You CAN claim <strong>different ads</strong> at any location.</p>
             </div>
             
-            <p style="color: #FF9800; font-weight: bold; margin-top: 20px; text-align: center;">
-                ⚠️ Do not refresh this page
-            </p>
+            <div class="instruction-box">
+                <h4>How to Use:</h4>
+                <p>1. Take screenshot of coupon code above</p>
+                <p>2. Show screenshot at checkout</p>
+                <p>3. Advertiser will scan to validate</p>
+            </div>
         </div>
         
         <!-- Blocked -->
@@ -166,25 +237,39 @@
             <h1 class="blocked">⛔ Already Claimed</h1>
             <h3 id="blockedAdName"></h3>
             
+            <div class="coupon-section">
+                <p style="font-weight: bold; color: #333; margin-bottom: 10px;">Your previously claimed coupon:</p>
+                <div class="coupon-blocked" id="blockedCouponCode"></div>
+                <p style="color: #666; font-size: 14px; margin-top: 5px;">Use this code at checkout</p>
+            </div>
+            
             <div class="info blocked-info">
                 <p>You've already claimed <strong>this ad</strong> today.</p>
                 <p><strong>Product:</strong> <span id="blockedProduct"></span></p>
-                <p><strong>Location:</strong> <span id="blockedLocation"></span></p>
-                <p><strong>Time:</strong> <span id="blockedTime"></span></p>
+                <p><strong>Location Claimed:</strong> <span id="blockedLocation"></span></p>
+                <p><strong>Claimed at:</strong> <span id="blockedTime"></span></p>
+                <p><strong>Status:</strong> <span id="blockedStatus">Available for use</span></p>
             </div>
             
             <div class="countdown" id="countdown"></div>
             
-            <div class="info">
-                <p><strong>You can still claim:</strong></p>
-                <p>✅ <strong>Different ads</strong> at any location</p>
-                <p>✅ <strong>Different products</strong> from this advertiser</p>
-                <p>❌ <strong>This same ad</strong> at any location (until tomorrow)</p>
+            <div class="screenshot-instruction">
+                📸 Need a screenshot? Take one now!<br>
+                You won't be able to see this code again
             </div>
             
-            <button onclick="location.reload()">
-                Try a Different Ad
-            </button>
+            <div class="info">
+                <p><strong>Coupon Rules:</strong></p>
+                <p>✅ <strong>This coupon is valid</strong> for 24 hours from claim time</p>
+                <p>✅ Show this code at checkout to advertiser</p>
+                <p>❌ <strong>Cannot claim same ad</strong> again until tomorrow</p>
+                <p>✅ You CAN claim <strong>different ads/products</strong></p>
+            </div>
+            
+            <div class="action-buttons">
+                <button onclick="closePage()">Close Page</button>
+                <button class="secondary" onclick="copyCouponCode()">Copy Code</button>
+            </div>
         </div>
         
         <!-- Error -->
@@ -226,6 +311,7 @@
         let currentProduct = null;
         let currentHost = null;
         let userFingerprint = null;
+        let existingCouponCode = null;
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
@@ -293,7 +379,12 @@
                     
                     if (isSameAd && isSameProduct && isWithin24h) {
                         alreadyClaimed = true;
-                        existingClaim = claim;
+                        existingClaim = {
+                            ...claim,
+                            id: doc.id,
+                            claimedAt: claim.claimedAt
+                        };
+                        existingCouponCode = claim.couponCode;
                     }
                 });
                 
@@ -421,7 +512,7 @@
             document.getElementById('error').classList.add('hidden');
             
             document.getElementById('couponCode').textContent = data.couponCode;
-            document.getElementById('claimTime').textContent = new Date().toLocaleTimeString();
+            document.getElementById('claimTime').textContent = new Date().toLocaleString();
             
             // Setup refresh protection
             setupRefreshProtection();
@@ -438,7 +529,21 @@
             document.getElementById('error').classList.add('hidden');
             
             const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
-            document.getElementById('blockedTime').textContent = claimedTime.toLocaleTimeString();
+            document.getElementById('blockedTime').textContent = claimedTime.toLocaleString();
+            
+            // Display the existing coupon code
+            if (existingCouponCode) {
+                document.getElementById('blockedCouponCode').textContent = existingCouponCode;
+            } else {
+                document.getElementById('blockedCouponCode').textContent = 'Not available';
+            }
+            
+            // Check if coupon is redeemed
+            if (existingClaim.redeemed) {
+                document.getElementById('blockedStatus').textContent = 'Already redeemed';
+                document.getElementById('blockedStatus').style.color = '#c62828';
+                document.getElementById('blockedStatus').style.fontWeight = 'bold';
+            }
             
             const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
             startCountdown(nextAvailable);
@@ -477,7 +582,7 @@
                         ${minutes.toString().padStart(2, '0')}:
                         ${seconds.toString().padStart(2, '0')}
                     </div>
-                    <p>Time until you can claim again</p>`;
+                    <p>Time until you can claim this ad again</p>`;
                 
                 // Continue updating every second
                 setTimeout(updateCountdown, 1000);
@@ -485,6 +590,29 @@
             
             // Start the countdown
             updateCountdown();
+        }
+        
+        function copyCouponCode() {
+            const couponCode = document.getElementById('blockedCouponCode').textContent;
+            if (couponCode && couponCode !== 'Not available') {
+                navigator.clipboard.writeText(couponCode).then(() => {
+                    alert('Coupon code copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Failed to copy code. Please take a screenshot instead.');
+                });
+            } else {
+                alert('No coupon code available to copy.');
+            }
+        }
+        
+        function closePage() {
+            // Provide options before closing
+            if (confirm('Have you taken a screenshot of your coupon code?')) {
+                window.close();
+            } else {
+                alert('Please take a screenshot before closing this page.');
+            }
         }
         
         function setupRefreshProtection() {
@@ -507,8 +635,11 @@
                 if (stored) {
                     const storedData = JSON.parse(stored);
                     const mockClaim = {
-                        claimedAt: { toDate: () => new Date(storedData.time) }
+                        claimedAt: { toDate: () => new Date(storedData.time) },
+                        couponCode: storedData.coupon,
+                        redeemed: false
                     };
+                    existingCouponCode = storedData.coupon;
                     showBlockedPage(mockClaim);
                     return;
                 }
