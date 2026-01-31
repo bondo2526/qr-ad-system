@@ -5,9 +5,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
         
         /* Body with dynamic backgrounds */
         body { 
@@ -33,7 +34,7 @@
         .container { 
             background: white; 
             border-radius: 20px; 
-            padding: 40px; 
+            padding: 30px; 
             max-width: 500px; 
             width: 100%; 
             box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
@@ -43,7 +44,7 @@
         .blocked { color: #C62828; }
         
         .coupon { 
-            font-size: 48px; 
+            font-size: 42px; 
             font-weight: bold; 
             color: #2E7D32; 
             margin: 20px 0; 
@@ -54,6 +55,7 @@
             border: 2px dashed #4CAF50; 
             text-align: center;
             word-break: break-all;
+            font-size: clamp(32px, 6vw, 42px); /* Responsive font */
         }
         
         .coupon-blocked {
@@ -68,6 +70,7 @@
             border: 2px dashed #c62828;
             text-align: center;
             word-break: break-all;
+            font-size: clamp(28px, 5vw, 36px); /* Responsive font */
         }
         
         .info { 
@@ -75,7 +78,8 @@
             padding: 15px; 
             border-radius: 10px; 
             margin: 20px 0; 
-            font-size: 14px; 
+            font-size: 16px; /* Larger font */
+            line-height: 1.6;
         }
         
         .info.blocked-info { 
@@ -89,11 +93,12 @@
         }
         
         .countdown { 
-            font-size: 24px; 
+            font-size: 28px; /* Larger font */
             font-weight: bold; 
             color: #E65100; 
             margin: 20px 0; 
             text-align: center;
+            font-size: clamp(24px, 5vw, 28px); /* Responsive */
         }
         
         .loading { 
@@ -105,8 +110,8 @@
             border: 4px solid #f3f3f3; 
             border-top: 4px solid #667eea; 
             border-radius: 50%; 
-            width: 40px; 
-            height: 40px; 
+            width: 50px; /* Larger spinner */
+            height: 50px;
             animation: spin 1s linear infinite; 
             margin: 0 auto 20px; 
         }
@@ -118,10 +123,29 @@
         
         .hidden { display: none; }
         
-        h1 { margin-bottom: 10px; }
-        h2 { color: #333; margin: 10px 0; }
-        h3 { color: #555; margin: 10px 0; }
-        p { margin: 10px 0; color: #555; }
+        h1 { 
+            margin-bottom: 15px; 
+            text-align: center; 
+            font-size: clamp(28px, 7vw, 36px); /* Responsive heading */
+        }
+        h2 { 
+            color: #333; 
+            margin: 15px 0; 
+            text-align: center;
+            font-size: clamp(22px, 5vw, 28px);
+        }
+        h3 { 
+            color: #555; 
+            margin: 15px 0; 
+            text-align: center;
+            font-size: clamp(18px, 4vw, 22px);
+        }
+        p { 
+            margin: 12px 0; 
+            color: #555; 
+            font-size: 16px; /* Larger font */
+            line-height: 1.6;
+        }
         
         .instruction-box {
             background: #F5F5F5;
@@ -130,11 +154,13 @@
             padding: 15px;
             margin: 20px 0;
             text-align: center;
+            font-size: 16px;
         }
         
         .instruction-box h4 {
             color: #333;
             margin-bottom: 10px;
+            font-size: 18px;
         }
         
         .screenshot-instruction {
@@ -146,6 +172,7 @@
             text-align: center;
             font-weight: bold;
             color: #E65100;
+            font-size: 18px;
         }
         
         .action-buttons {
@@ -155,15 +182,16 @@
         }
         
         button {
-            padding: 12px 24px;
+            padding: 14px 24px; /* Larger button */
             background: #2196F3;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 18px; /* Larger font */
             flex: 1;
+            min-height: 50px;
         }
         
         button:hover {
@@ -185,6 +213,86 @@
             background: #F9F9F9;
             border-radius: 10px;
         }
+        
+        /* QR Code Styles */
+        .qr-container {
+            text-align: center;
+            margin: 25px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #E0E0E0;
+        }
+        
+        .qr-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .qr-subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        #qrcode, #blockedQrcode {
+            display: inline-block;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin: 10px auto;
+        }
+        
+        .qr-instruction {
+            background: #E8F5E9;
+            border: 1px solid #4CAF50;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #2E7D32;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .coupon, .coupon-blocked {
+                font-size: 28px;
+                padding: 12px;
+            }
+            
+            h1 {
+                font-size: 28px;
+            }
+            
+            h2 {
+                font-size: 22px;
+            }
+            
+            .info {
+                padding: 12px;
+                font-size: 15px;
+            }
+        }
+        
+        strong {
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -192,19 +300,31 @@
         <!-- Loading -->
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>Loading your coupon...</p>
+            <p style="font-size: 18px;">Loading your coupon...</p>
         </div>
         
         <!-- Success -->
         <div id="success" class="hidden">
             <h1 class="success">✅ Coupon Claimed!</h1>
             <h2 id="adName"></h2>
-            <p><strong>Product:</strong> <span id="productName"></span></p>
-            <p><strong>Location:</strong> <span id="hostName"></span></p>
+            <p style="text-align: center;"><strong>Product:</strong> <span id="productName"></span></p>
+            <p style="text-align: center;"><strong>Location:</strong> <span id="hostName"></span></p>
             
             <div class="coupon-section">
                 <div class="coupon" id="couponCode"></div>
-                <p style="text-align: center; font-weight: bold; margin-top: 10px;">Show this code at checkout</p>
+                <p style="text-align: center; font-weight: bold; margin-top: 10px; font-size: 18px;">Show this code at checkout</p>
+            </div>
+            
+            <!-- QR Code for Success -->
+            <div class="qr-container">
+                <div class="qr-title">📱 Quick Scan QR Code</div>
+                <p style="color: #666; margin-bottom: 15px;">Advertiser can scan this directly:</p>
+                <div id="qrcode"></div>
+                <div class="qr-subtitle">Scan with advertiser's validator app</div>
+                <div class="qr-instruction">
+                    ✅ Faster validation<br>
+                    ✅ No manual code entry needed
+                </div>
             </div>
             
             <div class="screenshot-instruction">
@@ -214,7 +334,7 @@
             
             <div class="info">
                 <p><strong>✅ Valid:</strong> 24 hours from now</p>
-                <p><strong>⚠️ Limit:</strong> 1 coupon per ad per day (any location)</p>
+                <p><strong>⚠️ Limit:</strong> 1 coupon per ad per day</p>
                 <p><strong>🕒 Claimed at:</strong> <span id="claimTime"></span></p>
                 <p><strong>📍 Location:</strong> <span id="locationName"></span></p>
             </div>
@@ -226,9 +346,9 @@
             
             <div class="instruction-box">
                 <h4>How to Use:</h4>
-                <p>1. Take screenshot of coupon code above</p>
+                <p>1. Take screenshot of QR code above</p>
                 <p>2. Show screenshot at checkout</p>
-                <p>3. Advertiser will scan to validate</p>
+                <p>3. Advertiser scans QR code to validate</p>
             </div>
         </div>
         
@@ -238,9 +358,21 @@
             <h3 id="blockedAdName"></h3>
             
             <div class="coupon-section">
-                <p style="font-weight: bold; color: #333; margin-bottom: 10px;">Your previously claimed coupon:</p>
+                <p style="font-weight: bold; color: #333; margin-bottom: 10px; font-size: 18px;">Your previously claimed coupon:</p>
                 <div class="coupon-blocked" id="blockedCouponCode"></div>
-                <p style="color: #666; font-size: 14px; margin-top: 5px;">Use this code at checkout</p>
+                <p style="color: #666; font-size: 16px; margin-top: 5px;">Use this code at checkout</p>
+            </div>
+            
+            <!-- QR Code for Blocked/Already Claimed -->
+            <div class="qr-container">
+                <div class="qr-title">📱 Your Coupon QR Code</div>
+                <p style="color: #666; margin-bottom: 15px;">Advertiser can scan this directly:</p>
+                <div id="blockedQrcode"></div>
+                <div class="qr-subtitle">Scan with advertiser's validator app</div>
+                <div class="qr-instruction">
+                    ✅ Present this QR at checkout<br>
+                    ✅ Advertiser scans to validate
+                </div>
             </div>
             
             <div class="info blocked-info">
@@ -261,7 +393,7 @@
             <div class="info">
                 <p><strong>Coupon Rules:</strong></p>
                 <p>✅ <strong>This coupon is valid</strong> for 24 hours from claim time</p>
-                <p>✅ Show this code at checkout to advertiser</p>
+                <p>✅ Show QR code at checkout to advertiser</p>
                 <p>❌ <strong>Cannot claim same ad</strong> again until tomorrow</p>
                 <p>✅ You CAN claim <strong>different ads/products</strong></p>
             </div>
@@ -275,7 +407,7 @@
         <!-- Error -->
         <div id="error" class="hidden">
             <h1 style="color: #FF5722;">❌ Error</h1>
-            <p id="errorMessage"></p>
+            <p id="errorMessage" style="text-align: center; font-size: 18px;"></p>
             <button onclick="location.reload()">
                 Try Again
             </button>
@@ -455,6 +587,29 @@
             }
         }
         
+        // === QR CODE FUNCTIONS ===
+        function generateQRCode(elementId, text) {
+            // Clear previous QR code
+            document.getElementById(elementId).innerHTML = '';
+            
+            // Generate new QR code
+            QRCode.toCanvas(document.getElementById(elementId), text, {
+                width: 180,
+                height: 180,
+                margin: 1,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('QR Code generation error:', error);
+                    document.getElementById(elementId).innerHTML = 
+                        '<p style="color: #f44336;">QR Code failed to generate</p>';
+                }
+            });
+        }
+        
         // === UTILITY FUNCTIONS ===
         async function generateUserFingerprint() {
             try {
@@ -514,6 +669,9 @@
             document.getElementById('couponCode').textContent = data.couponCode;
             document.getElementById('claimTime').textContent = new Date().toLocaleString();
             
+            // Generate QR Code for the coupon
+            generateQRCode('qrcode', data.couponCode);
+            
             // Setup refresh protection
             setupRefreshProtection();
         }
@@ -534,6 +692,8 @@
             // Display the existing coupon code
             if (existingCouponCode) {
                 document.getElementById('blockedCouponCode').textContent = existingCouponCode;
+                // Generate QR Code for blocked page
+                generateQRCode('blockedQrcode', existingCouponCode);
             } else {
                 document.getElementById('blockedCouponCode').textContent = 'Not available';
             }
@@ -568,7 +728,7 @@
                 
                 if (diff <= 0) {
                     document.getElementById('countdown').innerHTML = 
-                        '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
+                        '<span style="color: #4CAF50; font-size: 20px;">✅ Ready to claim again!</span>';
                     return;
                 }
                 
@@ -577,12 +737,12 @@
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000);
                 
                 document.getElementById('countdown').innerHTML = 
-                    `<div style="font-size: 28px;">
+                    `<div style="font-size: 32px; font-weight: bold;">
                         ${hours.toString().padStart(2, '0')}:
                         ${minutes.toString().padStart(2, '0')}:
                         ${seconds.toString().padStart(2, '0')}
                     </div>
-                    <p>Time until you can claim this ad again</p>`;
+                    <p style="font-size: 16px;">Time until you can claim this ad again</p>`;
                 
                 // Continue updating every second
                 setTimeout(updateCountdown, 1000);
@@ -608,7 +768,7 @@
         
         function closePage() {
             // Provide options before closing
-            if (confirm('Have you taken a screenshot of your coupon code?')) {
+            if (confirm('Have you taken a screenshot of your coupon QR code?')) {
                 window.close();
             } else {
                 alert('Please take a screenshot before closing this page.');

@@ -8,16 +8,106 @@
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f5f7fa; color: #333; }
+        body { 
+            background: #f5f7fa; 
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        /* Login Screen */
+        .login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .login-container h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .login-container p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .password-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .password-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        
+        .login-btn:hover {
+            background: #45a049;
+        }
+        
+        .error-message {
+            color: #f44336;
+            margin-top: 15px;
+            font-size: 16px;
+            display: none;
+        }
+        
+        .password-change {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        /* Dashboard Content (Hidden initially) */
+        .dashboard-content {
+            display: none;
+        }
         
         .header { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 25px 20px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
         
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
         
         .controls {
             background: white;
@@ -35,14 +125,16 @@
             background: #4CAF50;
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 14px 24px;
+            border-radius: 10px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            font-size: 16px;
+            min-height: 50px;
         }
         
         .btn:hover { background: #45a049; transform: translateY(-2px); }
@@ -52,6 +144,10 @@
         .btn-refresh:hover { background: #F57C00; }
         .btn-clear { background: #f44336; }
         .btn-clear:hover { background: #d32f2f; }
+        .btn-logout { background: #757575; }
+        .btn-logout:hover { background: #616161; }
+        .btn-change-password { background: #9C27B0; }
+        .btn-change-password:hover { background: #7B1FA2; }
         
         .stats-grid {
             display: grid;
@@ -73,10 +169,11 @@
             font-weight: bold;
             color: #667eea;
             margin: 10px 0;
+            font-size: clamp(36px, 5vw, 42px);
         }
         
         .stat-label {
-            font-size: 14px;
+            font-size: 16px;
             color: #666;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -95,33 +192,37 @@
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
+            font-size: 15px;
         }
         
         th {
             background: #f8f9fa;
-            padding: 15px;
+            padding: 16px;
             text-align: left;
             font-weight: 600;
             color: #444;
             border-bottom: 2px solid #e9ecef;
             position: sticky;
             top: 0;
+            font-size: 16px;
         }
         
         td {
-            padding: 15px;
+            padding: 16px;
             border-bottom: 1px solid #e9ecef;
+            font-size: 15px;
         }
         
         tr:hover { background: #f8f9fa; }
         
         .filter-input {
-            padding: 10px 15px;
+            padding: 12px 15px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 10px;
+            font-size: 16px;
             flex: 1;
             min-width: 200px;
+            min-height: 50px;
         }
         
         .filter-input:focus {
@@ -133,19 +234,21 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            font-size: 16px;
         }
         
         .date-input {
-            padding: 10px;
+            padding: 12px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            border-radius: 10px;
+            font-size: 16px;
         }
         
         .badge {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 600;
         }
         
@@ -158,9 +261,10 @@
             font-weight: bold;
             color: #D32F2F;
             background: #f9f9f9;
-            padding: 10px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 8px;
             text-align: center;
+            font-size: 16px;
         }
         
         .pagination {
@@ -171,11 +275,12 @@
         }
         
         .page-btn {
-            padding: 8px 16px;
+            padding: 10px 18px;
             border: 1px solid #ddd;
             background: white;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 16px;
         }
         
         .page-btn.active {
@@ -195,8 +300,8 @@
             border: 4px solid #f3f3f3;
             border-top: 4px solid #667eea;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
@@ -205,135 +310,342 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Password Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal h2 {
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .modal-btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .modal-btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-input {
+                width: 100%;
+                min-width: unset;
+            }
+            
+            .date-range {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .date-input {
+                width: 100%;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            table {
+                font-size: 14px;
+            }
+            
+            th, td {
+                padding: 12px 8px;
+            }
+            
+            .stat-value {
+                font-size: 32px;
+            }
+            
+            .login-container {
+                padding: 30px 20px;
+            }
+        }
+        
+        /* Header buttons */
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .header-title {
+            font-size: clamp(24px, 5vw, 32px);
+        }
+        
+        .header-subtitle {
+            font-size: clamp(14px, 3vw, 18px);
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="container">
-            <h1>📊 QR Ad Campaign Dashboard</h1>
-            <p>Real-time analytics & management for your QR campaigns</p>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-container">
+            <h1>🔐 Advertiser Dashboard</h1>
+            <p>Enter your password to access analytics</p>
+            
+            <input type="password" 
+                   id="passwordInput" 
+                   class="password-input" 
+                   placeholder="Enter dashboard password"
+                   onkeypress="handlePasswordEnter(event)">
+            
+            <button class="login-btn" onclick="login()">
+                🔓 Login to Dashboard
+            </button>
+            
+            <div class="error-message" id="loginError">
+                ❌ Incorrect password. Please try again.
+            </div>
+            
+            <div class="password-change">
+                <p style="color: #666; margin-bottom: 10px; font-size: 14px;">
+                    First time? Default password is: <strong>admin123</strong>
+                </p>
+                <button class="btn btn-change-password" onclick="showChangePasswordModal()" style="width: 100%;">
+                    🔑 Change Password
+                </button>
+            </div>
         </div>
     </div>
     
-    <div class="container">
-        <!-- Controls -->
-        <div class="controls">
-            <input type="text" id="searchInput" class="filter-input" placeholder="Search by ad, product, location, coupon or user..." onkeyup="filterTable()">
-            
-            <div class="date-range">
-                <input type="date" id="dateFrom" class="date-input" onchange="filterByDate()">
-                <span>to</span>
-                <input type="date" id="dateTo" class="date-input" onchange="filterByDate()">
-            </div>
-            
-            <select id="adFilter" class="filter-input" onchange="filterTable()">
-                <option value="">All Ads</option>
-            </select>
-            
-            <select id="productFilter" class="filter-input" onchange="filterTable()">
-                <option value="">All Products</option>
-            </select>
-            
-            <select id="hostFilter" class="filter-input" onchange="filterTable()">
-                <option value="">All Locations</option>
-            </select>
-            
-            <select id="statusFilter" class="filter-input" onchange="filterTable()">
-                <option value="">All Status</option>
-                <option value="claimed">Claimed</option>
-                <option value="redeemed">Redeemed</option>
-                <option value="expired">Expired</option>
-            </select>
-            
-            <button class="btn btn-refresh" onclick="loadData()">
-                🔄 Refresh
-            </button>
-            
-            <button class="btn btn-export" onclick="exportToExcel()">
-                📊 Export to Excel
-            </button>
-            
-            <button class="btn btn-clear" onclick="clearFilters()">
-                🗑️ Clear Filters
-            </button>
-        </div>
-        
-        <!-- Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Total Claims</div>
-                <div class="stat-value" id="totalClaims">0</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Today's Claims</div>
-                <div class="stat-value" id="todayClaims">0</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Unique Users</div>
-                <div class="stat-value" id="uniqueUsers">0</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Redeemed</div>
-                <div class="stat-value" id="redeemedCount">0</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Top Product</div>
-                <div class="stat-value" id="topProduct">-</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Top Location</div>
-                <div class="stat-value" id="topLocation">-</div>
-            </div>
-        </div>
-        
-        <!-- Data Table -->
-        <div class="table-container">
-            <h2 style="margin-bottom: 20px;">Claim History</h2>
-            
-            <div id="loadingData" class="loading">
-                <div class="spinner"></div>
-                <p>Loading data...</p>
-            </div>
-            
-            <div id="tableWrapper" style="display: none;">
-                <table id="claimsTable">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Ad Campaign</th>
-                            <th>Product</th>
-                            <th>Location</th>
-                            <th>Coupon Code</th>
-                            <th>User</th>
-                            <th>IP Address</th>
-                            <th>Status</th>
-                            <th>Redeemed</th>
-                            <th>Expires</th>
-                        </tr>
-                    </thead>
-                    <tbody id="claimsBody">
-                        <!-- Data will be inserted here -->
-                    </tbody>
-                </table>
+    <!-- Dashboard Content -->
+    <div class="dashboard-content" id="dashboardContent">
+        <div class="header">
+            <div class="container">
+                <h1 class="header-title">📊 QR Ad Campaign Dashboard</h1>
+                <p class="header-subtitle">Real-time analytics & management for your QR campaigns</p>
                 
-                <!-- Pagination -->
-                <div class="pagination" id="pagination">
-                    <!-- Pagination buttons will be inserted here -->
+                <div class="header-controls">
+                    <button class="btn btn-change-password" onclick="showChangePasswordModal()">
+                        🔑 Change Password
+                    </button>
+                    <button class="btn btn-logout" onclick="logout()">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <!-- Controls -->
+            <div class="controls">
+                <input type="text" id="searchInput" class="filter-input" placeholder="Search by ad, product, location, coupon or user..." onkeyup="filterTable()">
+                
+                <div class="date-range">
+                    <input type="date" id="dateFrom" class="date-input" onchange="filterByDate()">
+                    <span>to</span>
+                    <input type="date" id="dateTo" class="date-input" onchange="filterByDate()">
+                </div>
+                
+                <select id="adFilter" class="filter-input" onchange="filterTable()">
+                    <option value="">All Ads</option>
+                </select>
+                
+                <select id="productFilter" class="filter-input" onchange="filterTable()">
+                    <option value="">All Products</option>
+                </select>
+                
+                <select id="hostFilter" class="filter-input" onchange="filterTable()">
+                    <option value="">All Locations</option>
+                </select>
+                
+                <select id="statusFilter" class="filter-input" onchange="filterTable()">
+                    <option value="">All Status</option>
+                    <option value="claimed">Claimed</option>
+                    <option value="redeemed">Redeemed</option>
+                    <option value="expired">Expired</option>
+                </select>
+                
+                <button class="btn btn-refresh" onclick="loadData()">
+                    🔄 Refresh Data
+                </button>
+                
+                <button class="btn btn-export" onclick="exportToExcel()">
+                    📊 Export to Excel
+                </button>
+                
+                <button class="btn btn-clear" onclick="clearFilters()">
+                    🗑️ Clear Filters
+                </button>
+            </div>
+            
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Claims</div>
+                    <div class="stat-value" id="totalClaims">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Today's Claims</div>
+                    <div class="stat-value" id="todayClaims">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Unique Users</div>
+                    <div class="stat-value" id="uniqueUsers">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Redeemed</div>
+                    <div class="stat-value" id="redeemedCount">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Top Product</div>
+                    <div class="stat-value" id="topProduct">-</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Top Location</div>
+                    <div class="stat-value" id="topLocation">-</div>
                 </div>
             </div>
             
-            <div id="noData" style="display: none; text-align: center; padding: 40px; color: #666;">
-                No claims found. Try adjusting your filters.
+            <!-- Data Table -->
+            <div class="table-container">
+                <h2 style="margin-bottom: 20px; font-size: 24px;">Claim History</h2>
+                
+                <div id="loadingData" class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading data...</p>
+                </div>
+                
+                <div id="tableWrapper" style="display: none;">
+                    <table id="claimsTable">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Ad Campaign</th>
+                                <th>Product</th>
+                                <th>Location</th>
+                                <th>Coupon Code</th>
+                                <th>User</th>
+                                <th>IP Address</th>
+                                <th>Status</th>
+                                <th>Redeemed</th>
+                                <th>Expires</th>
+                            </tr>
+                        </thead>
+                        <tbody id="claimsBody">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                    
+                    <!-- Pagination -->
+                    <div class="pagination" id="pagination">
+                        <!-- Pagination buttons will be inserted here -->
+                    </div>
+                </div>
+                
+                <div id="noData" style="display: none; text-align: center; padding: 40px; color: #666; font-size: 18px;">
+                    No claims found. Try adjusting your filters.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Change Password Modal -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal">
+            <h2>🔑 Change Dashboard Password</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <input type="password" 
+                       id="currentPassword" 
+                       class="password-input" 
+                       placeholder="Current Password"
+                       style="margin-bottom: 15px;">
+                
+                <input type="password" 
+                       id="newPassword" 
+                       class="password-input" 
+                       placeholder="New Password (min 6 characters)"
+                       style="margin-bottom: 15px;">
+                
+                <input type="password" 
+                       id="confirmPassword" 
+                       class="password-input" 
+                       placeholder="Confirm New Password">
+                
+                <div class="error-message" id="passwordError" style="text-align: center; margin-top: 15px;"></div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="closePasswordModal()">
+                    Cancel
+                </button>
+                <button class="modal-btn modal-btn-primary" onclick="changePassword()">
+                    Change Password
+                </button>
             </div>
         </div>
     </div>
 
     <script>
+        // === PASSWORD MANAGEMENT ===
+        const STORAGE_KEY = 'dashboard_password';
+        const DEFAULT_PASSWORD = 'admin123';
+        
+        // Initialize password if not set
+        if (!localStorage.getItem(STORAGE_KEY)) {
+            localStorage.setItem(STORAGE_KEY, DEFAULT_PASSWORD);
+        }
+        
         // === FIREBASE CONFIG ===
         const firebaseConfig = {
             apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
@@ -358,17 +670,103 @@
         let productsList = new Set();
         let hostsList = new Set();
         
-        // Initialize dashboard
+        // === PASSWORD FUNCTIONS ===
+        function login() {
+            const inputPassword = document.getElementById('passwordInput').value;
+            const storedPassword = localStorage.getItem(STORAGE_KEY);
+            
+            if (inputPassword === storedPassword) {
+                // Successful login
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+                document.getElementById('loginError').style.display = 'none';
+                
+                // Clear password field
+                document.getElementById('passwordInput').value = '';
+                
+                // Load data
+                loadData();
+            } else {
+                // Failed login
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        }
+        
+        function handlePasswordEnter(event) {
+            if (event.key === 'Enter') {
+                login();
+            }
+        }
+        
+        function logout() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboardContent').style.display = 'none';
+            document.getElementById('passwordInput').focus();
+        }
+        
+        function showChangePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'flex';
+            document.getElementById('currentPassword').focus();
+        }
+        
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('passwordError').style.display = 'none';
+        }
+        
+        function changePassword() {
+            const current = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const errorDiv = document.getElementById('passwordError');
+            
+            // Clear previous error
+            errorDiv.style.display = 'none';
+            
+            // Validate
+            if (current !== localStorage.getItem(STORAGE_KEY)) {
+                errorDiv.textContent = '❌ Current password is incorrect';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            if (newPass.length < 6) {
+                errorDiv.textContent = '❌ New password must be at least 6 characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            if (newPass !== confirm) {
+                errorDiv.textContent = '❌ New passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            // Update password
+            localStorage.setItem(STORAGE_KEY, newPass);
+            
+            // Show success and close modal
+            alert('✅ Password changed successfully!');
+            closePasswordModal();
+        }
+        
+        // Initialize dashboard on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Set default dates
-            const today = new Date().toISOString().split('T')[0];
-            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            // Focus on password input
+            document.getElementById('passwordInput').focus();
             
-            document.getElementById('dateFrom').value = weekAgo;
-            document.getElementById('dateTo').value = today;
-            
-            // Load data
-            loadData();
+            // Check if already logged in (from session)
+            const isLoggedIn = sessionStorage.getItem('dashboard_logged_in');
+            if (isLoggedIn) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+                loadData();
+            }
         });
         
         // === LOAD DATA ===
