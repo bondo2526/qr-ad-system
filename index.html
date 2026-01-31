@@ -7,8 +7,32 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     
     <style>
+        /* Replace or modify the body style */
+body { 
+    min-height: 100vh; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    padding: 20px; 
+    transition: background 0.5s ease;
+}
+
+/* Default background (when loading) */
+body.default-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Success background (green gradient) */
+body.success-bg {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+/* Blocked/Already claimed background (red gradient) */
+body.blocked-bg {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+       body { min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; transition: background 0.5s ease; }
         .container { background: white; border-radius: 20px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         .success { color: #2E7D32; }
         .blocked { color: #C62828; }
@@ -22,7 +46,7 @@
         .hidden { display: none; }
     </style>
 </head>
-<body>
+<body class="default-bg">
     <div class="container">
         <!-- Loading -->
         <div id="loading" class="loading">
@@ -292,6 +316,11 @@
         // === UI FUNCTIONS ===
 function showSuccessPage(data) {
     // HIDE everything first
+   function showSuccessPage(data) {
+    // Change background to green
+    document.body.className = 'success-bg';
+    
+    // HIDE everything first
     document.getElementById('loading').style.display = 'none';
     document.getElementById('success').style.display = 'block';
     document.getElementById('blocked').style.display = 'none';
@@ -299,9 +328,11 @@ function showSuccessPage(data) {
     
     document.getElementById('couponCode').textContent = data.couponCode;
     document.getElementById('claimTime').textContent = new Date().toLocaleTimeString();
-}
-
+}}
 function showBlockedPage(existingClaim) {
+    // Change background to red/yellow
+    document.body.className = 'blocked-bg';
+    
     // HIDE everything first
     document.getElementById('loading').style.display = 'none';
     document.getElementById('success').style.display = 'none';
@@ -316,6 +347,9 @@ function showBlockedPage(existingClaim) {
 }
 
 function showError(message) {
+    // Keep default background for errors
+    document.body.className = 'default-bg';
+    
     // HIDE everything first
     document.getElementById('loading').style.display = 'none';
     document.getElementById('success').style.display = 'none';
