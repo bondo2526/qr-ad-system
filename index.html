@@ -5,8 +5,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
+   
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
         
@@ -590,36 +589,68 @@
         
         // === QR CODE FUNCTIONS (FIXED) ===
        // === QR CODE FUNCTIONS ===
+// === SIMPLE BARCODE DISPLAY ===
 function generateQRCode(elementId, text) {
-    // Clear previous QR code
     const element = document.getElementById(elementId);
     element.innerHTML = '';
     
-    try {
-        // Create new QR code
-        new QRCode(element, {
-            text: text,
-            width: 180,
-            height: 180,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-        
-    } catch (error) {
-        console.error('QR Code generation error:', error);
-        // Fallback: show text if QR code fails
-        element.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <div style="color: #666; margin-bottom: 10px;">Coupon Code:</div>
-                <div style="font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; 
-                     background: #f5f5f5; padding: 15px; border-radius: 5px; letter-spacing: 2px;">
-                    ${text}
+    // Create a simple barcode-like visual
+    element.innerHTML = `
+        <div style="text-align: center; padding: 15px;">
+            <div style="display: inline-block; padding: 20px; background: white; border-radius: 10px; 
+                 border: 2px solid #4CAF50; margin: 10px 0; position: relative;">
+                
+                <!-- Barcode lines -->
+                <div style="display: flex; justify-content: center; align-items: center; height: 80px; margin: 15px 0;">
+                    ${generateBarcodeLines(text)}
                 </div>
-                <p style="color: #666; margin-top: 10px; font-size: 14px;">Show this code to advertiser</p>
+                
+                <!-- Coupon code below -->
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #ddd;">
+                    <div style="font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; 
+                         color: #2E7D32; letter-spacing: 3px; text-align: center;">
+                        ${text}
+                    </div>
+                    <div style="color: #666; font-size: 14px; margin-top: 8px;">
+                        Scan this pattern or enter code
+                    </div>
+                </div>
+                
+                <!-- Scan guide -->
+                <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); 
+                     background: #4CAF50; color: white; padding: 5px 15px; border-radius: 20px; 
+                     font-size: 12px; font-weight: bold;">
+                    SCAN
+                </div>
             </div>
+        </div>
+    `;
+}
+
+// Helper function to generate barcode lines
+function generateBarcodeLines(text) {
+    let barcodeHTML = '';
+    const colors = ['#000000', '#333333', '#666666', '#999999', '#CCCCCC'];
+    
+    // Convert text to simple barcode pattern
+    for (let i = 0; i < text.length; i++) {
+        const charCode = text.charCodeAt(i);
+        const height = 30 + (charCode % 50); // Varying heights
+        const width = 6;
+        const colorIndex = charCode % colors.length;
+        
+        barcodeHTML += `
+            <div style="
+                width: ${width}px;
+                height: ${height}px;
+                background-color: ${colors[colorIndex]};
+                margin: 0 1px;
+                border-radius: 1px;
+            "></div>
         `;
     }
+    
+    return barcodeHTML;
 }
         
         // === UTILITY FUNCTIONS ===
