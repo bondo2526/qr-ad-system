@@ -149,7 +149,8 @@
             font-weight: 600;
         }
         
-        .badge-active { background: #E8F5E9; color: #2E7D32; }
+        .badge-claimed { background: #E3F2FD; color: #1976D2; }
+        .badge-redeemed { background: #E8F5E9; color: #2E7D32; }
         .badge-expired { background: #FFEBEE; color: #C62828; }
         
         .coupon-cell {
@@ -217,7 +218,7 @@
     <div class="container">
         <!-- Controls -->
         <div class="controls">
-            <input type="text" id="searchInput" class="filter-input" placeholder="Search by ad, location, coupon or user..." onkeyup="filterTable()">
+            <input type="text" id="searchInput" class="filter-input" placeholder="Search by ad, product, location, coupon or user..." onkeyup="filterTable()">
             
             <div class="date-range">
                 <input type="date" id="dateFrom" class="date-input" onchange="filterByDate()">
@@ -229,8 +230,19 @@
                 <option value="">All Ads</option>
             </select>
             
+            <select id="productFilter" class="filter-input" onchange="filterTable()">
+                <option value="">All Products</option>
+            </select>
+            
             <select id="hostFilter" class="filter-input" onchange="filterTable()">
                 <option value="">All Locations</option>
+            </select>
+            
+            <select id="statusFilter" class="filter-input" onchange="filterTable()">
+                <option value="">All Status</option>
+                <option value="claimed">Claimed</option>
+                <option value="redeemed">Redeemed</option>
+                <option value="expired">Expired</option>
             </select>
             
             <button class="btn btn-refresh" onclick="loadData()">
@@ -264,13 +276,13 @@
             </div>
             
             <div class="stat-card">
-                <div class="stat-label">Active Coupons</div>
-                <div class="stat-value" id="activeCoupons">0</div>
+                <div class="stat-label">Redeemed</div>
+                <div class="stat-value" id="redeemedCount">0</div>
             </div>
             
             <div class="stat-card">
-                <div class="stat-label">Top Ad</div>
-                <div class="stat-value" id="topAd">-</div>
+                <div class="stat-label">Top Product</div>
+                <div class="stat-value" id="topProduct">-</div>
             </div>
             
             <div class="stat-card">
@@ -294,11 +306,13 @@
                         <tr>
                             <th>Time</th>
                             <th>Ad Campaign</th>
+                            <th>Product</th>
                             <th>Location</th>
                             <th>Coupon Code</th>
                             <th>User</th>
                             <th>IP Address</th>
                             <th>Status</th>
+                            <th>Redeemed</th>
                             <th>Expires</th>
                         </tr>
                     </thead>
@@ -322,15 +336,14 @@
     <script>
         // === FIREBASE CONFIG ===
         const firebaseConfig = {
-  apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
-  authDomain: "ad-coupon-system.firebaseapp.com",
-  projectId: "ad-coupon-system",
-  storageBucket: "ad-coupon-system.firebasestorage.app",
-  messagingSenderId: "1030272051491",
-  appId: "1:1030272051491:web:4ec6ce21336cf511cac496",
-  measurementId: "G-PR9E37ZYE2"
-};
-      
+            apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
+            authDomain: "ad-coupon-system.firebaseapp.com",
+            projectId: "ad-coupon-system",
+            storageBucket: "ad-coupon-system.firebasestorage.app",
+            messagingSenderId: "1030272051491",
+            appId: "1:1030272051491:web:4ec6ce21336cf511cac496",
+            measurementId: "G-PR9E37ZYE2"
+        };
         
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
@@ -342,6 +355,7 @@
         let currentPage = 1;
         const pageSize = 20;
         let adsList = new Set();
+        let productsList = new Set();
         let hostsList = new Set();
         
         // Initialize dashboard
@@ -369,6 +383,7 @@
                 
                 allClaims = [];
                 adsList.clear();
+                productsList.clear();
                 hostsList.clear();
                 
                 snapshot.forEach(doc => {
@@ -376,11 +391,13 @@
                     data.id = doc.id;
                     data.claimedAt = data.claimedAt?.toDate() || new Date();
                     data.expiresAt = data.expiresAt?.toDate() || new Date();
+                    data.redeemedAt = data.redeemedAt?.toDate() || null;
                     
                     allClaims.push(data);
                     
-                    // Collect unique ads and hosts
+                    // Collect unique ads, products and hosts
                     if (data.adName) adsList.add(data.adName);
+                    if (data.productName) productsList.add(data.productName);
                     if (data.hostName) hostsList.add(data.hostName);
                 });
                 
@@ -402,10 +419,12 @@
         // === UPDATE FILTER DROPDOWNS ===
         function updateFilterDropdowns() {
             const adFilter = document.getElementById('adFilter');
+            const productFilter = document.getElementById('productFilter');
             const hostFilter = document.getElementById('hostFilter');
             
             // Clear existing options (keep "All" option)
             adFilter.innerHTML = '<option value="">All Ads</option>';
+            productFilter.innerHTML = '<option value="">All Products</option>';
             hostFilter.innerHTML = '<option value="">All Locations</option>';
             
             // Add ads
@@ -414,6 +433,14 @@
                 option.value = ad;
                 option.textContent = ad;
                 adFilter.appendChild(option);
+            });
+            
+            // Add products
+            Array.from(productsList).sort().forEach(product => {
+                const option = document.createElement('option');
+                option.value = product;
+                option.textContent = product;
+                productFilter.appendChild(option);
             });
             
             // Add hosts
@@ -454,13 +481,16 @@
         function applyOtherFilters(data) {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const adFilter = document.getElementById('adFilter').value;
+            const productFilter = document.getElementById('productFilter').value;
             const hostFilter = document.getElementById('hostFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
             
             return data.filter(claim => {
                 // Search filter
                 if (searchTerm) {
                     const searchable = [
                         claim.adName || '',
+                        claim.productName || '',
                         claim.hostName || '',
                         claim.couponCode || '',
                         claim.userId || '',
@@ -473,8 +503,21 @@
                 // Ad filter
                 if (adFilter && claim.adName !== adFilter) return false;
                 
+                // Product filter
+                if (productFilter && claim.productName !== productFilter) return false;
+                
                 // Host filter
                 if (hostFilter && claim.hostName !== hostFilter) return false;
+                
+                // Status filter
+                if (statusFilter) {
+                    const now = new Date();
+                    const isExpired = claim.expiresAt < now;
+                    
+                    if (statusFilter === 'expired' && !isExpired) return false;
+                    if (statusFilter === 'claimed' && (claim.redeemed || isExpired)) return false;
+                    if (statusFilter === 'redeemed' && !claim.redeemed) return false;
+                }
                 
                 return true;
             });
@@ -489,7 +532,9 @@
         function clearFilters() {
             document.getElementById('searchInput').value = '';
             document.getElementById('adFilter').value = '';
+            document.getElementById('productFilter').value = '';
             document.getElementById('hostFilter').value = '';
+            document.getElementById('statusFilter').value = '';
             
             // Reset dates to last 7 days
             const today = new Date().toISOString().split('T')[0];
@@ -505,6 +550,7 @@
         function updateStats() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const now = new Date();
             
             // Basic counts
             const total = filteredClaims.length;
@@ -513,28 +559,27 @@
             // Unique users
             const uniqueUsers = new Set(filteredClaims.map(c => c.userId)).size;
             
-            // Active coupons (not expired)
-            const now = new Date();
-            const active = filteredClaims.filter(c => c.expiresAt > now).length;
+            // Redeemed coupons
+            const redeemed = filteredClaims.filter(c => c.redeemed).length;
             
-            // Top ad and location
-            const adCounts = {};
+            // Top product and location
+            const productCounts = {};
             const hostCounts = {};
             
             filteredClaims.forEach(claim => {
-                adCounts[claim.adName] = (adCounts[claim.adName] || 0) + 1;
+                productCounts[claim.productName] = (productCounts[claim.productName] || 0) + 1;
                 hostCounts[claim.hostName] = (hostCounts[claim.hostName] || 0) + 1;
             });
             
-            const topAd = Object.entries(adCounts).sort((a, b) => b[1] - a[1])[0];
+            const topProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0];
             const topLocation = Object.entries(hostCounts).sort((a, b) => b[1] - a[1])[0];
             
             // Update UI
             document.getElementById('totalClaims').textContent = total.toLocaleString();
             document.getElementById('todayClaims').textContent = todayCount.toLocaleString();
             document.getElementById('uniqueUsers').textContent = uniqueUsers.toLocaleString();
-            document.getElementById('activeCoupons').textContent = active.toLocaleString();
-            document.getElementById('topAd').textContent = topAd ? topAd[0] : '-';
+            document.getElementById('redeemedCount').textContent = redeemed.toLocaleString();
+            document.getElementById('topProduct').textContent = topProduct ? topProduct[0] : '-';
             document.getElementById('topLocation').textContent = topLocation ? topLocation[0] : '-';
         }
         
@@ -567,20 +612,33 @@
             pageClaims.forEach(claim => {
                 const row = document.createElement('tr');
                 
-                // Check if coupon is expired
+                // Determine status
                 const now = new Date();
                 const isExpired = claim.expiresAt < now;
-                const statusClass = isExpired ? 'badge-expired' : 'badge-active';
-                const statusText = isExpired ? 'Expired' : 'Active';
+                let status = 'claimed';
+                let statusClass = 'badge-claimed';
+                let statusText = 'Claimed';
+                
+                if (claim.redeemed) {
+                    status = 'redeemed';
+                    statusClass = 'badge-redeemed';
+                    statusText = 'Redeemed';
+                } else if (isExpired) {
+                    status = 'expired';
+                    statusClass = 'badge-expired';
+                    statusText = 'Expired';
+                }
                 
                 row.innerHTML = `
                     <td>${claim.claimedAt.toLocaleString()}</td>
                     <td><strong>${claim.adName || 'Unknown'}</strong></td>
+                    <td>${claim.productName || 'Unknown'}</td>
                     <td>${claim.hostName || 'Unknown'}</td>
                     <td class="coupon-cell">${claim.couponCode || 'N/A'}</td>
                     <td>${claim.userId.substring(0, 8)}...</td>
                     <td>${claim.clientIP || 'Unknown'}</td>
                     <td><span class="badge ${statusClass}">${statusText}</span></td>
+                    <td>${claim.redeemed ? (claim.redeemedAt ? claim.redeemedAt.toLocaleString() : 'Yes') : 'No'}</td>
                     <td>${claim.expiresAt.toLocaleString()}</td>
                 `;
                 
@@ -651,19 +709,29 @@
             }
             
             // Prepare data for Excel
-            const excelData = filteredClaims.map(claim => ({
-                'Date': claim.claimedAt.toLocaleDateString(),
-                'Time': claim.claimedAt.toLocaleTimeString(),
-                'Ad Campaign': claim.adName || 'Unknown',
-                'Location': claim.hostName || 'Unknown',
-                'Coupon Code': claim.couponCode || 'N/A',
-                'User ID': claim.userId,
-                'User Fingerprint': claim.userFingerprint || 'N/A',
-                'IP Address': claim.clientIP || 'Unknown',
-                'User Agent': claim.userAgent || 'Unknown',
-                'Status': claim.expiresAt < new Date() ? 'Expired' : 'Active',
-                'Expires At': claim.expiresAt.toLocaleString()
-            }));
+            const excelData = filteredClaims.map(claim => {
+                const now = new Date();
+                const isExpired = claim.expiresAt < now;
+                let status = 'Claimed';
+                if (claim.redeemed) status = 'Redeemed';
+                else if (isExpired) status = 'Expired';
+                
+                return {
+                    'Date': claim.claimedAt.toLocaleDateString(),
+                    'Time': claim.claimedAt.toLocaleTimeString(),
+                    'Ad Campaign': claim.adName || 'Unknown',
+                    'Product': claim.productName || 'Unknown',
+                    'Location': claim.hostName || 'Unknown',
+                    'Coupon Code': claim.couponCode || 'N/A',
+                    'User ID': claim.userId,
+                    'User Fingerprint': claim.userFingerprint || 'N/A',
+                    'IP Address': claim.clientIP || 'Unknown',
+                    'Status': status,
+                    'Redeemed': claim.redeemed ? 'Yes' : 'No',
+                    'Redeemed At': claim.redeemedAt ? claim.redeemedAt.toLocaleString() : '',
+                    'Expires At': claim.expiresAt.toLocaleString()
+                };
+            });
             
             // Create worksheet
             const ws = XLSX.utils.json_to_sheet(excelData);

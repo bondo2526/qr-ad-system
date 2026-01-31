@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coupon Validator - Advertiser Portal</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
+        body { background: #f5f5f5; padding: 20px; }
+        
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        h1 { color: #333; margin-bottom: 20px; }
+        
+        .scanner-section {
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .result {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+        }
+        
+        .valid { background: #E8F5E9; border: 2px solid #4CAF50; }
+        .invalid { background: #FFEBEE; border: 2px solid #F44336; }
+        .used { background: #FFF3E0; border: 2px solid #FF9800; }
+        
+        .coupon-display {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .info-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        
+        .btn-validate { background: #4CAF50; color: white; }
+        .btn-mark-used { background: #2196F3; color: white; }
+        .btn-reset { background: #9E9E9E; color: white; }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Coupon Validator - Advertiser Portal</h1>
+        <p>Scan customer coupons to validate and mark as used</p>
+        
+        <!-- Login Section -->
+        <div id="loginSection">
+            <h3>Advertiser Login</h3>
+            <input type="password" id="advertiserKey" placeholder="Enter your advertiser key" 
+                   style="padding: 10px; width: 100%; max-width: 300px; margin: 10px 0;">
+            <button class="btn btn-validate" onclick="loginAdvertiser()">Login</button>
+        </div>
+        
+        <!-- Scanner Section -->
+        <div id="scannerSection" class="hidden">
+            <div class="scanner-section">
+                <h3>Scan Customer Coupon</h3>
+                <div id="reader"></div>
+                <p>Or enter coupon code manually:</p>
+                <input type="text" id="manualCode" placeholder="Enter coupon code" 
+                       style="padding: 10px; width: 100%; max-width: 300px;">
+                <button class="btn btn-validate" onclick="validateManualCode()">Validate</button>
+            </div>
+            
+            <!-- Result Display -->
+            <div id="resultSection" class="hidden">
+                <div class="coupon-display" id="scannedCoupon"></div>
+                
+                <div id="validResult" class="result hidden">
+                    <h3 style="color: #4CAF50;">✅ VALID COUPON</h3>
+                    <div class="info-item"><strong>Ad Campaign:</strong> <span id="resultAd"></span></div>
+                    <div class="info-item"><strong>Product:</strong> <span id="resultProduct"></span></div>
+                    <div class="info-item"><strong>Location Claimed:</strong> <span id="resultLocation"></span></div>
+                    <div class="info-item"><strong>Claimed At:</strong> <span id="resultTime"></span></div>
+                    <div class="info-item"><strong>Expires:</strong> <span id="resultExpires"></span></div>
+                    <div class="info-item"><strong>Customer ID:</strong> <span id="resultCustomer"></span></div>
+                    
+                    <button class="btn btn-mark-used" onclick="markCouponUsed()">Mark as Used</button>
+                    <button class="btn btn-reset" onclick="resetScanner()">Scan Another</button>
+                </div>
+                
+                <div id="invalidResult" class="result invalid hidden">
+                    <h3 style="color: #F44336;">❌ INVALID COUPON</h3>
+                    <p id="invalidMessage"></p>
+                    <button class="btn btn-reset" onclick="resetScanner()">Try Again</button>
+                </div>
+                
+                <div id="usedResult" class="result used hidden">
+                    <h3 style="color: #FF9800;">⚠️ ALREADY USED</h3>
+                    <p>This coupon was already redeemed.</p>
+                    <div class="info-item"><strong>Used At:</strong> <span id="usedTime"></span></div>
+                    <button class="btn btn-reset" onclick="resetScanner()">Scan Another</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === FIREBASE CONFIG (Same as before) ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
+            authDomain: "ad-coupon-system.firebaseapp.com",
+            projectId: "ad-coupon-system",
+            storageBucket: "ad-coupon-system.firebasestorage.app",
+            messagingSenderId: "1030272051491",
+            appId: "1:1030272051491:web:4ec6ce21336cf511cac496",
+            measurementId: "G-PR9E37ZYE2"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        let html5QrCode;
+        let currentCouponData = null;
+        
+        function loginAdvertiser() {
+            const key = document.getElementById('advertiserKey').value;
+            // In production, use Firebase Auth. For demo, simple check
+            if (key && key.length > 5) {
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('scannerSection').classList.remove('hidden');
+                initializeScanner();
+            } else {
+                alert('Please enter a valid advertiser key');
+            }
+        }
+        
+        function initializeScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 } 
+            };
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess
+            ).catch(err => {
+                console.error("Scanner error:", err);
+                alert("Camera access required for scanning");
+            });
+        }
+        
+        function onScanSuccess(decodedText) {
+            html5QrCode.stop();
+            validateCoupon(decodedText);
+        }
+        
+        function validateManualCode() {
+            const code = document.getElementById('manualCode').value.trim();
+            if (code) {
+                validateCoupon(code);
+            } else {
+                alert("Please enter a coupon code");
+            }
+        }
+        
+        async function validateCoupon(couponCode) {
+            try {
+                // Query Firestore for this coupon
+                const claimsRef = db.collection('claims');
+                const querySnapshot = await claimsRef
+                    .where('couponCode', '==', couponCode)
+                    .limit(1)
+                    .get();
+                
+                if (querySnapshot.empty) {
+                    showInvalidResult("Coupon not found in database");
+                    return;
+                }
+                
+                const doc = querySnapshot.docs[0];
+                currentCouponData = {
+                    id: doc.id,
+                    ...doc.data()
+                };
+                
+                // Format dates
+                const claimedTime = currentCouponData.claimedAt?.toDate();
+                const expiresTime = currentCouponData.expiresAt?.toDate();
+                const now = new Date();
+                
+                // Check if expired
+                if (expiresTime && expiresTime < now) {
+                    showInvalidResult("Coupon has expired");
+                    return;
+                }
+                
+                // Check if already redeemed
+                if (currentCouponData.redeemed) {
+                    showUsedResult();
+                    return;
+                }
+                
+                // Show valid result
+                showValidResult();
+                
+            } catch (error) {
+                console.error("Validation error:", error);
+                showInvalidResult("Error validating coupon");
+            }
+        }
+        
+        function showValidResult() {
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('validResult').classList.remove('hidden');
+            document.getElementById('invalidResult').classList.add('hidden');
+            document.getElementById('usedResult').classList.add('hidden');
+            
+            const claimedTime = currentCouponData.claimedAt?.toDate();
+            const expiresTime = currentCouponData.expiresAt?.toDate();
+            
+            document.getElementById('scannedCoupon').textContent = currentCouponData.couponCode;
+            document.getElementById('resultAd').textContent = currentCouponData.adName || 'Unknown';
+            document.getElementById('resultProduct').textContent = currentCouponData.productName || 'Unknown';
+            document.getElementById('resultLocation').textContent = currentCouponData.hostName || 'Unknown';
+            document.getElementById('resultTime').textContent = claimedTime ? claimedTime.toLocaleString() : 'Unknown';
+            document.getElementById('resultExpires').textContent = expiresTime ? expiresTime.toLocaleString() : 'Unknown';
+            document.getElementById('resultCustomer').textContent = currentCouponData.userId.substring(0, 8) + '...';
+        }
+        
+        function showInvalidResult(message) {
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('validResult').classList.add('hidden');
+            document.getElementById('invalidResult').classList.remove('hidden');
+            document.getElementById('usedResult').classList.add('hidden');
+            
+            document.getElementById('scannedCoupon').textContent = '';
+            document.getElementById('invalidMessage').textContent = message;
+        }
+        
+        function showUsedResult() {
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('validResult').classList.add('hidden');
+            document.getElementById('invalidResult').classList.add('hidden');
+            document.getElementById('usedResult').classList.remove('hidden');
+            
+            const redeemedTime = currentCouponData.redeemedAt?.toDate();
+            document.getElementById('usedTime').textContent = redeemedTime ? redeemedTime.toLocaleString() : 'Unknown';
+        }
+        
+        async function markCouponUsed() {
+            try {
+                // Update the coupon as redeemed
+                await db.collection('claims').doc(currentCouponData.id).update({
+                    redeemed: true,
+                    redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    redeemedBy: 'advertiser_scanner'
+                });
+                
+                alert('✅ Coupon marked as used successfully!');
+                showUsedResult();
+                
+            } catch (error) {
+                alert('Error marking coupon as used: ' + error.message);
+            }
+        }
+        
+        function resetScanner() {
+            currentCouponData = null;
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('manualCode').value = '';
+            
+            // Restart scanner
+            initializeScanner();
+        }
+    </script>
+</body>
+</html>
