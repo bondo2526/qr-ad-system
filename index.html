@@ -237,12 +237,13 @@
             margin-top: 10px;
         }
         
-        #qrcode, #blockedQrcode {
+        .qr-code-canvas {
             display: inline-block;
             padding: 10px;
             background: white;
             border-radius: 8px;
             margin: 10px auto;
+            border: 1px solid #ddd;
         }
         
         .qr-instruction {
@@ -319,7 +320,7 @@
             <div class="qr-container">
                 <div class="qr-title">📱 Quick Scan QR Code</div>
                 <p style="color: #666; margin-bottom: 15px;">Advertiser can scan this directly:</p>
-                <div id="qrcode"></div>
+                <div id="qrcode" class="qr-code-canvas"></div>
                 <div class="qr-subtitle">Scan with advertiser's validator app</div>
                 <div class="qr-instruction">
                     ✅ Faster validation<br>
@@ -367,7 +368,7 @@
             <div class="qr-container">
                 <div class="qr-title">📱 Your Coupon QR Code</div>
                 <p style="color: #666; margin-bottom: 15px;">Advertiser can scan this directly:</p>
-                <div id="blockedQrcode"></div>
+                <div id="blockedQrcode" class="qr-code-canvas"></div>
                 <div class="qr-subtitle">Scan with advertiser's validator app</div>
                 <div class="qr-instruction">
                     ✅ Present this QR at checkout<br>
@@ -587,27 +588,41 @@
             }
         }
         
-        // === QR CODE FUNCTIONS ===
+        // === QR CODE FUNCTIONS (FIXED) ===
         function generateQRCode(elementId, text) {
             // Clear previous QR code
-            document.getElementById(elementId).innerHTML = '';
+            const element = document.getElementById(elementId);
+            element.innerHTML = '';
             
-            // Generate new QR code
-            QRCode.toCanvas(document.getElementById(elementId), text, {
-                width: 180,
-                height: 180,
-                margin: 1,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
+            try {
+                // Check if QRCode library is loaded
+                if (typeof QRCode === 'undefined') {
+                    throw new Error('QRCode library not loaded');
                 }
-            }, function (error) {
-                if (error) {
-                    console.error('QR Code generation error:', error);
-                    document.getElementById(elementId).innerHTML = 
-                        '<p style="color: #f44336;">QR Code failed to generate</p>';
-                }
-            });
+                
+                // Generate new QR code
+                new QRCode(element, {
+                    text: text,
+                    width: 180,
+                    height: 180,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+            } catch (error) {
+                console.error('QR Code generation error:', error);
+                // Fallback: show text if QR code fails
+                element.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="color: #f44336; margin-bottom: 10px;">QR Code failed to load</div>
+                        <div style="font-family: 'Courier New', monospace; font-size: 18px; background: #f5f5f5; padding: 10px; border-radius: 5px;">
+                            ${text}
+                        </div>
+                        <p style="color: #666; margin-top: 10px;">Show this code to advertiser</p>
+                    </div>
+                `;
+            }
         }
         
         // === UTILITY FUNCTIONS ===
