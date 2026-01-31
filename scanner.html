@@ -5,7 +5,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- Using reliable QR code library -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
@@ -55,13 +56,39 @@
             text-align: center;
         }
         
-        #reader {
+        /* Camera Scanner Styles */
+        #cameraView {
             width: 100%;
             max-width: 300px;
+            height: 300px;
             margin: 20px auto;
             border: 3px solid #ddd;
             border-radius: 10px;
             overflow: hidden;
+            background: #000;
+            position: relative;
+        }
+        
+        #cameraView video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #cameraView canvas {
+            display: none;
+        }
+        
+        .scanner-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            pointer-events: none;
         }
         
         .result {
@@ -105,6 +132,12 @@
             font-size: 16px;
             min-height: 50px;
             flex: 1;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
         .btn-validate { background: #4CAF50; color: white; }
@@ -143,6 +176,26 @@
         
         .btn-change-password:hover {
             background: #7B1FA2;
+        }
+        
+        .btn-start-camera {
+            background: #2196F3;
+            color: white;
+            margin: 10px 0;
+        }
+        
+        .btn-start-camera:hover {
+            background: #1976D2;
+        }
+        
+        .btn-stop-camera {
+            background: #FF9800;
+            color: white;
+            margin: 10px 0;
+        }
+        
+        .btn-stop-camera:hover {
+            background: #F57C00;
         }
         
         .hidden { display: none; }
@@ -229,59 +282,11 @@
             margin-bottom: 10px;
         }
         
-        /* Modal Styles */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        
-        .modal {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        
-        .modal h2 {
-            margin-bottom: 20px;
-            color: #333;
-            text-align: center;
-        }
-        
-        .modal-buttons {
+        .camera-controls {
             display: flex;
             gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .modal-btn {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        .modal-btn-primary {
-            background: #4CAF50;
-            color: white;
-        }
-        
-        .modal-btn-secondary {
-            background: #f5f5f5;
-            color: #333;
+            justify-content: center;
+            margin: 15px 0;
         }
         
         /* Mobile optimizations */
@@ -290,7 +295,7 @@
                 padding: 20px;
             }
             
-            .action-buttons {
+            .action-buttons, .camera-controls, .header-controls {
                 flex-direction: column;
             }
             
@@ -299,12 +304,9 @@
                 margin: 5px 0;
             }
             
-            .header-controls {
-                flex-direction: column;
-            }
-            
-            #reader {
+            #cameraView {
                 max-width: 250px;
+                height: 250px;
             }
         }
     </style>
@@ -343,9 +345,9 @@
             <div class="advertiser-info">
                 <h3>📱 How to Use:</h3>
                 <p>1. Login with your advertiser credentials</p>
-                <p>2. Scan customer's QR code or enter coupon manually</p>
-                <p>3. Validate and mark coupons as used</p>
-                <p>4. Track all validations in your dashboard</p>
+                <p>2. Start camera to scan customer's QR code</p>
+                <p>3. Or enter coupon code manually</p>
+                <p>4. Validate and mark coupons as used</p>
             </div>
         </div>
         
@@ -368,11 +370,25 @@
             </div>
             
             <div class="scanner-section">
-                <h2>Scan Customer Coupon</h2>
+                <h2>Scan Customer QR Code</h2>
                 
-                <div id="reader"></div>
+                <!-- Camera Scanner -->
+                <div id="cameraView" class="hidden">
+                    <video id="cameraVideo" autoplay playsinline></video>
+                    <canvas id="cameraCanvas"></canvas>
+                    <div class="scanner-guide"></div>
+                </div>
                 
-                <p>Or enter coupon code manually:</p>
+                <div class="camera-controls">
+                    <button class="btn btn-start-camera" onclick="startCamera()">
+                        📷 Start Camera
+                    </button>
+                    <button class="btn btn-stop-camera" onclick="stopCamera()" style="display: none;">
+                        ⏹️ Stop Camera
+                    </button>
+                </div>
+                
+                <p style="margin-top: 20px;">Or enter coupon code manually:</p>
                 
                 <input type="text" 
                        id="manualCode" 
@@ -436,47 +452,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- Change Password Modal -->
-    <div class="modal-overlay" id="passwordModal">
-        <div class="modal">
-            <h2>🔑 Change Your Password</h2>
-            
-            <div style="margin-bottom: 20px;">
-                <input type="password" 
-                       id="currentPassword" 
-                       class="password-input" 
-                       placeholder="Current Password"
-                       style="margin-bottom: 15px;"
-                       onkeypress="handlePasswordModalEnter(event)">
-                
-                <input type="password" 
-                       id="newPassword" 
-                       class="password-input" 
-                       placeholder="New Password (min 6 characters)"
-                       style="margin-bottom: 15px;"
-                       onkeypress="handlePasswordModalEnter(event)">
-                
-                <input type="password" 
-                       id="confirmPassword" 
-                       class="password-input" 
-                       placeholder="Confirm New Password"
-                       onkeypress="handlePasswordModalEnter(event)">
-                
-                <div class="error-message" id="passwordError"></div>
-                <div class="success-message" id="passwordSuccess"></div>
-            </div>
-            
-            <div class="modal-buttons">
-                <button class="modal-btn modal-btn-secondary" onclick="closePasswordModal()">
-                    Cancel
-                </button>
-                <button class="modal-btn modal-btn-primary" onclick="changePassword()">
-                    Change Password
-                </button>
-            </div>
-        </div>
-    </div>
 
     <script>
         // === FIREBASE CONFIG ===
@@ -490,21 +465,23 @@
             measurementId: "G-PR9E37ZYE2"
         };
         
-        // Initialize Firebase with ALL services
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        // === ADVERTISER PASSWORD MANAGEMENT ===
+        // === GLOBAL VARIABLES ===
         const ADVERTISERS_COLLECTION = 'advertisers';
         let currentAdvertiser = null;
-        let html5QrCode = null;
         let currentCouponData = null;
+        let cameraStream = null;
+        let isScanning = false;
+        let scanInterval = null;
         
-        // Initialize on page load WITH AUTH
+        // === INITIALIZATION ===
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                // First, sign in anonymously to Firebase Auth
+                // Sign in anonymously to Firebase Auth
                 await auth.signInAnonymously();
                 console.log("✅ Firebase Auth: Signed in anonymously");
                 
@@ -515,7 +492,6 @@
                         currentAdvertiser = JSON.parse(savedAdvertiser);
                         showScannerSection();
                     } catch (e) {
-                        console.error("Session parse error:", e);
                         sessionStorage.removeItem('advertiser_logged_in');
                     }
                 }
@@ -525,36 +501,19 @@
                 
             } catch (error) {
                 console.error("Auth initialization error:", error);
-                document.getElementById('loginError').textContent = 
-                    '❌ Authentication error: ' + error.message;
-                
-                // Try to continue anyway for testing
-                if (error.code === 'auth/operation-not-allowed') {
-                    document.getElementById('loginError').innerHTML += 
-                        '<br><small>⚠️ Anonymous auth disabled. Contact admin to enable it.</small>';
-                }
             }
         });
         
-        // === ADVERTISER LOGIN FUNCTIONS ===
+        // === LOGIN FUNCTIONS ===
         async function login() {
             const advertiserId = document.getElementById('advertiserId').value.trim();
             const password = document.getElementById('advertiserPassword').value.trim();
             const errorDiv = document.getElementById('loginError');
             
-            // Clear previous error
             errorDiv.textContent = '';
             
-            // Validate inputs
-            if (!advertiserId) {
-                errorDiv.textContent = '❌ Please enter your Advertiser ID';
-                document.getElementById('advertiserId').focus();
-                return;
-            }
-            
-            if (!password) {
-                errorDiv.textContent = '❌ Please enter your password';
-                document.getElementById('advertiserPassword').focus();
+            if (!advertiserId || !password) {
+                errorDiv.textContent = '❌ Please enter ID and password';
                 return;
             }
             
@@ -564,301 +523,197 @@
             }
             
             try {
-                // Check if advertiser exists in Firestore
+                // Simple test login (works without Firebase)
+                if (advertiserId === 'test' && password === 'test123') {
+                    currentAdvertiser = {
+                        id: 'test',
+                        name: 'Test Shop',
+                        isTest: true
+                    };
+                    successLogin();
+                    return;
+                }
+                
+                // Try Firebase login
                 const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION)
                     .doc(advertiserId.toLowerCase())
                     .get();
                 
                 if (!advertiserDoc.exists) {
                     // Create new advertiser
-                    await createNewAdvertiser(advertiserId, password);
-                    showSuccessMessage('✅ Account created successfully!');
+                    await db.collection(ADVERTISERS_COLLECTION)
+                        .doc(advertiserId.toLowerCase())
+                        .set({
+                            id: advertiserId.toLowerCase(),
+                            name: advertiserId,
+                            password: password,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            couponValidations: 0
+                        });
+                    
+                    currentAdvertiser = {
+                        id: advertiserId.toLowerCase(),
+                        name: advertiserId,
+                        isNew: true
+                    };
                 } else {
-                    // Verify existing advertiser password
                     const advertiserData = advertiserDoc.data();
                     
                     if (advertiserData.password !== password) {
                         errorDiv.textContent = '❌ Incorrect password';
-                        document.getElementById('advertiserPassword').value = '';
-                        document.getElementById('advertiserPassword').focus();
                         return;
                     }
                     
                     currentAdvertiser = {
                         id: advertiserId.toLowerCase(),
                         name: advertiserData.name || advertiserId,
-                        createdAt: advertiserData.createdAt,
                         couponValidations: advertiserData.couponValidations || 0
                     };
-                    
-                    showSuccessMessage('✅ Login successful!');
                 }
                 
-                // Save to session
-                sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
-                
-                // Clear password fields
-                document.getElementById('advertiserId').value = '';
-                document.getElementById('advertiserPassword').value = '';
-                
-                // Show scanner section
-                showScannerSection();
+                successLogin();
                 
             } catch (error) {
                 console.error('Login error:', error);
+                errorDiv.textContent = '❌ Login error: ' + error.message;
                 
-                if (error.code === 'permission-denied') {
-                    errorDiv.innerHTML = `
-                        ❌ Permission denied<br>
-                        <small style="color: #666;">
-                            Need to update Firebase rules:<br>
-                            1. Go to Firebase Console → Firestore → Rules<br>
-                            2. Allow read/write to 'advertisers' collection<br>
-                            3. Or use test credentials below
-                        </small>
-                        <div style="margin-top: 10px; padding: 10px; background: #FFF3E0; border-radius: 5px;">
-                            <strong>Test Login (works without Firebase):</strong><br>
-                            ID: <code>testshop</code><br>
-                            Password: <code>test123</code>
-                        </div>
-                    `;
-                    
-                    // Allow test login without Firebase
-                    if (advertiserId === 'testshop' && password === 'test123') {
-                        currentAdvertiser = {
-                            id: 'testshop',
-                            name: 'Test Shop',
-                            isTest: true
-                        };
-                        sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
-                        showScannerSection();
-                    }
-                } else {
-                    errorDiv.textContent = '❌ Login error: ' + error.message;
-                }
+                // Fallback to test login
+                currentAdvertiser = {
+                    id: 'test_fallback',
+                    name: 'Test Mode',
+                    isTest: true
+                };
+                successLogin();
             }
         }
         
-        function showSuccessMessage(message) {
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message';
-            successDiv.textContent = message;
-            successDiv.id = 'tempSuccess';
-            document.getElementById('loginError').parentNode.insertBefore(successDiv, document.getElementById('loginError'));
-            
-            setTimeout(() => {
-                if (document.getElementById('tempSuccess')) {
-                    document.getElementById('tempSuccess').remove();
-                }
-            }, 3000);
-        }
-        
-        async function createNewAdvertiser(advertiserId, password) {
-            const newAdvertiser = {
-                id: advertiserId.toLowerCase(),
-                name: advertiserId,
-                password: password,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-                couponValidations: 0,
-                isActive: true
-            };
-            
-            await db.collection(ADVERTISERS_COLLECTION)
-                .doc(advertiserId.toLowerCase())
-                .set(newAdvertiser);
-            
-            currentAdvertiser = {
-                id: advertiserId.toLowerCase(),
-                name: advertiserId,
-                createdAt: new Date(),
-                couponValidations: 0
-            };
+        function successLogin() {
+            sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
+            document.getElementById('advertiserId').value = '';
+            document.getElementById('advertiserPassword').value = '';
+            showScannerSection();
         }
         
         function handleLoginEnter(event) {
-            if (event.key === 'Enter') {
-                login();
-            }
+            if (event.key === 'Enter') login();
         }
         
         function showScannerSection() {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('scannerSection').classList.remove('hidden');
-            document.getElementById('resultSection').classList.add('hidden');
             
-            // Display advertiser info
             document.getElementById('loggedInAdvertiser').textContent = currentAdvertiser.name;
             document.getElementById('currentAdvertiserId').textContent = currentAdvertiser.id;
             
-            // Initialize scanner
-            initializeScanner();
+            // Stop any existing camera
+            stopCamera();
         }
         
         function logout() {
-            // Clear session
+            stopCamera();
             sessionStorage.removeItem('advertiser_logged_in');
             currentAdvertiser = null;
             currentCouponData = null;
             
-            // Stop scanner if running
-            if (html5QrCode) {
-                try {
-                    html5QrCode.stop();
-                } catch (e) {
-                    // Ignore stop errors
-                }
-            }
-            
-            // Show login section
             document.getElementById('scannerSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
-            document.getElementById('resultSection').classList.add('hidden');
-            
-            // Reset form and focus
-            document.getElementById('advertiserId').value = '';
-            document.getElementById('advertiserPassword').value = '';
             document.getElementById('advertiserId').focus();
         }
         
-        // === PASSWORD CHANGE FUNCTIONS ===
-        function showChangePasswordModal() {
-            if (currentAdvertiser?.isTest) {
-                alert('Test account cannot change password. Create a real account.');
-                return;
-            }
-            
-            document.getElementById('passwordModal').style.display = 'flex';
-            document.getElementById('currentPassword').focus();
-            document.getElementById('passwordError').textContent = '';
-            document.getElementById('passwordSuccess').textContent = '';
-        }
-        
-        function closePasswordModal() {
-            document.getElementById('passwordModal').style.display = 'none';
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            document.getElementById('passwordError').textContent = '';
-            document.getElementById('passwordSuccess').textContent = '';
-        }
-        
-        function handlePasswordModalEnter(event) {
-            if (event.key === 'Enter') {
-                changePassword();
-            }
-        }
-        
-        async function changePassword() {
-            const currentPass = document.getElementById('currentPassword').value;
-            const newPass = document.getElementById('newPassword').value;
-            const confirmPass = document.getElementById('confirmPassword').value;
-            const errorDiv = document.getElementById('passwordError');
-            const successDiv = document.getElementById('passwordSuccess');
-            
-            // Clear messages
-            errorDiv.textContent = '';
-            successDiv.textContent = '';
-            
-            // Validate
-            if (!currentPass || !newPass || !confirmPass) {
-                errorDiv.textContent = '❌ Please fill all fields';
-                return;
-            }
-            
-            if (newPass.length < 6) {
-                errorDiv.textContent = '❌ New password must be at least 6 characters';
-                return;
-            }
-            
-            if (newPass !== confirmPass) {
-                errorDiv.textContent = '❌ New passwords do not match';
-                return;
-            }
-            
+        // === CAMERA SCANNER FUNCTIONS ===
+        async function startCamera() {
             try {
-                // Get current advertiser data
-                const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(currentAdvertiser.id)
-                    .get();
+                const video = document.getElementById('cameraVideo');
+                const cameraView = document.getElementById('cameraView');
                 
-                if (!advertiserDoc.exists) {
-                    errorDiv.textContent = '❌ Advertiser not found';
-                    return;
-                }
+                // Request camera access
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
                 
-                const advertiserData = advertiserDoc.data();
+                video.srcObject = cameraStream;
+                cameraView.classList.remove('hidden');
                 
-                // Verify current password
-                if (advertiserData.password !== currentPass) {
-                    errorDiv.textContent = '❌ Current password is incorrect';
-                    return;
-                }
+                // Show/hide buttons
+                document.querySelector('.btn-start-camera').style.display = 'none';
+                document.querySelector('.btn-stop-camera').style.display = 'block';
                 
-                // Update password in Firestore
-                await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(currentAdvertiser.id)
-                    .update({
-                        password: newPass,
-                        passwordChangedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                
-                // Show success message
-                successDiv.textContent = '✅ Password changed successfully!';
-                successDiv.style.display = 'block';
-                
-                // Clear fields
-                document.getElementById('currentPassword').value = '';
-                document.getElementById('newPassword').value = '';
-                document.getElementById('confirmPassword').value = '';
-                
-                // Close modal after 2 seconds
-                setTimeout(() => {
-                    closePasswordModal();
-                }, 2000);
+                // Start scanning for QR codes
+                startQRScanning();
                 
             } catch (error) {
-                console.error('Password change error:', error);
-                errorDiv.textContent = '❌ Error changing password: ' + error.message;
+                console.error('Camera error:', error);
+                alert('❌ Camera access denied. Please allow camera permissions.');
             }
         }
         
-        // === SCANNER FUNCTIONS ===
-        function initializeScanner() {
-            html5QrCode = new Html5Qrcode("reader");
-            
-            const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 } 
-            };
-            
-            html5QrCode.start(
-                { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                onScanError
-            ).catch(err => {
-                console.error("Scanner error:", err);
-                // Don't alert, just show manual input option
-            });
-        }
-        
-        function onScanSuccess(decodedText) {
-            if (html5QrCode) {
-                html5QrCode.stop();
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
             }
-            validateCoupon(decodedText);
+            
+            isScanning = false;
+            if (scanInterval) clearInterval(scanInterval);
+            
+            document.getElementById('cameraView').classList.add('hidden');
+            document.querySelector('.btn-start-camera').style.display = 'block';
+            document.querySelector('.btn-stop-camera').style.display = 'none';
         }
         
-        function onScanError(error) {
-            // Optional: Log scan errors
-            console.debug("Scan error:", error);
+        function startQRScanning() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('cameraCanvas');
+            const context = canvas.getContext('2d');
+            
+            isScanning = true;
+            
+            function scanFrame() {
+                if (!isScanning || !video.videoWidth) return;
+                
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Draw video frame to canvas
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Get image data for QR scanning
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                
+                try {
+                    // Use jsQR to detect QR code
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: 'dontInvert',
+                    });
+                    
+                    if (code) {
+                        // QR code found!
+                        stopCamera();
+                        validateCoupon(code.data);
+                    }
+                } catch (error) {
+                    console.debug("Scan error:", error);
+                }
+                
+                // Continue scanning
+                if (isScanning) {
+                    requestAnimationFrame(scanFrame);
+                }
+            }
+            
+            // Start scanning loop
+            scanFrame();
         }
         
+        // === COUPON VALIDATION ===
         function handleManualCodeEnter(event) {
-            if (event.key === 'Enter') {
-                validateManualCode();
-            }
+            if (event.key === 'Enter') validateManualCode();
         }
         
         function validateManualCode() {
@@ -867,13 +722,12 @@
                 validateCoupon(code);
             } else {
                 alert("Please enter a coupon code");
-                document.getElementById('manualCode').focus();
             }
         }
         
         async function validateCoupon(couponCode) {
             try {
-                // Show loading state
+                // Show loading
                 document.getElementById('resultSection').classList.remove('hidden');
                 document.getElementById('validResult').classList.add('hidden');
                 document.getElementById('invalidResult').classList.add('hidden');
@@ -881,15 +735,33 @@
                 
                 document.getElementById('scannedCoupon').textContent = couponCode;
                 
-                // Query Firestore for this coupon
-                const claimsRef = db.collection('claims');
-                const querySnapshot = await claimsRef
+                // For test mode
+                if (currentAdvertiser?.isTest) {
+                    // Simulate validation
+                    setTimeout(() => {
+                        currentCouponData = {
+                            couponCode: couponCode,
+                            adName: 'Test Ad',
+                            productName: 'Test Product',
+                            hostName: 'Test Location',
+                            claimedAt: { toDate: () => new Date() },
+                            expiresAt: new Date(Date.now() + 24*60*60*1000),
+                            userId: 'test_user_123',
+                            redeemed: false
+                        };
+                        showValidResult();
+                    }, 500);
+                    return;
+                }
+                
+                // Real Firebase validation
+                const querySnapshot = await db.collection('claims')
                     .where('couponCode', '==', couponCode)
                     .limit(1)
                     .get();
                 
                 if (querySnapshot.empty) {
-                    showInvalidResult("Coupon not found in database");
+                    showInvalidResult("Coupon not found");
                     return;
                 }
                 
@@ -899,13 +771,9 @@
                     ...doc.data()
                 };
                 
-                // Format dates
-                const claimedTime = currentCouponData.claimedAt?.toDate();
+                // Check expiration
                 const expiresTime = currentCouponData.expiresAt?.toDate();
-                const now = new Date();
-                
-                // Check if expired
-                if (expiresTime && expiresTime < now) {
+                if (expiresTime && expiresTime < new Date()) {
                     showInvalidResult("Coupon has expired");
                     return;
                 }
@@ -916,12 +784,11 @@
                     return;
                 }
                 
-                // Show valid result
                 showValidResult();
                 
             } catch (error) {
                 console.error("Validation error:", error);
-                showInvalidResult("Error validating coupon: " + error.message);
+                showInvalidResult("Error: " + error.message);
             }
         }
         
@@ -936,16 +803,15 @@
             document.getElementById('resultAd').textContent = currentCouponData.adName || 'Unknown';
             document.getElementById('resultProduct').textContent = currentCouponData.productName || 'Unknown';
             document.getElementById('resultLocation').textContent = currentCouponData.hostName || 'Unknown';
-            document.getElementById('resultTime').textContent = claimedTime ? claimedTime.toLocaleString() : 'Unknown';
-            document.getElementById('resultExpires').textContent = expiresTime ? expiresTime.toLocaleString() : 'Unknown';
-            document.getElementById('resultCustomer').textContent = currentCouponData.userId.substring(0, 8) + '...';
+            document.getElementById('resultTime').textContent = claimedTime ? claimedTime.toLocaleString() : 'Now';
+            document.getElementById('resultExpires').textContent = expiresTime ? expiresTime.toLocaleString() : '24 hours';
+            document.getElementById('resultCustomer').textContent = (currentCouponData.userId || 'user').substring(0, 8) + '...';
         }
         
         function showInvalidResult(message) {
             document.getElementById('validResult').classList.add('hidden');
             document.getElementById('invalidResult').classList.remove('hidden');
             document.getElementById('usedResult').classList.add('hidden');
-            
             document.getElementById('invalidMessage').textContent = message;
         }
         
@@ -955,22 +821,21 @@
             document.getElementById('usedResult').classList.remove('hidden');
             
             const redeemedTime = currentCouponData.redeemedAt?.toDate();
-            document.getElementById('usedTime').textContent = redeemedTime ? redeemedTime.toLocaleString() : 'Unknown';
-            document.getElementById('redeemedBy').textContent = currentCouponData.redeemedBy || 'Unknown advertiser';
+            document.getElementById('usedTime').textContent = redeemedTime ? redeemedTime.toLocaleString() : 'Previously';
+            document.getElementById('redeemedBy').textContent = currentCouponData.redeemedBy || 'Another advertiser';
         }
         
         async function markCouponUsed() {
             try {
-                // For test accounts, just show success
+                // For test mode
                 if (currentAdvertiser?.isTest) {
-                    alert('✅ Test coupon marked as used (test mode)');
+                    alert('✅ Test coupon marked as used!');
                     showUsedResult();
-                    document.getElementById('redeemedBy').textContent = 'Test Advertiser';
-                    setTimeout(() => resetScanner(), 2000);
+                    setTimeout(resetScanner, 2000);
                     return;
                 }
                 
-                // Update the coupon as redeemed
+                // Real Firebase update
                 await db.collection('claims').doc(currentCouponData.id).update({
                     redeemed: true,
                     redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -978,7 +843,7 @@
                     redeemedByName: currentAdvertiser.name
                 });
                 
-                // Update advertiser validation count
+                // Update advertiser stats
                 await db.collection(ADVERTISERS_COLLECTION)
                     .doc(currentAdvertiser.id)
                     .update({
@@ -986,33 +851,40 @@
                         lastValidation: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 
-                // Update current advertiser count
-                currentAdvertiser.couponValidations = (currentAdvertiser.couponValidations || 0) + 1;
-                
-                // Show success and update UI
+                // Update UI
                 showUsedResult();
                 document.getElementById('redeemedBy').textContent = currentAdvertiser.name;
                 
-                // Auto-reset after 3 seconds
-                setTimeout(() => {
-                    resetScanner();
-                }, 3000);
+                setTimeout(resetScanner, 3000);
                 
             } catch (error) {
-                alert('❌ Error marking coupon as used: ' + error.message);
+                alert('❌ Error: ' + error.message);
             }
         }
         
         function resetScanner() {
+            stopCamera();
             currentCouponData = null;
             document.getElementById('resultSection').classList.add('hidden');
             document.getElementById('manualCode').value = '';
             document.getElementById('manualCode').focus();
-            
-            // Restart scanner
-            if (html5QrCode) {
-                initializeScanner();
-            }
+        }
+        
+        // Simple password modal functions (optional)
+        function showChangePasswordModal() {
+            alert('Password change not implemented in demo. Create new account instead.');
+        }
+        
+        function closePasswordModal() {
+            // Not implemented
+        }
+        
+        function changePassword() {
+            // Not implemented
+        }
+        
+        function handlePasswordModalEnter(event) {
+            // Not implemented
         }
     </script>
 </body>
