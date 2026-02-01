@@ -4,11 +4,10 @@
     <title>Claim Your Coupon</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script> 
-    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
-   
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
         
         /* Body with dynamic backgrounds */
         body { 
@@ -34,7 +33,7 @@
         .container { 
             background: white; 
             border-radius: 20px; 
-            padding: 30px; 
+            padding: 40px; 
             max-width: 500px; 
             width: 100%; 
             box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
@@ -44,7 +43,7 @@
         .blocked { color: #C62828; }
         
         .coupon { 
-            font-size: 42px; 
+            font-size: 48px; 
             font-weight: bold; 
             color: #2E7D32; 
             margin: 20px 0; 
@@ -55,7 +54,6 @@
             border: 2px dashed #4CAF50; 
             text-align: center;
             word-break: break-all;
-            font-size: clamp(32px, 6vw, 42px); /* Responsive font */
         }
         
         .coupon-blocked {
@@ -70,7 +68,6 @@
             border: 2px dashed #c62828;
             text-align: center;
             word-break: break-all;
-            font-size: clamp(28px, 5vw, 36px); /* Responsive font */
         }
         
         .info { 
@@ -78,8 +75,7 @@
             padding: 15px; 
             border-radius: 10px; 
             margin: 20px 0; 
-            font-size: 16px; /* Larger font */
-            line-height: 1.6;
+            font-size: 14px; 
         }
         
         .info.blocked-info { 
@@ -93,12 +89,11 @@
         }
         
         .countdown { 
-            font-size: 28px; /* Larger font */
+            font-size: 24px; 
             font-weight: bold; 
             color: #E65100; 
             margin: 20px 0; 
             text-align: center;
-            font-size: clamp(24px, 5vw, 28px); /* Responsive */
         }
         
         .loading { 
@@ -110,8 +105,8 @@
             border: 4px solid #f3f3f3; 
             border-top: 4px solid #667eea; 
             border-radius: 50%; 
-            width: 50px; /* Larger spinner */
-            height: 50px;
+            width: 40px; 
+            height: 40px; 
             animation: spin 1s linear infinite; 
             margin: 0 auto 20px; 
         }
@@ -123,29 +118,10 @@
         
         .hidden { display: none; }
         
-        h1 { 
-            margin-bottom: 15px; 
-            text-align: center; 
-            font-size: clamp(28px, 7vw, 36px); /* Responsive heading */
-        }
-        h2 { 
-            color: #333; 
-            margin: 15px 0; 
-            text-align: center;
-            font-size: clamp(22px, 5vw, 28px);
-        }
-        h3 { 
-            color: #555; 
-            margin: 15px 0; 
-            text-align: center;
-            font-size: clamp(18px, 4vw, 22px);
-        }
-        p { 
-            margin: 12px 0; 
-            color: #555; 
-            font-size: 16px; /* Larger font */
-            line-height: 1.6;
-        }
+        h1 { margin-bottom: 10px; }
+        h2 { color: #333; margin: 10px 0; }
+        h3 { color: #555; margin: 10px 0; }
+        p { margin: 10px 0; color: #555; }
         
         .instruction-box {
             background: #F5F5F5;
@@ -154,13 +130,11 @@
             padding: 15px;
             margin: 20px 0;
             text-align: center;
-            font-size: 16px;
         }
         
         .instruction-box h4 {
             color: #333;
             margin-bottom: 10px;
-            font-size: 18px;
         }
         
         .screenshot-instruction {
@@ -172,7 +146,6 @@
             text-align: center;
             font-weight: bold;
             color: #E65100;
-            font-size: 18px;
         }
         
         .action-buttons {
@@ -182,16 +155,15 @@
         }
         
         button {
-            padding: 14px 24px; /* Larger button */
+            padding: 12px 24px;
             background: #2196F3;
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 18px; /* Larger font */
+            font-size: 16px;
             flex: 1;
-            min-height: 50px;
         }
         
         button:hover {
@@ -213,87 +185,6 @@
             background: #F9F9F9;
             border-radius: 10px;
         }
-        
-        /* QR Code Styles */
-        .qr-container {
-            text-align: center;
-            margin: 25px 0;
-            padding: 15px;
-            background: white;
-            border-radius: 10px;
-            border: 2px solid #E0E0E0;
-        }
-        
-        .qr-title {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 18px;
-        }
-        
-        .qr-subtitle {
-            color: #666;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-        
-        .qr-code-canvas {
-            display: inline-block;
-            padding: 10px;
-            background: white;
-            border-radius: 8px;
-            margin: 10px auto;
-            border: 1px solid #ddd;
-        }
-        
-        .qr-instruction {
-            background: #E8F5E9;
-            border: 1px solid #4CAF50;
-            border-radius: 8px;
-            padding: 10px;
-            margin-top: 15px;
-            font-size: 14px;
-            color: #2E7D32;
-        }
-        
-        /* Mobile optimizations */
-        @media (max-width: 480px) {
-            .container {
-                padding: 20px;
-                margin: 10px;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-            
-            button {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-            
-            .coupon, .coupon-blocked {
-                font-size: 28px;
-                padding: 12px;
-            }
-            
-            h1 {
-                font-size: 28px;
-            }
-            
-            h2 {
-                font-size: 22px;
-            }
-            
-            .info {
-                padding: 12px;
-                font-size: 15px;
-            }
-        }
-        
-        strong {
-            font-size: 16px;
-        }
     </style>
 </head>
 <body>
@@ -301,31 +192,19 @@
         <!-- Loading -->
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p style="font-size: 18px;">Loading your coupon...</p>
+            <p>Loading your coupon...</p>
         </div>
         
         <!-- Success -->
         <div id="success" class="hidden">
             <h1 class="success">✅ Coupon Claimed!</h1>
             <h2 id="adName"></h2>
-            <p style="text-align: center;"><strong>Product:</strong> <span id="productName"></span></p>
-            <p style="text-align: center;"><strong>Location:</strong> <span id="hostName"></span></p>
+            <p><strong>Product:</strong> <span id="productName"></span></p>
+            <p><strong>Location:</strong> <span id="hostName"></span></p>
             
             <div class="coupon-section">
                 <div class="coupon" id="couponCode"></div>
-                <p style="text-align: center; font-weight: bold; margin-top: 10px; font-size: 18px;">Show this code at checkout</p>
-            </div>
-            
-            <!-- QR Code for Success -->
-            <div class="qr-container">
-                <div class="qr-title">📱 Quick Scan QR Code</div>
-                <p style="color: #666; margin-bottom: 15px;">Advertiser can scan this directly:</p>
-                <div id="qrcode" class="qr-code-canvas"></div>
-                <div class="qr-subtitle">Scan with advertiser's validator app</div>
-                <div class="qr-instruction">
-                    ✅ Faster validation<br>
-                    ✅ No manual code entry needed
-                </div>
+                <p style="text-align: center; font-weight: bold; margin-top: 10px;">Show this code at checkout</p>
             </div>
             
             <div class="screenshot-instruction">
@@ -335,7 +214,7 @@
             
             <div class="info">
                 <p><strong>✅ Valid:</strong> 24 hours from now</p>
-                <p><strong>⚠️ Limit:</strong> 1 coupon per ad per day</p>
+                <p><strong>⚠️ Limit:</strong> 1 coupon per ad per day (any location)</p>
                 <p><strong>🕒 Claimed at:</strong> <span id="claimTime"></span></p>
                 <p><strong>📍 Location:</strong> <span id="locationName"></span></p>
             </div>
@@ -347,9 +226,9 @@
             
             <div class="instruction-box">
                 <h4>How to Use:</h4>
-                <p>1. Take screenshot of QR code above</p>
+                <p>1. Take screenshot of coupon code above</p>
                 <p>2. Show screenshot at checkout</p>
-                <p>3. Advertiser scans QR code to validate</p>
+                <p>3. Advertiser will scan to validate</p>
             </div>
         </div>
         
@@ -359,21 +238,9 @@
             <h3 id="blockedAdName"></h3>
             
             <div class="coupon-section">
-                <p style="font-weight: bold; color: #333; margin-bottom: 10px; font-size: 18px;">Your previously claimed coupon:</p>
+                <p style="font-weight: bold; color: #333; margin-bottom: 10px;">Your previously claimed coupon:</p>
                 <div class="coupon-blocked" id="blockedCouponCode"></div>
-                <p style="color: #666; font-size: 16px; margin-top: 5px;">Use this code at checkout</p>
-            </div>
-            
-            <!-- QR Code for Blocked/Already Claimed -->
-            <div class="qr-container">
-                <div class="qr-title">📱 Your Coupon QR Code</div>
-                <p style="color: #666; margin-bottom: 15px;">Advertiser can scan this directly:</p>
-                <div id="blockedQrcode" class="qr-code-canvas"></div>
-                <div class="qr-subtitle">Scan with advertiser's validator app</div>
-                <div class="qr-instruction">
-                    ✅ Present this QR at checkout<br>
-                    ✅ Advertiser scans to validate
-                </div>
+                <p style="color: #666; font-size: 14px; margin-top: 5px;">Use this code at checkout</p>
             </div>
             
             <div class="info blocked-info">
@@ -394,7 +261,7 @@
             <div class="info">
                 <p><strong>Coupon Rules:</strong></p>
                 <p>✅ <strong>This coupon is valid</strong> for 24 hours from claim time</p>
-                <p>✅ Show QR code at checkout to advertiser</p>
+                <p>✅ Show this code at checkout to advertiser</p>
                 <p>❌ <strong>Cannot claim same ad</strong> again until tomorrow</p>
                 <p>✅ You CAN claim <strong>different ads/products</strong></p>
             </div>
@@ -408,7 +275,7 @@
         <!-- Error -->
         <div id="error" class="hidden">
             <h1 style="color: #FF5722;">❌ Error</h1>
-            <p id="errorMessage" style="text-align: center; font-size: 18px;"></p>
+            <p id="errorMessage"></p>
             <button onclick="location.reload()">
                 Try Again
             </button>
@@ -587,123 +454,6 @@
                 showError('Failed to generate coupon: ' + error.message);
             }
         }
-function generateSimpleBarcode(text) {
-    let barcodeHTML = '';
-    
-    // Simple binary pattern based on characters
-    for (let i = 0; i < Math.min(text.length, 12); i++) {
-        const charCode = text.charCodeAt(i);
-        const binary = charCode.toString(2).padStart(8, '0');
-        
-        // Take first 4 bits for pattern
-        const pattern = binary.substring(0, 4);
-        
-        barcodeHTML += '<div style="display: inline-block;">';
-        
-        for (let j = 0; j < 4; j++) {
-            const bit = pattern[j];
-            const isBlack = bit === '1';
-            const height = 50 + (j * 5);
-            
-            barcodeHTML += `
-                <div style="
-                    display: inline-block;
-                    width: 3px;
-                    height: ${height}px;
-                    background: ${isBlack ? '#000' : '#fff'};
-                    margin: 0 1px;
-                    vertical-align: bottom;
-                "></div>
-            `;
-        }
-        
-        barcodeHTML += '</div>';
-    }
-    
-    return barcodeHTML;
-}
-
-function formatUPC(text) {
-    // Format as XXX-XXX-XXX
-    if (text.length <= 6) return text;
-    if (text.length <= 9) return text.replace(/(.{3})(.{3})(.{3})/, '$1 $2 $3');
-    return text.replace(/(.{4})(.{4})(.{4})/, '$1 $2 $3');
-}
-
-// Helper function to generate UPC-like lines
-function generateUPCLines(text) {
-    let linesHTML = '';
-    
-    // Simple algorithm to convert text to barcode pattern
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const charCode = char.charCodeAt(0);
-        
-        // Determine line properties based on character
-        const isNumber = !isNaN(char);
-        const lineHeight = 40 + (charCode % 30); // Height varies
-        const lineWidth = 3 + (charCode % 5); // Width varies
-        const isThick = charCode % 3 === 0; // Some lines are thicker
-        
-        // Color based on position
-        const colorIndex = i % 4;
-        const colors = ['#000000', '#333333', '#555555', '#777777'];
-        
-        linesHTML += `
-            <div style="
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                margin: 0 ${isThick ? '2px' : '1px'};
-            ">
-                <!-- Barcode line -->
-                <div style="
-                    width: ${lineWidth}px;
-                    height: ${lineHeight}px;
-                    background-color: ${colors[colorIndex]};
-                    border-radius: 1px;
-                    margin-bottom: 2px;
-                "></div>
-                
-                <!-- Character below (optional) -->
-                <div style="
-                    font-size: 9px;
-                    color: #999;
-                    margin-top: 3px;
-                    font-family: 'Courier New', monospace;
-                ">${isNumber ? char : ''}</div>
-            </div>
-        `;
-    }
-    
-    return linesHTML;
-}
-
-// Helper function to generate barcode lines
-function generateBarcodeLines(text) {
-    let barcodeHTML = '';
-    const colors = ['#000000', '#333333', '#666666', '#999999', '#CCCCCC'];
-    
-    // Convert text to simple barcode pattern
-    for (let i = 0; i < text.length; i++) {
-        const charCode = text.charCodeAt(i);
-        const height = 30 + (charCode % 50); // Varying heights
-        const width = 6;
-        const colorIndex = charCode % colors.length;
-        
-        barcodeHTML += `
-            <div style="
-                width: ${width}px;
-                height: ${height}px;
-                background-color: ${colors[colorIndex]};
-                margin: 0 1px;
-                border-radius: 1px;
-            "></div>
-        `;
-    }
-    
-    return barcodeHTML;
-}
         
         // === UTILITY FUNCTIONS ===
         async function generateUserFingerprint() {
@@ -764,9 +514,6 @@ function generateBarcodeLines(text) {
             document.getElementById('couponCode').textContent = data.couponCode;
             document.getElementById('claimTime').textContent = new Date().toLocaleString();
             
-            // Generate QR Code for the coupon
-            generateQRCode('qrcode', data.couponCode);
-            
             // Setup refresh protection
             setupRefreshProtection();
         }
@@ -787,8 +534,6 @@ function generateBarcodeLines(text) {
             // Display the existing coupon code
             if (existingCouponCode) {
                 document.getElementById('blockedCouponCode').textContent = existingCouponCode;
-                // Generate QR Code for blocked page
-                generateQRCode('blockedQrcode', existingCouponCode);
             } else {
                 document.getElementById('blockedCouponCode').textContent = 'Not available';
             }
@@ -823,7 +568,7 @@ function generateBarcodeLines(text) {
                 
                 if (diff <= 0) {
                     document.getElementById('countdown').innerHTML = 
-                        '<span style="color: #4CAF50; font-size: 20px;">✅ Ready to claim again!</span>';
+                        '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
                     return;
                 }
                 
@@ -832,12 +577,12 @@ function generateBarcodeLines(text) {
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000);
                 
                 document.getElementById('countdown').innerHTML = 
-                    `<div style="font-size: 32px; font-weight: bold;">
+                    `<div style="font-size: 28px;">
                         ${hours.toString().padStart(2, '0')}:
                         ${minutes.toString().padStart(2, '0')}:
                         ${seconds.toString().padStart(2, '0')}
                     </div>
-                    <p style="font-size: 16px;">Time until you can claim this ad again</p>`;
+                    <p>Time until you can claim this ad again</p>`;
                 
                 // Continue updating every second
                 setTimeout(updateCountdown, 1000);
@@ -863,7 +608,7 @@ function generateBarcodeLines(text) {
         
         function closePage() {
             // Provide options before closing
-            if (confirm('Have you taken a screenshot of your coupon QR code?')) {
+            if (confirm('Have you taken a screenshot of your coupon code?')) {
                 window.close();
             } else {
                 alert('Please take a screenshot before closing this page.');
