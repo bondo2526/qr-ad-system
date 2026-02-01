@@ -606,14 +606,36 @@
             }
         }
         
-        function closePage() {
-            // Provide options before closing
-            if (confirm('Have you taken a screenshot of your coupon code?')) {
-                window.close();
-            } else {
-                alert('Please take a screenshot before closing this page.');
-            }
+       function closePage() {
+    // Show confirmation message
+    const userConfirmed = confirm(
+        '📸 IMPORTANT:\n\n' +
+        'Have you taken a screenshot of your coupon?\n\n' +
+        'Click OK if you have a screenshot.\n' +
+        'Click Cancel to stay on page and take screenshot.'
+    );
+    
+    if (userConfirmed) {
+        // Provide clear instructions since window.close() often doesn't work
+        alert(
+            '✅ Your coupon has been saved!\n\n' +
+            'You can now:\n' +
+            '1. Close this browser tab manually\n' +
+            '2. Or keep it open as reference\n\n' +
+            'Show the screenshot to advertiser at checkout.'
+        );
+        
+        // Try to close (may not work due to browser security)
+        try {
+            window.close();
+        } catch (e) {
+            // Ignore - most browsers block window.close()
         }
+    } else {
+        // Remind user to screenshot
+        alert('⚠️ Please take a screenshot now! Press Volume Down + Power button (Android) or Shift+Cmd+4 (Mac).');
+    }
+}
         
         function setupRefreshProtection() {
             // Replace URL to prevent re-submission
@@ -648,4 +670,5 @@
     </script>
 </body>
 </html>
+
 
