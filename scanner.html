@@ -5,7 +5,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     
@@ -25,7 +24,7 @@
             background: white; 
             border-radius: 20px; 
             padding: 30px; 
-            max-width: 500px; 
+            max-width: 600px; 
             width: 100%; 
             box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
         }
@@ -61,15 +60,6 @@
         .scanner-section {
             margin: 25px 0;
             text-align: center;
-        }
-        
-        #reader {
-            width: 100%;
-            max-width: 300px;
-            margin: 20px auto;
-            border: 3px solid #ddd;
-            border-radius: 10px;
-            overflow: hidden;
         }
         
         .result {
@@ -146,7 +136,6 @@
         .btn-change-password {
             background: #9C27B0;
             color: white;
-            margin-top: 20px;
         }
         
         .btn-change-password:hover {
@@ -156,7 +145,6 @@
         .btn-dashboard {
             background: #FF9800;
             color: white;
-            margin-top: 20px;
         }
         
         .btn-dashboard:hover {
@@ -324,32 +312,6 @@
             color: #333;
         }
         
-        /* New validation message styles */
-        .validation-result {
-            text-align: center;
-            padding: 30px;
-        }
-        
-        .validation-icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-        }
-        
-        .validation-message {
-            font-size: 18px;
-            margin: 20px 0;
-            line-height: 1.5;
-        }
-        
-        .coupon-code-highlight {
-            background: #333;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            margin: 0 5px;
-        }
-        
         /* Dashboard Styles */
         .dashboard-section {
             text-align: center;
@@ -381,18 +343,6 @@
             font-size: 14px;
             color: #666;
             margin-top: 5px;
-        }
-        
-        .date-filter {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-        
-        .date-filter input {
-            flex: 1;
-            min-width: 120px;
         }
         
         .coupons-list {
@@ -455,14 +405,6 @@
                 flex-direction: column;
             }
             
-            #reader {
-                max-width: 250px;
-            }
-            
-            .date-filter {
-                flex-direction: column;
-            }
-            
             .dashboard-stats {
                 flex-direction: column;
             }
@@ -520,7 +462,7 @@
             
             <div class="header-controls">
                 <button class="btn btn-dashboard" onclick="showDashboard()">
-                    📊 Redeemed Coupons
+                    📊 My Redeemed Coupons
                 </button>
                 <button class="btn btn-change-password" onclick="showChangePasswordModal()">
                     🔑 Change Password
@@ -580,28 +522,10 @@
                     </div>
                 </div>
                 
-                <!-- SIMPLIFIED USED COUPON RESULT -->
-                <div id="usedResult" class="validation-result hidden">
-                    <div class="validation-icon">⚠️</div>
-                    <h2 style="color: #FF9800;">COUPON ALREADY REDEEMED</h2>
-                    <p class="validation-message">
-                        This coupon was already redeemed by <strong><span id="redeemedBy"></span></strong>.
-                    </p>
-                    <div class="action-buttons">
-                        <button class="btn btn-reset" onclick="resetScanner()">
-                            🔄 Scan Another Coupon
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- SUCCESS VALIDATION MESSAGE -->
-                <div id="successResult" class="validation-result hidden">
-                    <div class="validation-icon">✅</div>
-                    <h2 style="color: #4CAF50;">VALIDATION COMPLETE!</h2>
-                    <p class="validation-message">
-                        Coupon code <span class="coupon-code-highlight" id="successCouponCode"></span><br>
-                        has been successfully validated and marked as used.
-                    </p>
+                <!-- USED COUPON RESULT -->
+                <div id="usedResult" class="result used hidden">
+                    <h2 style="color: #FF9800;">⚠️ COUPON ALREADY REDEEMED</h2>
+                    <p id="usedMessage" style="text-align: center; font-size: 16px;"></p>
                     <div class="action-buttons">
                         <button class="btn btn-reset" onclick="resetScanner()">
                             🔄 Scan Another Coupon
@@ -613,11 +537,11 @@
         
         <!-- Dashboard Section -->
         <div id="dashboardSection" class="dashboard-section hidden">
-            <h1>📊 Redeemed Coupons Dashboard</h1>
+            <h1>📊 My Redeemed Coupons</h1>
             
             <div class="advertiser-info">
                 <h3>Advertiser: <span id="dashboardAdvertiser"></span></h3>
-                <p>Viewing all coupons you have redeemed</p>
+                <p>Viewing coupons redeemed by you only</p>
             </div>
             
             <div class="dashboard-stats">
@@ -639,24 +563,13 @@
                 </div>
             </div>
             
-            <div class="date-filter">
-                <input type="date" id="startDate" placeholder="Start Date">
-                <input type="date" id="endDate" placeholder="End Date">
-                <button class="btn btn-validate" onclick="filterCoupons()">
-                    🔍 Filter
-                </button>
-                <button class="btn btn-reset" onclick="clearFilter()">
-                    🔄 Clear
-                </button>
-            </div>
-            
             <button class="btn btn-export" onclick="exportToPDF()">
                 📄 Export to PDF
             </button>
             
             <div id="couponsList" class="coupons-list">
                 <div class="no-coupons" id="loadingCoupons">
-                    Loading redeemed coupons...
+                    Loading your redeemed coupons...
                 </div>
             </div>
             
@@ -719,22 +632,21 @@
             measurementId: "G-PR9E37ZYE2"
         };
         
-        // Initialize Firebase with ALL services
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        // === ADVERTISER PASSWORD MANAGEMENT ===
+        // === ADVERTISER MANAGEMENT ===
         const ADVERTISERS_COLLECTION = 'advertisers';
         let currentAdvertiser = null;
-        let html5QrCode = null;
         let currentCouponData = null;
         let redeemedCoupons = [];
         
-        // Initialize on page load WITH AUTH
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                // First, sign in anonymously to Firebase Auth
+                // Sign in anonymously to Firebase Auth
                 await auth.signInAnonymously();
                 console.log("✅ Firebase Auth: Signed in anonymously");
                 
@@ -757,12 +669,6 @@
                 console.error("Auth initialization error:", error);
                 document.getElementById('loginError').textContent = 
                     '❌ Authentication error: ' + error.message;
-                
-                // Try to continue anyway for testing
-                if (error.code === 'auth/operation-not-allowed') {
-                    document.getElementById('loginError').innerHTML += 
-                        '<br><small>⚠️ Anonymous auth disabled. Contact admin to enable it.</small>';
-                }
             }
         });
         
@@ -802,7 +708,6 @@
                 if (!advertiserDoc.exists) {
                     // Create new advertiser
                     await createNewAdvertiser(advertiserId, password);
-                    showSuccessMessage('✅ Account created successfully!');
                 } else {
                     // Verify existing advertiser password
                     const advertiserData = advertiserDoc.data();
@@ -820,8 +725,6 @@
                         createdAt: advertiserData.createdAt,
                         couponValidations: advertiserData.couponValidations || 0
                     };
-                    
-                    showSuccessMessage('✅ Login successful!');
                 }
                 
                 // Save to session
@@ -836,51 +739,8 @@
                 
             } catch (error) {
                 console.error('Login error:', error);
-                
-                if (error.code === 'permission-denied') {
-                    errorDiv.innerHTML = `
-                        ❌ Permission denied<br>
-                        <small style="color: #666;">
-                            Need to update Firebase rules:<br>
-                            1. Go to Firebase Console → Firestore → Rules<br>
-                            2. Allow read/write to 'advertisers' collection<br>
-                            3. Or use test credentials below
-                        </small>
-                        <div style="margin-top: 10px; padding: 10px; background: #FFF3E0; border-radius: 5px;">
-                            <strong>Test Login (works without Firebase):</strong><br>
-                            ID: <code>testshop</code><br>
-                            Password: <code>test123</code>
-                        </div>
-                    `;
-                    
-                    // Allow test login without Firebase
-                    if (advertiserId === 'testshop' && password === 'test123') {
-                        currentAdvertiser = {
-                            id: 'testshop',
-                            name: 'Test Shop',
-                            isTest: true
-                        };
-                        sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
-                        showScannerSection();
-                    }
-                } else {
-                    errorDiv.textContent = '❌ Login error: ' + error.message;
-                }
+                errorDiv.textContent = '❌ Login error: ' + error.message;
             }
-        }
-        
-        function showSuccessMessage(message) {
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message';
-            successDiv.textContent = message;
-            successDiv.id = 'tempSuccess';
-            document.getElementById('loginError').parentNode.insertBefore(successDiv, document.getElementById('loginError'));
-            
-            setTimeout(() => {
-                if (document.getElementById('tempSuccess')) {
-                    document.getElementById('tempSuccess').remove();
-                }
-            }, 3000);
         }
         
         async function createNewAdvertiser(advertiserId, password) {
@@ -921,6 +781,9 @@
             // Display advertiser info
             document.getElementById('loggedInAdvertiser').textContent = currentAdvertiser.name;
             document.getElementById('currentAdvertiserId').textContent = currentAdvertiser.id;
+            
+            // Focus on input field
+            document.getElementById('manualCode').focus();
         }
         
         function logout() {
@@ -955,263 +818,116 @@
         function backToScanner() {
             document.getElementById('dashboardSection').classList.add('hidden');
             document.getElementById('scannerSection').classList.remove('hidden');
+            document.getElementById('manualCode').focus();
         }
         
-    async function loadRedeemedCoupons() {
-    try {
-        document.getElementById('couponsList').innerHTML = 
-            '<div class="no-coupons" id="loadingCoupons">Loading your redeemed coupons...</div>';
-        
-        // Query Firestore for coupons redeemed by THIS advertiser
-        const claimsRef = db.collection('claims');
-        
-        // First, let's check what's actually in the database for debugging
-        console.log("Looking for coupons redeemed by advertiser ID:", currentAdvertiser.id);
-        console.log("Advertiser name:", currentAdvertiser.name);
-        
-        // Try to query by ID first (this should be correct based on markCouponUsed function)
-        let querySnapshot;
-        try {
-            querySnapshot = await claimsRef
-                .where('redeemedBy', '==', currentAdvertiser.id.toLowerCase())
-                .where('redeemed', '==', true)
-                .orderBy('redeemedAt', 'desc')
-                .get();
-            console.log("Found", querySnapshot.size, "coupons redeemed by ID");
-        } catch (error) {
-            console.log("Error querying by ID:", error);
-            querySnapshot = { empty: true, forEach: () => {} };
-        }
-        
-        let redeemedCouponsData = [];
-        let todayCount = 0;
-        let weekCount = 0;
-        let monthCount = 0;
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        
-        if (querySnapshot.empty) {
-            console.log("Trying to find coupons by advertiser name instead...");
+        async function loadRedeemedCoupons() {
             try {
-                const queryByName = await claimsRef
-                    .where('redeemedByName', '==', currentAdvertiser.name)
-                    .where('redeemed', '==', true)
-                    .get();
+                document.getElementById('couponsList').innerHTML = 
+                    '<div class="no-coupons">Loading your redeemed coupons...</div>';
                 
-                console.log("Found", queryByName.size, "coupons redeemed by name");
+                // Query Firestore for coupons redeemed by THIS advertiser
+                const claimsRef = db.collection('claims');
                 
-                queryByName.forEach(doc => {
+                let querySnapshot;
+                try {
+                    // Try to query by advertiser ID
+                    querySnapshot = await claimsRef
+                        .where('redeemedBy', '==', currentAdvertiser.id.toLowerCase())
+                        .where('redeemed', '==', true)
+                        .orderBy('redeemedAt', 'desc')
+                        .limit(100) // Limit to 100 for performance
+                        .get();
+                } catch (error) {
+                    console.log("Error querying by ID:", error);
+                    
+                    // Fallback: Try to query by advertiser name
+                    try {
+                        querySnapshot = await claimsRef
+                            .where('redeemedByName', '==', currentAdvertiser.name)
+                            .where('redeemed', '==', true)
+                            .limit(100)
+                            .get();
+                    } catch (error2) {
+                        console.log("Error querying by name:", error2);
+                        querySnapshot = { empty: true, forEach: () => {} };
+                    }
+                }
+                
+                let redeemedCouponsData = [];
+                let todayCount = 0;
+                let weekCount = 0;
+                let monthCount = 0;
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                
+                // Process the coupons
+                querySnapshot.forEach(doc => {
                     const couponData = {
                         id: doc.id,
                         ...doc.data()
                     };
+                    
                     redeemedCouponsData.push(couponData);
+                    
+                    // Count statistics
+                    const redeemedAt = couponData.redeemedAt?.toDate();
+                    if (redeemedAt) {
+                        if (redeemedAt >= today) todayCount++;
+                        if (redeemedAt >= weekAgo) weekCount++;
+                        if (redeemedAt >= monthAgo) monthCount++;
+                    }
                 });
-            } catch (error) {
-                console.log("Error querying by name:", error);
-            }
-        } else {
-            querySnapshot.forEach(doc => {
-                const couponData = {
-                    id: doc.id,
-                    ...doc.data()
-                };
-                redeemedCouponsData.push(couponData);
-            });
-        }
-        
-        // Process the coupons and count statistics
-        let couponsHTML = '';
-        redeemedCouponsData.forEach(couponData => {
-            const redeemedAt = couponData.redeemedAt?.toDate();
-            
-            // Count statistics
-            if (redeemedAt) {
-                if (redeemedAt >= today) todayCount++;
-                if (redeemedAt >= weekAgo) weekCount++;
-                if (redeemedAt >= monthAgo) monthCount++;
-            }
-            
-            // Format date for display
-            const redeemedDate = redeemedAt ? 
-                redeemedAt.toLocaleDateString() + ' ' + redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
-                'Unknown';
-            
-            const claimedDate = couponData.claimedAt?.toDate();
-            const claimedDateStr = claimedDate ? claimedDate.toLocaleDateString() : 'Unknown';
-            
-            couponsHTML += `
-                <div class="coupon-item">
-                    <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
-                    <div class="coupon-details">
-                        <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
-                        <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
-                        <div><strong>Customer:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
-                        <div><strong>Redeemed:</strong> ${redeemedDate}</div>
-                        <div><strong>Original Claim:</strong> ${claimedDateStr}</div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Update the display
-        if (redeemedCouponsData.length === 0) {
-            document.getElementById('couponsList').innerHTML = 
-                '<div class="no-coupons">No redeemed coupons found yet.</div>';
-        } else {
-            document.getElementById('couponsList').innerHTML = couponsHTML;
-        }
-        
-        // Update statistics
-        document.getElementById('totalRedeemed').textContent = redeemedCouponsData.length;
-        document.getElementById('todayRedeemed').textContent = todayCount;
-        document.getElementById('weekRedeemed').textContent = weekCount;
-        document.getElementById('monthRedeemed').textContent = monthCount;
-        
-        // Store globally for PDF export
-        redeemedCoupons = redeemedCouponsData;
-        
-    } catch (error) {
-        console.error("Error loading redeemed coupons:", error);
-        
-        // Check for index error specifically
-        if (error.code === 'failed-precondition') {
-            document.getElementById('couponsList').innerHTML = 
-                '<div class="no-coupons">Firestore index required. Please contact admin to create a composite index.</div>';
-        } else {
-            document.getElementById('couponsList').innerHTML = 
-                '<div class="no-coupons">Error loading coupons: ' + error.message + '</div>';
-        }
-    }
-}
+                
+                // Generate HTML for coupons list
+                let couponsHTML = '';
+                if (redeemedCouponsData.length === 0) {
+                    couponsHTML = '<div class="no-coupons">No redeemed coupons found yet.</div>';
+                } else {
+                    redeemedCouponsData.forEach(couponData => {
+                        const redeemedAt = couponData.redeemedAt?.toDate();
+                        const redeemedDate = redeemedAt ? 
+                            redeemedAt.toLocaleDateString() + ' ' + 
+                            redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+                            'Unknown';
+                        
+                        const claimedDate = couponData.claimedAt?.toDate();
+                        const claimedDateStr = claimedDate ? claimedDate.toLocaleDateString() : 'Unknown';
+                        
+                        couponsHTML += `
+                            <div class="coupon-item">
+                                <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
+                                <div class="coupon-details">
+                                    <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
+                                    <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
+                                    <div><strong>Customer ID:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
+                                    <div><strong>Redeemed:</strong> ${redeemedDate}</div>
+                                    <div><strong>Original Claim:</strong> ${claimedDateStr}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                // Update the display
+                document.getElementById('couponsList').innerHTML = couponsHTML;
                 
                 // Update statistics
-                document.getElementById('totalRedeemed').textContent = redeemedCoupons.length;
+                document.getElementById('totalRedeemed').textContent = redeemedCouponsData.length;
                 document.getElementById('todayRedeemed').textContent = todayCount;
                 document.getElementById('weekRedeemed').textContent = weekCount;
                 document.getElementById('monthRedeemed').textContent = monthCount;
+                
+                // Store globally for PDF export
+                redeemedCoupons = redeemedCouponsData;
                 
             } catch (error) {
                 console.error("Error loading redeemed coupons:", error);
                 document.getElementById('couponsList').innerHTML = 
                     '<div class="no-coupons">Error loading coupons: ' + error.message + '</div>';
             }
-        }
-        
-async function filterCoupons() {
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    
-    if (!startDate || !endDate) {
-        alert("Please select both start and end dates");
-        return;
-    }
-    
-    try {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // End of day
-        
-        if (start > end) {
-            alert("Start date must be before end date");
-            return;
-        }
-        
-        document.getElementById('couponsList').innerHTML = 
-            '<div class="no-coupons">Filtering your coupons...</div>';
-        
-        const claimsRef = db.collection('claims');
-        
-        let filteredCoupons = [];
-        let filteredHTML = '';
-        
-        // Try to get coupons by ID first
-        try {
-            const querySnapshot = await claimsRef
-                .where('redeemedBy', '==', currentAdvertiser.id.toLowerCase())
-                .where('redeemed', '==', true)
-                .get();
-            
-            querySnapshot.forEach(doc => {
-                const couponData = {
-                    id: doc.id,
-                    ...doc.data()
-                };
-                
-                const redeemedAt = couponData.redeemedAt?.toDate();
-                if (redeemedAt && redeemedAt >= start && redeemedAt <= end) {
-                    filteredCoupons.push(couponData);
-                }
-            });
-        } catch (error) {
-            console.log("Error querying by ID:", error);
-        }
-        
-        // If no results by ID, try by name
-        if (filteredCoupons.length === 0) {
-            try {
-                const queryByName = await claimsRef
-                    .where('redeemedByName', '==', currentAdvertiser.name)
-                    .where('redeemed', '==', true)
-                    .get();
-                
-                queryByName.forEach(doc => {
-                    const couponData = {
-                        id: doc.id,
-                        ...doc.data()
-                    };
-                    
-                    const redeemedAt = couponData.redeemedAt?.toDate();
-                    if (redeemedAt && redeemedAt >= start && redeemedAt <= end) {
-                        filteredCoupons.push(couponData);
-                    }
-                });
-            } catch (error) {
-                console.log("Error querying by name:", error);
-            }
-        }
-        
-        // Generate HTML for filtered coupons
-        filteredCoupons.forEach(couponData => {
-            const redeemedAt = couponData.redeemedAt?.toDate();
-            const redeemedDate = redeemedAt ? 
-                redeemedAt.toLocaleDateString() + ' ' + 
-                redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
-                'Unknown';
-            
-            filteredHTML += `
-                <div class="coupon-item">
-                    <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
-                    <div class="coupon-details">
-                        <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
-                        <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
-                        <div><strong>Customer:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
-                        <div><strong>Redeemed:</strong> ${redeemedDate}</div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        if (filteredCoupons.length === 0) {
-            document.getElementById('couponsList').innerHTML = 
-                '<div class="no-coupons">No redeemed coupons found for this date range.</div>';
-        } else {
-            document.getElementById('couponsList').innerHTML = filteredHTML;
-        }
-        
-    } catch (error) {
-        console.error("Error filtering coupons:", error);
-        document.getElementById('couponsList').innerHTML = 
-            '<div class="no-coupons">Error filtering coupons: ' + error.message + '</div>';
-    }
-}
-        
-        function clearFilter() {
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
-            loadRedeemedCoupons();
         }
         
         function exportToPDF() {
@@ -1225,7 +941,7 @@ async function filterCoupons() {
             
             // Title
             doc.setFontSize(18);
-            doc.text("Redeemed Coupons Report", 105, 15, { align: 'center' });
+            doc.text("My Redeemed Coupons Report", 105, 15, { align: 'center' });
             
             // Advertiser info
             doc.setFontSize(12);
@@ -1260,17 +976,12 @@ async function filterCoupons() {
             });
             
             // Save the PDF
-            const fileName = `Redeemed_Coupons_${currentAdvertiser.id}_${new Date().toISOString().split('T')[0]}.pdf`;
+            const fileName = `My_Redeemed_Coupons_${currentAdvertiser.id}_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(fileName);
         }
         
         // === PASSWORD CHANGE FUNCTIONS ===
         function showChangePasswordModal() {
-            if (currentAdvertiser?.isTest) {
-                alert('Test account cannot change password. Create a real account.');
-                return;
-            }
-            
             document.getElementById('passwordModal').style.display = 'flex';
             document.getElementById('currentPassword').focus();
             document.getElementById('passwordError').textContent = '';
@@ -1348,7 +1059,6 @@ async function filterCoupons() {
                 
                 // Show success message
                 successDiv.textContent = '✅ Password changed successfully!';
-                successDiv.style.display = 'block';
                 
                 // Clear fields
                 document.getElementById('currentPassword').value = '';
@@ -1390,7 +1100,6 @@ async function filterCoupons() {
                 document.getElementById('validResult').classList.add('hidden');
                 document.getElementById('invalidResult').classList.add('hidden');
                 document.getElementById('usedResult').classList.add('hidden');
-                document.getElementById('successResult').classList.add('hidden');
                 
                 document.getElementById('scannedCoupon').textContent = couponCode;
                 
@@ -1425,7 +1134,14 @@ async function filterCoupons() {
                 
                 // Check if already redeemed
                 if (currentCouponData.redeemed) {
-                    showUsedResult();
+                    const redeemedBy = currentCouponData.redeemedBy || 'another advertiser';
+                    const redeemedByName = currentCouponData.redeemedByName || 'another advertiser';
+                    
+                    if (redeemedBy === currentAdvertiser.id || redeemedByName === currentAdvertiser.name) {
+                        showUsedResult(`This coupon was already redeemed by you on ${currentCouponData.redeemedAt?.toDate().toLocaleString()}`);
+                    } else {
+                        showUsedResult(`This coupon was already redeemed by ${redeemedByName}`);
+                    }
                     return;
                 }
                 
@@ -1442,7 +1158,6 @@ async function filterCoupons() {
             document.getElementById('validResult').classList.remove('hidden');
             document.getElementById('invalidResult').classList.add('hidden');
             document.getElementById('usedResult').classList.add('hidden');
-            document.getElementById('successResult').classList.add('hidden');
             
             const claimedTime = currentCouponData.claimedAt?.toDate();
             const expiresTime = currentCouponData.expiresAt?.toDate();
@@ -1459,37 +1174,21 @@ async function filterCoupons() {
             document.getElementById('validResult').classList.add('hidden');
             document.getElementById('invalidResult').classList.remove('hidden');
             document.getElementById('usedResult').classList.add('hidden');
-            document.getElementById('successResult').classList.add('hidden');
             
             document.getElementById('invalidMessage').textContent = message;
         }
         
-        function showUsedResult() {
+        function showUsedResult(message) {
             document.getElementById('validResult').classList.add('hidden');
             document.getElementById('invalidResult').classList.add('hidden');
             document.getElementById('usedResult').classList.remove('hidden');
-            document.getElementById('successResult').classList.add('hidden');
             
-            document.getElementById('redeemedBy').textContent = currentCouponData.redeemedBy || 'another advertiser';
+            document.getElementById('usedMessage').textContent = message;
         }
         
         async function markCouponUsed() {
             try {
                 const couponCode = currentCouponData.couponCode;
-                
-                // For test accounts, just show success
-                if (currentAdvertiser?.isTest) {
-                    // Show success message immediately
-                    document.getElementById('validResult').classList.add('hidden');
-                    document.getElementById('successResult').classList.remove('hidden');
-                    document.getElementById('successCouponCode').textContent = couponCode;
-                    
-                    // Auto-reset after 1 second
-                    setTimeout(() => {
-                        resetScanner();
-                    }, 1000);
-                    return;
-                }
                 
                 // Update the coupon as redeemed
                 await db.collection('claims').doc(currentCouponData.id).update({
@@ -1510,15 +1209,10 @@ async function filterCoupons() {
                 // Update current advertiser count
                 currentAdvertiser.couponValidations = (currentAdvertiser.couponValidations || 0) + 1;
                 
-                // Show success message
-                document.getElementById('validResult').classList.add('hidden');
-                document.getElementById('successResult').classList.remove('hidden');
-                document.getElementById('successCouponCode').textContent = couponCode;
+                alert(`✅ Coupon "${couponCode}" marked as used!`);
                 
-                // Auto-reset after 1 second
-                setTimeout(() => {
-                    resetScanner();
-                }, 1000);
+                // Reset scanner
+                resetScanner();
                 
             } catch (error) {
                 alert('❌ Error marking coupon as used: ' + error.message);
@@ -1534,5 +1228,3 @@ async function filterCoupons() {
     </script>
 </body>
 </html>
-
-
