@@ -284,6 +284,32 @@
             color: #333;
         }
         
+        /* New validation message styles */
+        .validation-result {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .validation-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .validation-message {
+            font-size: 18px;
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+        
+        .coupon-code-highlight {
+            background: #333;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 0 5px;
+        }
+        
         /* Mobile optimizations */
         @media (max-width: 480px) {
             .container {
@@ -365,7 +391,15 @@
                 <button class="btn btn-logout" onclick="logout()">
                     🚪 Logout
                 </button>
-            </div>   
+            </div>
+            
+            <!-- Manual Input Section -->
+            <div class="scanner-section">
+                <p>Scan QR code or enter coupon code manually:</p>
+                <div id="reader"></div>
+                
+                <p style="margin-top: 20px; font-weight: bold; color: #666;">OR</p>
+                
                 <input type="text" 
                        id="manualCode" 
                        placeholder="Enter coupon code here"
@@ -381,7 +415,7 @@
                 </div>
             </div>
             
-            <!-- Result Display -->
+            <!-- Validation Result Section -->
             <div id="resultSection" class="hidden">
                 <div class="coupon-display" id="scannedCoupon"></div>
                 
@@ -414,14 +448,31 @@
                     </div>
                 </div>
                 
-                <div id="usedResult" class="result used hidden">
-                    <h2 style="color: #FF9800;">⚠️ ALREADY USED</h2>
-                    <p style="text-align: center;">This coupon was already redeemed.</p>
-                    <div class="info-item"><strong>Used At:</strong> <span id="usedTime"></span></div>
-                    <div class="info-item"><strong>Redeemed By:</strong> <span id="redeemedBy"></span></div>
+                <!-- SIMPLIFIED USED COUPON RESULT -->
+                <div id="usedResult" class="validation-result hidden">
+                    <div class="validation-icon">⚠️</div>
+                    <h2 style="color: #FF9800;">COUPON ALREADY REDEEMED</h2>
+                    <p class="validation-message">
+                        This coupon was already redeemed by <strong><span id="redeemedBy"></span></strong>.
+                    </p>
                     <div class="action-buttons">
                         <button class="btn btn-reset" onclick="resetScanner()">
-                            🔄 Scan Another
+                            🔄 Scan Another Coupon
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- SUCCESS VALIDATION MESSAGE -->
+                <div id="successResult" class="validation-result hidden">
+                    <div class="validation-icon">✅</div>
+                    <h2 style="color: #4CAF50;">VALIDATION COMPLETE!</h2>
+                    <p class="validation-message">
+                        Coupon code <span class="coupon-code-highlight" id="successCouponCode"></span><br>
+                        has been successfully validated and marked as used.
+                    </p>
+                    <div class="action-buttons">
+                        <button class="btn btn-reset" onclick="resetScanner()">
+                            🔄 Scan Another Coupon
                         </button>
                     </div>
                 </div>
@@ -870,6 +921,7 @@
                 document.getElementById('validResult').classList.add('hidden');
                 document.getElementById('invalidResult').classList.add('hidden');
                 document.getElementById('usedResult').classList.add('hidden');
+                document.getElementById('successResult').classList.add('hidden');
                 
                 document.getElementById('scannedCoupon').textContent = couponCode;
                 
@@ -921,6 +973,7 @@
             document.getElementById('validResult').classList.remove('hidden');
             document.getElementById('invalidResult').classList.add('hidden');
             document.getElementById('usedResult').classList.add('hidden');
+            document.getElementById('successResult').classList.add('hidden');
             
             const claimedTime = currentCouponData.claimedAt?.toDate();
             const expiresTime = currentCouponData.expiresAt?.toDate();
@@ -937,6 +990,7 @@
             document.getElementById('validResult').classList.add('hidden');
             document.getElementById('invalidResult').classList.remove('hidden');
             document.getElementById('usedResult').classList.add('hidden');
+            document.getElementById('successResult').classList.add('hidden');
             
             document.getElementById('invalidMessage').textContent = message;
         }
@@ -945,20 +999,26 @@
             document.getElementById('validResult').classList.add('hidden');
             document.getElementById('invalidResult').classList.add('hidden');
             document.getElementById('usedResult').classList.remove('hidden');
+            document.getElementById('successResult').classList.add('hidden');
             
-            const redeemedTime = currentCouponData.redeemedAt?.toDate();
-            document.getElementById('usedTime').textContent = redeemedTime ? redeemedTime.toLocaleString() : 'Unknown';
-            document.getElementById('redeemedBy').textContent = currentCouponData.redeemedBy || 'Unknown advertiser';
+            document.getElementById('redeemedBy').textContent = currentCouponData.redeemedBy || 'another advertiser';
         }
         
         async function markCouponUsed() {
             try {
+                const couponCode = currentCouponData.couponCode;
+                
                 // For test accounts, just show success
                 if (currentAdvertiser?.isTest) {
-                    alert('✅ Test coupon marked as used (test mode)');
-                    showUsedResult();
-                    document.getElementById('redeemedBy').textContent = 'Test Advertiser';
-                    setTimeout(() => resetScanner(), 2000);
+                    // Show success message immediately
+                    document.getElementById('validResult').classList.add('hidden');
+                    document.getElementById('successResult').classList.remove('hidden');
+                    document.getElementById('successCouponCode').textContent = couponCode;
+                    
+                    // Auto-reset after 3 seconds
+                    setTimeout(() => {
+                        resetScanner();
+                    }, 3000);
                     return;
                 }
                 
@@ -981,9 +1041,10 @@
                 // Update current advertiser count
                 currentAdvertiser.couponValidations = (currentAdvertiser.couponValidations || 0) + 1;
                 
-                // Show success and update UI
-                showUsedResult();
-                document.getElementById('redeemedBy').textContent = currentAdvertiser.name;
+                // Show success message
+                document.getElementById('validResult').classList.add('hidden');
+                document.getElementById('successResult').classList.remove('hidden');
+                document.getElementById('successCouponCode').textContent = couponCode;
                 
                 // Auto-reset after 3 seconds
                 setTimeout(() => {
