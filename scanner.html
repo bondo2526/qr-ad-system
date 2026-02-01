@@ -957,7 +957,7 @@
             document.getElementById('scannerSection').classList.remove('hidden');
         }
         
-        async function loadRedeemedCoupons() {
+    async function loadRedeemedCoupons() {
     try {
         document.getElementById('couponsList').innerHTML = 
             '<div class="no-coupons" id="loadingCoupons">Loading your redeemed coupons...</div>';
@@ -970,141 +970,108 @@
         console.log("Advertiser name:", currentAdvertiser.name);
         
         // Try to query by ID first (this should be correct based on markCouponUsed function)
-        const querySnapshot = await claimsRef
-            .where('redeemedBy', '==', currentAdvertiser.id.toLowerCase())  // Ensure lowercase
-            .where('redeemed', '==', true)
-            .orderBy('redeemedAt', 'desc')
-            .get();
-        
-        console.log("Found", querySnapshot.size, "coupons redeemed by ID");
-        
-        // If no results by ID, try by name (in case data was stored differently)
-        if (querySnapshot.empty) {
-            console.log("Trying to find coupons by advertiser name instead...");
-            const queryByName = await claimsRef
-                .where('redeemedByName', '==', currentAdvertiser.name)
+        let querySnapshot;
+        try {
+            querySnapshot = await claimsRef
+                .where('redeemedBy', '==', currentAdvertiser.id.toLowerCase())
                 .where('redeemed', '==', true)
                 .orderBy('redeemedAt', 'desc')
                 .get();
-            
-            console.log("Found", queryByName.size, "coupons redeemed by name");
-            
-            // Use whichever query returned results
-            redeemedCoupons = [];
-            let todayCount = 0;
-            let weekCount = 0;
-            let monthCount = 0;
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            
-            if (queryByName.empty) {
-                document.getElementById('couponsList').innerHTML = 
-                    '<div class="no-coupons">No redeemed coupons found yet.</div>';
-            } else {
-                let couponsHTML = '';
+            console.log("Found", querySnapshot.size, "coupons redeemed by ID");
+        } catch (error) {
+            console.log("Error querying by ID:", error);
+            querySnapshot = { empty: true, forEach: () => {} };
+        }
+        
+        let redeemedCouponsData = [];
+        let todayCount = 0;
+        let weekCount = 0;
+        let monthCount = 0;
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        if (querySnapshot.empty) {
+            console.log("Trying to find coupons by advertiser name instead...");
+            try {
+                const queryByName = await claimsRef
+                    .where('redeemedByName', '==', currentAdvertiser.name)
+                    .where('redeemed', '==', true)
+                    .get();
+                
+                console.log("Found", queryByName.size, "coupons redeemed by name");
                 
                 queryByName.forEach(doc => {
                     const couponData = {
                         id: doc.id,
                         ...doc.data()
                     };
-                    
-                    const redeemedAt = couponData.redeemedAt?.toDate();
-                    redeemedCoupons.push(couponData);
-                    
-                    // Count statistics
-                    if (redeemedAt) {
-                        if (redeemedAt >= today) todayCount++;
-                        if (redeemedAt >= weekAgo) weekCount++;
-                        if (redeemedAt >= monthAgo) monthCount++;
-                    }
-                    
-                    // Format date for display
-                    const redeemedDate = redeemedAt ? 
-                        redeemedAt.toLocaleDateString() + ' ' + redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
-                        'Unknown';
-                    
-                    couponsHTML += `
-                        <div class="coupon-item">
-                            <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
-                            <div class="coupon-details">
-                                <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
-                                <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
-                                <div><strong>Customer:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
-                                <div><strong>Redeemed:</strong> ${redeemedDate}</div>
-                                <div><strong>Original Claim:</strong> ${couponData.claimedAt?.toDate().toLocaleDateString() || 'Unknown'}</div>
-                            </div>
-                        </div>
-                    `;
+                    redeemedCouponsData.push(couponData);
                 });
-                
-                document.getElementById('couponsList').innerHTML = couponsHTML;
+            } catch (error) {
+                console.log("Error querying by name:", error);
             }
-            
-            // Update statistics
-            document.getElementById('totalRedeemed').textContent = redeemedCoupons.length;
-            document.getElementById('todayRedeemed').textContent = todayCount;
-            document.getElementById('weekRedeemed').textContent = weekCount;
-            document.getElementById('monthRedeemed').textContent = monthCount;
-            
         } else {
-            // Original code for when query by ID works
-            redeemedCoupons = [];
-            let todayCount = 0;
-            let weekCount = 0;
-            let monthCount = 0;
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            
-            let couponsHTML = '';
-            
             querySnapshot.forEach(doc => {
                 const couponData = {
                     id: doc.id,
                     ...doc.data()
                 };
-                
-                const redeemedAt = couponData.redeemedAt?.toDate();
-                redeemedCoupons.push(couponData);
-                
-                // Count statistics
-                if (redeemedAt) {
-                    if (redeemedAt >= today) todayCount++;
-                    if (redeemedAt >= weekAgo) weekCount++;
-                    if (redeemedAt >= monthAgo) monthCount++;
-                }
-                
-                // Format date for display
-                const redeemedDate = redeemedAt ? 
-                    redeemedAt.toLocaleDateString() + ' ' + redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
-                    'Unknown';
-                
-                couponsHTML += `
-                    <div class="coupon-item">
-                        <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
-                        <div class="coupon-details">
-                            <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
-                            <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
-                            <div><strong>Customer:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
-                            <div><strong>Redeemed:</strong> ${redeemedDate}</div>
-                            <div><strong>Original Claim:</strong> ${couponData.claimedAt?.toDate().toLocaleDateString() || 'Unknown'}</div>
-                        </div>
-                    </div>
-                `;
+                redeemedCouponsData.push(couponData);
             });
-            
-            document.getElementById('couponsList').innerHTML = couponsHTML;
-            
-            // Update statistics
-            document.getElementById('totalRedeemed').textContent = redeemedCoupons.length;
-            document.getElementById('todayRedeemed').textContent = todayCount;
-            document.getElementById('weekRedeemed').textContent = weekCount;
-            document.getElementById('monthRedeemed').textContent = monthCount;
         }
+        
+        // Process the coupons and count statistics
+        let couponsHTML = '';
+        redeemedCouponsData.forEach(couponData => {
+            const redeemedAt = couponData.redeemedAt?.toDate();
+            
+            // Count statistics
+            if (redeemedAt) {
+                if (redeemedAt >= today) todayCount++;
+                if (redeemedAt >= weekAgo) weekCount++;
+                if (redeemedAt >= monthAgo) monthCount++;
+            }
+            
+            // Format date for display
+            const redeemedDate = redeemedAt ? 
+                redeemedAt.toLocaleDateString() + ' ' + redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+                'Unknown';
+            
+            const claimedDate = couponData.claimedAt?.toDate();
+            const claimedDateStr = claimedDate ? claimedDate.toLocaleDateString() : 'Unknown';
+            
+            couponsHTML += `
+                <div class="coupon-item">
+                    <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
+                    <div class="coupon-details">
+                        <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
+                        <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
+                        <div><strong>Customer:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
+                        <div><strong>Redeemed:</strong> ${redeemedDate}</div>
+                        <div><strong>Original Claim:</strong> ${claimedDateStr}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Update the display
+        if (redeemedCouponsData.length === 0) {
+            document.getElementById('couponsList').innerHTML = 
+                '<div class="no-coupons">No redeemed coupons found yet.</div>';
+        } else {
+            document.getElementById('couponsList').innerHTML = couponsHTML;
+        }
+        
+        // Update statistics
+        document.getElementById('totalRedeemed').textContent = redeemedCouponsData.length;
+        document.getElementById('todayRedeemed').textContent = todayCount;
+        document.getElementById('weekRedeemed').textContent = weekCount;
+        document.getElementById('monthRedeemed').textContent = monthCount;
+        
+        // Store globally for PDF export
+        redeemedCoupons = redeemedCouponsData;
         
     } catch (error) {
         console.error("Error loading redeemed coupons:", error);
@@ -1112,9 +1079,7 @@
         // Check for index error specifically
         if (error.code === 'failed-precondition') {
             document.getElementById('couponsList').innerHTML = 
-                '<div class="no-coupons">Firestore index required. Please create a composite index for:<br>' +
-                'Collection: claims<br>' +
-                'Fields: redeemedBy (asc), redeemed (asc), redeemedAt (desc)</div>';
+                '<div class="no-coupons">Firestore index required. Please contact admin to create a composite index.</div>';
         } else {
             document.getElementById('couponsList').innerHTML = 
                 '<div class="no-coupons">Error loading coupons: ' + error.message + '</div>';
@@ -1135,7 +1100,7 @@
             }
         }
         
-      async function filterCoupons() {
+async function filterCoupons() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     
@@ -1159,51 +1124,16 @@
         
         const claimsRef = db.collection('claims');
         
-        // Try to get coupons by ID first
-        const querySnapshot = await claimsRef
-            .where('redeemedBy', '==', currentAdvertiser.id.toLowerCase())
-            .where('redeemed', '==', true)
-            .orderBy('redeemedAt', 'desc')
-            .get();
-        
         let filteredCoupons = [];
         let filteredHTML = '';
         
-        // If no results by ID, try by name
-        if (querySnapshot.empty) {
-            const queryByName = await claimsRef
-                .where('redeemedByName', '==', currentAdvertiser.name)
+        // Try to get coupons by ID first
+        try {
+            const querySnapshot = await claimsRef
+                .where('redeemedBy', '==', currentAdvertiser.id.toLowerCase())
                 .where('redeemed', '==', true)
-                .orderBy('redeemedAt', 'desc')
                 .get();
             
-            queryByName.forEach(doc => {
-                const couponData = {
-                    id: doc.id,
-                    ...doc.data()
-                };
-                
-                const redeemedAt = couponData.redeemedAt?.toDate();
-                if (redeemedAt && redeemedAt >= start && redeemedAt <= end) {
-                    filteredCoupons.push(couponData);
-                    
-                    const redeemedDate = redeemedAt.toLocaleDateString() + ' ' + 
-                                        redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    
-                    filteredHTML += `
-                        <div class="coupon-item">
-                            <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
-                            <div class="coupon-details">
-                                <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
-                                <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
-                                <div><strong>Customer:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
-                                <div><strong>Redeemed:</strong> ${redeemedDate}</div>
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-        } else {
             querySnapshot.forEach(doc => {
                 const couponData = {
                     id: doc.id,
@@ -1213,24 +1143,56 @@
                 const redeemedAt = couponData.redeemedAt?.toDate();
                 if (redeemedAt && redeemedAt >= start && redeemedAt <= end) {
                     filteredCoupons.push(couponData);
-                    
-                    const redeemedDate = redeemedAt.toLocaleDateString() + ' ' + 
-                                        redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    
-                    filteredHTML += `
-                        <div class="coupon-item">
-                            <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
-                            <div class="coupon-details">
-                                <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
-                                <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
-                                <div><strong>Customer:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
-                                <div><strong>Redeemed:</strong> ${redeemedDate}</div>
-                            </div>
-                        </div>
-                    `;
                 }
             });
+        } catch (error) {
+            console.log("Error querying by ID:", error);
         }
+        
+        // If no results by ID, try by name
+        if (filteredCoupons.length === 0) {
+            try {
+                const queryByName = await claimsRef
+                    .where('redeemedByName', '==', currentAdvertiser.name)
+                    .where('redeemed', '==', true)
+                    .get();
+                
+                queryByName.forEach(doc => {
+                    const couponData = {
+                        id: doc.id,
+                        ...doc.data()
+                    };
+                    
+                    const redeemedAt = couponData.redeemedAt?.toDate();
+                    if (redeemedAt && redeemedAt >= start && redeemedAt <= end) {
+                        filteredCoupons.push(couponData);
+                    }
+                });
+            } catch (error) {
+                console.log("Error querying by name:", error);
+            }
+        }
+        
+        // Generate HTML for filtered coupons
+        filteredCoupons.forEach(couponData => {
+            const redeemedAt = couponData.redeemedAt?.toDate();
+            const redeemedDate = redeemedAt ? 
+                redeemedAt.toLocaleDateString() + ' ' + 
+                redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+                'Unknown';
+            
+            filteredHTML += `
+                <div class="coupon-item">
+                    <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
+                    <div class="coupon-details">
+                        <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
+                        <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
+                        <div><strong>Customer:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
+                        <div><strong>Redeemed:</strong> ${redeemedDate}</div>
+                    </div>
+                </div>
+            `;
+        });
         
         if (filteredCoupons.length === 0) {
             document.getElementById('couponsList').innerHTML = 
@@ -1572,4 +1534,5 @@
     </script>
 </body>
 </html>
+
 
