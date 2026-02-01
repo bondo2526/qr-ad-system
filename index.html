@@ -153,6 +153,10 @@
             gap: 10px;
             margin-top: 20px;
         }
+        .action-buttons:has(button:only-child) button {
+    width: 100%;
+    flex: none;
+}
         
         button {
             padding: 12px 24px;
@@ -196,7 +200,7 @@
         </div>
         
         <!-- Success -->
-      <div id="success" class="hidden">
+        <div id="success" class="hidden">
             <h1 class="success">✅ Coupon Claimed!</h1>
             <h2 align="center" id="adName"></h2>
             <p align="center"><strong>Product:</strong> <span id="productName"></span></p>
@@ -267,7 +271,6 @@
             </div>
             
             <div class="action-buttons">
-                <button onclick="closePage()">Close Page</button>
                 <button class="secondary" onclick="copyCouponCode()">Copy Code</button>
             </div>
         </div>
@@ -605,38 +608,6 @@
                 alert('No coupon code available to copy.');
             }
         }
-        
-       function closePage() {
-    // Show confirmation message
-    const userConfirmed = confirm(
-        '📸 IMPORTANT:\n\n' +
-        'Have you taken a screenshot of your coupon?\n\n' +
-        'Click OK if you have a screenshot.\n' +
-        'Click Cancel to stay on page and take screenshot.'
-    );
-    
-    if (userConfirmed) {
-        // Provide clear instructions since window.close() often doesn't work
-        alert(
-            '✅ Your coupon has been saved!\n\n' +
-            'You can now:\n' +
-            '1. Close this browser tab manually\n' +
-            '2. Or keep it open as reference\n\n' +
-            'Show the screenshot to advertiser at checkout.'
-        );
-        
-        // Try to close (may not work due to browser security)
-        try {
-            window.close();
-        } catch (e) {
-            // Ignore - most browsers block window.close()
-        }
-    } else {
-        // Remind user to screenshot
-        alert('⚠️ Please take a screenshot now! Press Volume Down + Power button (Android) or Shift+Cmd+4 (Mac).');
-    }
-}
-        
         function setupRefreshProtection() {
             // Replace URL to prevent re-submission
             const newUrl = window.location.origin + window.location.pathname + 
@@ -670,5 +641,3 @@
     </script>
 </body>
 </html>
-
-
