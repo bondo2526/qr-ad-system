@@ -394,9 +394,6 @@
             </div>
             
             <!-- Manual Input Section -->
-            <div class="scanner-section">
-                <p>Scan QR code or enter coupon code manually:</p>
-                <div id="reader"></div>
                 
                 <p style="margin-top: 20px; font-weight: bold; color: #666;">OR</p>
                 
@@ -1049,7 +1046,7 @@
                 // Auto-reset after 3 seconds
                 setTimeout(() => {
                     resetScanner();
-                }, 1000);
+                }, 3000);
                 
             } catch (error) {
                 alert('❌ Error marking coupon as used: ' + error.message);
@@ -1070,4 +1067,5 @@
     </script>
 </body>
 </html>
+
 
