@@ -1186,38 +1186,190 @@
             document.getElementById('usedMessage').textContent = message;
         }
         
-        async function markCouponUsed() {
-            try {
-                const couponCode = currentCouponData.couponCode;
+      // === FIX IN markCouponUsed() FUNCTION ===
+async function markCouponUsed() {
+    try {
+        const couponCode = currentCouponData.couponCode;
+        
+        // Update the coupon as redeemed - MAKE SURE TO STORE BOTH ID AND NAME
+        await db.collection('claims').doc(currentCouponData.id).update({
+            redeemed: true,
+            redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            redeemedBy: currentAdvertiser.id,  // Store ID
+            redeemedByName: currentAdvertiser.name,  // Store name for display
+            // Add advertiser-specific field for easier querying
+            advertiserId: currentAdvertiser.id
+        });
+        
+        // Update advertiser validation count
+        await db.collection(ADVERTISERS_COLLECTION)
+            .doc(currentAdvertiser.id)
+            .update({
+                couponValidations: firebase.firestore.FieldValue.increment(1),
+                lastValidation: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        
+        // Update current advertiser count
+        currentAdvertiser.couponValidations = (currentAdvertiser.couponValidations || 0) + 1;
+        
+        alert(`✅ Coupon "${couponCode}" marked as used!`);
+        
+        // Reset scanner
+        resetScanner();
+        
+    } catch (error) {
+        alert('❌ Error marking coupon as used: ' + error.message);
+    }
+}
+
+// === FIX IN loadRedeemedCoupons() FUNCTION ===
+async function loadRedeemedCoupons() {
+    try {
+        document.getElementById('couponsList').innerHTML = 
+            '<div class="no-coupons">Loading your redeemed coupons...</div>';
+        
+        // Query Firestore for coupons redeemed by THIS advertiser ONLY
+        const claimsRef = db.collection('claims');
+        
+        // IMPORTANT: Query using the advertiserId field that we set in markCouponUsed()
+        const querySnapshot = await claimsRef
+            .where('advertiserId', '==', currentAdvertiser.id)
+            .where('redeemed', '==', true)
+            .orderBy('redeemedAt', 'desc')
+            .limit(100)
+            .get();
+        
+        // If no results with advertiserId, try the old fields for backward compatibility
+        if (querySnapshot.empty) {
+            console.log("No coupons found with advertiserId field, trying old fields...");
+            
+            // Try query by redeemedBy (ID)
+            const queryByID = await claimsRef
+                .where('redeemedBy', '==', currentAdvertiser.id)
+                .where('redeemed', '==', true)
+                .limit(100)
+                .get();
+            
+            if (!queryByID.empty) {
+                console.log("Found coupons by ID");
+                querySnapshot = queryByID;
+            } else {
+                // Try query by redeemedByName
+                const queryByName = await claimsRef
+                    .where('redeemedByName', '==', currentAdvertiser.name)
+                    .where('redeemed', '==', true)
+                    .limit(100)
+                    .get();
                 
-                // Update the coupon as redeemed
-                await db.collection('claims').doc(currentCouponData.id).update({
-                    redeemed: true,
-                    redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    redeemedBy: currentAdvertiser.id,
-                    redeemedByName: currentAdvertiser.name
-                });
-                
-                // Update advertiser validation count
-                await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(currentAdvertiser.id)
-                    .update({
-                        couponValidations: firebase.firestore.FieldValue.increment(1),
-                        lastValidation: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                
-                // Update current advertiser count
-                currentAdvertiser.couponValidations = (currentAdvertiser.couponValidations || 0) + 1;
-                
-                alert(`✅ Coupon "${couponCode}" marked as used!`);
-                
-                // Reset scanner
-                resetScanner();
-                
-            } catch (error) {
-                alert('❌ Error marking coupon as used: ' + error.message);
+                if (!queryByName.empty) {
+                    console.log("Found coupons by name");
+                    querySnapshot = queryByName;
+                }
             }
         }
+        
+        let redeemedCouponsData = [];
+        let todayCount = 0;
+        let weekCount = 0;
+        let monthCount = 0;
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        // Process the coupons
+        querySnapshot.forEach(doc => {
+            const couponData = {
+                id: doc.id,
+                ...doc.data()
+            };
+            
+            // IMPORTANT: Verify this coupon actually belongs to this advertiser
+            // Check all possible fields that could indicate ownership
+            const belongsToCurrentAdvertiser = 
+                couponData.advertiserId === currentAdvertiser.id ||
+                couponData.redeemedBy === currentAdvertiser.id ||
+                couponData.redeemedByName === currentAdvertiser.name;
+            
+            if (belongsToCurrentAdvertiser) {
+                redeemedCouponsData.push(couponData);
+                
+                // Count statistics
+                const redeemedAt = couponData.redeemedAt?.toDate();
+                if (redeemedAt) {
+                    if (redeemedAt >= today) todayCount++;
+                    if (redeemedAt >= weekAgo) weekCount++;
+                    if (redeemedAt >= monthAgo) monthCount++;
+                }
+            }
+        });
+        
+        // Generate HTML for coupons list
+        let couponsHTML = '';
+        if (redeemedCouponsData.length === 0) {
+            couponsHTML = '<div class="no-coupons">No redeemed coupons found yet.</div>';
+        } else {
+            redeemedCouponsData.forEach(couponData => {
+                const redeemedAt = couponData.redeemedAt?.toDate();
+                const redeemedDate = redeemedAt ? 
+                    redeemedAt.toLocaleDateString() + ' ' + 
+                    redeemedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+                    'Unknown';
+                
+                const claimedDate = couponData.claimedAt?.toDate();
+                const claimedDateStr = claimedDate ? claimedDate.toLocaleDateString() : 'Unknown';
+                
+                couponsHTML += `
+                    <div class="coupon-item">
+                        <div class="coupon-code">${couponData.couponCode || 'N/A'}</div>
+                        <div class="coupon-details">
+                            <div><strong>Ad Campaign:</strong> ${couponData.adName || 'Unknown'}</div>
+                            <div><strong>Product:</strong> ${couponData.productName || 'Unknown'}</div>
+                            <div><strong>Customer ID:</strong> ${couponData.userId?.substring(0, 8) || 'Unknown'}...</div>
+                            <div><strong>Redeemed:</strong> ${redeemedDate}</div>
+                            <div><strong>Original Claim:</strong> ${claimedDateStr}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        // Update the display
+        document.getElementById('couponsList').innerHTML = couponsHTML;
+        
+        // Update statistics
+        document.getElementById('totalRedeemed').textContent = redeemedCouponsData.length;
+        document.getElementById('todayRedeemed').textContent = todayCount;
+        document.getElementById('weekRedeemed').textContent = weekCount;
+        document.getElementById('monthRedeemed').textContent = monthCount;
+        
+        // Store globally for PDF export
+        redeemedCoupons = redeemedCouponsData;
+        
+    } catch (error) {
+        console.error("Error loading redeemed coupons:", error);
+        document.getElementById('couponsList').innerHTML = 
+            '<div class="no-coupons">Error loading coupons: ' + error.message + '</div>';
+    }
+}
+
+// === FIX IN validateCoupon() FUNCTION ===
+// In the showUsedResult() call, make sure we show who redeemed it
+if (currentCouponData.redeemed) {
+    const redeemedBy = currentCouponData.redeemedBy || 'another advertiser';
+    const redeemedByName = currentCouponData.redeemedByName || 'another advertiser';
+    const advertiserId = currentCouponData.advertiserId || 'unknown';
+    
+    // Check if it was redeemed by this advertiser
+    if (redeemedBy === currentAdvertiser.id || 
+        redeemedByName === currentAdvertiser.name ||
+        advertiserId === currentAdvertiser.id) {
+        showUsedResult(`This coupon was already redeemed by you on ${currentCouponData.redeemedAt?.toDate().toLocaleString()}`);
+    } else {
+        showUsedResult(`This coupon was already redeemed by ${redeemedByName}`);
+    }
+    return;
+}
         
         function resetScanner() {
             currentCouponData = null;
@@ -1228,3 +1380,4 @@
     </script>
 </body>
 </html>
+
