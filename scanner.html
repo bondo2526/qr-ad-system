@@ -369,7 +369,7 @@
             <div class="advertiser-info">
                 <h3>📱 How to Use:</h3>
                 <p>1. Login with your advertiser credentials</p>
-                <p>2. Scan customer's QR code or enter coupon manually</p>
+                <p>2. Enter customer's coupon code manually</p>
                 <p>3. Validate and mark coupons as used</p>
                 <p>4. Track all validations in your dashboard</p>
             </div>
@@ -394,9 +394,6 @@
             </div>
             
             <!-- Manual Input Section -->
-                
-                <p style="margin-top: 20px; font-weight: bold; color: #666;">OR</p>
-                
                 <input type="text" 
                        id="manualCode" 
                        placeholder="Enter coupon code here"
@@ -1015,7 +1012,7 @@
                     // Auto-reset after 3 seconds
                     setTimeout(() => {
                         resetScanner();
-                    }, 3000);
+                    }, 2000);
                     return;
                 }
                 
@@ -1067,5 +1064,6 @@
     </script>
 </body>
 </html>
+
 
 
