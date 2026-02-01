@@ -5,49 +5,288 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     
     <style>
-        /* ... (keep all existing styles) ... */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
         
-        /* Add troubleshooting styles */
-        .debug-info {
-            background: #FFF3E0;
-            border: 2px solid #FF9800;
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 30px; 
+            max-width: 900px; 
+            width: 100%; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+        }
+        
+        h1 { 
+            color: #333; 
+            margin-bottom: 10px; 
+            text-align: center;
+            font-size: 28px;
+        }
+        
+        h2 {
+            color: #333;
+            margin: 15px 0;
+            font-size: 22px;
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* Login Section */
+        .login-section {
+            text-align: center;
+        }
+        
+        .advertiser-info {
+            background: #E8F5E9;
+            border: 2px solid #4CAF50;
             border-radius: 10px;
             padding: 15px;
-            margin: 15px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
+            margin: 20px 0;
+            text-align: center;
         }
         
-        .debug-info h4 {
-            color: #E65100;
-            margin-bottom: 10px;
+        /* Dashboard Section */
+        .dashboard-section {
+            text-align: center;
         }
         
-        .debug-toggle {
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-export {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background: #45a049;
+        }
+        
+        .btn-back {
             background: #757575;
             color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-left: 10px;
         }
         
-        .debug-toggle:hover {
+        .btn-back:hover {
             background: #616161;
         }
         
-        .data-row {
+        .btn-logout {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-logout:hover {
+            background: #d32f2f;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border-left: 5px solid #4CAF50;
+        }
+        
+        .stat-card.orange { border-left-color: #FF9800; }
+        .stat-card.blue { border-left-color: #2196F3; }
+        .stat-card.purple { border-left-color: #9C27B0; }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
             margin: 5px 0;
-            padding: 3px;
-            border-bottom: 1px solid #FFE0B2;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .filter-select, input[type="text"] {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        
+        .coupons-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .coupons-table th {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        
+        .coupons-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .coupons-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .coupon-code-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .status-redeemed {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        /* Login form */
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        input[type="text"], 
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .error-message {
+            color: #f44336;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+            min-height: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                max-width: 100%;
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+            
+            .filter-select, input[type="text"] {
+                width: 100%;
+            }
+            
+            .coupons-table {
+                display: block;
+                overflow-x: auto;
+            }
         }
     </style>
 </head>
@@ -55,13 +294,13 @@
     <div class="container">
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner</h1>
-            <p>Login with your advertiser credentials</p>
+            <h1>🔐 Advertiser Dashboard Login</h1>
+            <p>Enter your advertiser credentials</p>
             
-            <div class="advertiser-id-section">
+            <div class="input-group">
                 <input type="text" 
                        id="advertiserId" 
-                       placeholder="Your Advertiser ID (e.g., pharmacy1)"
+                       placeholder="Your Advertiser ID"
                        autocomplete="off">
                 
                 <input type="password" 
@@ -71,68 +310,17 @@
                 
                 <div class="error-message" id="loginError"></div>
                 
-                <button class="btn btn-login" onclick="login()">
-                    🔓 Login to Scanner
+                <button class="btn btn-export" onclick="login()" style="width: 100%; padding: 12px;">
+                    🔓 Login to Dashboard
                 </button>
-            </div>
-            
-            <div class="scanner-instruction">
-                <p><strong>First time?</strong></p>
-                <p>Use any advertiser ID and password (min 6 chars).</p>
-                <p>Account will be created automatically.</p>
             </div>
             
             <div class="advertiser-info">
-                <h3>📱 How to Use:</h3>
-                <p>1. Login with your advertiser credentials</p>
-                <p>2. Enter customer's coupon code manually</p>
-                <p>3. Validate and mark coupons as used</p>
-                <p>4. Track all validations in your dashboard</p>
-            </div>
-        </div>
-        
-        <!-- Scanner Section -->
-        <div id="scannerSection" class="hidden">
-            <h1>📱 Coupon Validator</h1>
-            
-            <div class="advertiser-info">
-                <h3>Logged in as: <span id="loggedInAdvertiser"></span></h3>
-                <p>Advertiser ID: <strong><span id="currentAdvertiserId"></span></strong></p>
-                <p>Coupons Redeemed: <strong><span id="currentAdvertiserCount"></span></strong></p>
-            </div>
-            
-            <div class="header-controls">
-                <button class="btn btn-change-password" onclick="showChangePasswordModal()">
-                    🔑 Change Password
-                </button>
-                <button class="btn btn-dashboard" onclick="showDashboard()">
-                    📊 Redeemed Coupons
-                </button>
-                <button class="btn btn-logout" onclick="logout()">
-                    🚪 Logout
-                </button>
-            </div>
-            
-            <!-- Manual Input Section -->
-            <div class="input-group">
-                <input type="text" 
-                       id="manualCode" 
-                       placeholder="Enter coupon code here"
-                       onkeypress="handleManualCodeEnter(event)">
-                
-                <div class="action-buttons">
-                    <button class="btn btn-validate" onclick="validateManualCode()">
-                        ✅ Validate Code
-                    </button>
-                    <button class="btn btn-reset" onclick="resetScanner()">
-                        🔄 Reset Scanner
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Validation Result Section -->
-            <div id="resultSection" class="hidden">
-                <!-- ... (keep existing result section) ... -->
+                <h3>📊 Dashboard Features:</h3>
+                <p>• View only YOUR redeemed coupons</p>
+                <p>• Filter by date and search</p>
+                <p>• Export to PDF report</p>
+                <p>• Track redemption statistics</p>
             </div>
         </div>
         
@@ -140,29 +328,20 @@
         <div id="dashboardSection" class="dashboard-section hidden">
             <div class="dashboard-header">
                 <h1 style="margin: 0; text-align: left;">📊 Redeemed Coupons Dashboard</h1>
-                <div>
-                    <span class="debug-toggle" onclick="toggleDebugInfo()">🛠 Debug</span>
+                <div style="display: flex; gap: 10px;">
                     <button class="btn btn-export" onclick="exportToPDF()">
                         📄 Export to PDF
                     </button>
-                    <button class="btn btn-back" onclick="backToScanner()">
-                        ← Back to Scanner
+                    <button class="btn btn-back" onclick="logout()">
+                        🚪 Logout
                     </button>
                 </div>
             </div>
             
             <div class="advertiser-info">
-                <h3>Advertiser: <span id="dashboardAdvertiserName"></span></h3>
-                <p>ID: <strong><span id="dashboardAdvertiserId"></span></strong> | 
+                <h3 style="margin: 0;">Advertiser: <span id="dashboardAdvertiserName"></span></h3>
+                <p style="margin: 5px 0;">ID: <strong><span id="dashboardAdvertiserId"></span></strong> | 
                    Total Redeemed: <strong><span id="dashboardTotalCount"></span></strong></p>
-            </div>
-            
-            <!-- Debug Information -->
-            <div id="debugInfo" class="debug-info hidden">
-                <h4>Debug Information <span class="debug-toggle" onclick="toggleDebugInfo()">Hide</span></h4>
-                <div id="debugContent">
-                    <p>Loading debug data...</p>
-                </div>
             </div>
             
             <div class="stats-container">
@@ -171,12 +350,12 @@
                     <div class="stat-number" id="statTotal">0</div>
                 </div>
                 <div class="stat-card orange">
-                    <div class="stat-label">Last 7 Days</div>
-                    <div class="stat-number" id="statLast7Days">0</div>
+                    <div class="stat-label">Today</div>
+                    <div class="stat-number" id="statToday">0</div>
                 </div>
                 <div class="stat-card blue">
-                    <div class="stat-label">Last 30 Days</div>
-                    <div class="stat-number" id="statLast30Days">0</div>
+                    <div class="stat-label">This Week</div>
+                    <div class="stat-number" id="statThisWeek">0</div>
                 </div>
                 <div class="stat-card purple">
                     <div class="stat-label">This Month</div>
@@ -184,44 +363,36 @@
                 </div>
             </div>
             
-            <div class="dashboard-controls">
-                <div class="filters">
-                    <select id="timeFilter" class="filter-select" onchange="loadDashboardData()">
-                        <option value="all">All Time</option>
-                        <option value="today">Today</option>
-                        <option value="week">Last 7 Days</option>
-                        <option value="month">Last 30 Days</option>
-                        <option value="year">This Year</option>
-                    </select>
-                    
-                    <select id="sortFilter" class="filter-select" onchange="loadDashboardData()">
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="code">Coupon Code</option>
-                    </select>
-                    
-                    <input type="text" 
-                           id="searchFilter" 
-                           class="filter-select" 
-                           placeholder="Search coupon codes..."
-                           onkeyup="loadDashboardData()"
-                           style="min-width: 200px;">
-                </div>
+            <div class="filters">
+                <select id="timeFilter" class="filter-select" onchange="loadDashboardData()">
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="year">This Year</option>
+                </select>
                 
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-export" style="padding: 8px 15px; font-size: 12px;" onclick="refreshDashboard()">
-                        🔄 Refresh
-                    </button>
-                    <button class="btn btn-export" style="padding: 8px 15px; font-size: 12px; background: #9C27B0;" onclick="testQuery()">
-                        🧪 Test Query
-                    </button>
-                </div>
+                <select id="sortFilter" class="filter-select" onchange="loadDashboardData()">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                </select>
+                
+                <input type="text" 
+                       id="searchFilter" 
+                       class="filter-select" 
+                       placeholder="Search coupon codes..."
+                       onkeyup="loadDashboardData()"
+                       style="flex-grow: 1;">
+                
+                <button class="btn btn-export" onclick="loadDashboardData()" style="padding: 10px 20px;">
+                    🔄 Refresh
+                </button>
             </div>
             
             <div id="dashboardContent">
                 <div class="loading" id="dashboardLoading">
                     <div class="loading-spinner"></div>
-                    <p>Loading redeemed coupons...</p>
+                    <p>Loading your redeemed coupons...</p>
                 </div>
                 
                 <div id="dashboardTable" class="hidden">
@@ -231,7 +402,6 @@
                                 <th>Coupon Code</th>
                                 <th>Product</th>
                                 <th>Campaign</th>
-                                <th>Customer</th>
                                 <th>Claimed At</th>
                                 <th>Redeemed At</th>
                                 <th>Status</th>
@@ -244,26 +414,24 @@
                 </div>
                 
                 <div id="noDataMessage" class="no-data hidden">
-                    <p>📭 No redeemed coupons found for the selected filters.</p>
+                    <p>📭 No redeemed coupons found.</p>
                     <p>Start by validating and marking coupons as used in the scanner.</p>
-                    <p style="font-size: 14px; color: #999; margin-top: 10px;">
-                        <strong>Note:</strong> Only shows coupons you have marked as "used".
-                    </p>
                 </div>
             </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-back" onclick="checkDatabaseStructure()">
+                    🔍 Check Database
+                </button>
+            </div>
         </div>
-    </div>
-    
-    <!-- Change Password Modal -->
-    <div class="modal-overlay" id="passwordModal">
-        <!-- ... (keep existing modal) ... -->
     </div>
 
     <script>
         // === FIREBASE CONFIG ===
         const firebaseConfig = {
             apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
-            authDomain: "ad-coupon-system.firebasestorage.app",
+            authDomain: "ad-coupon-system.firebaseapp.com",
             projectId: "ad-coupon-system",
             storageBucket: "ad-coupon-system.firebasestorage.app",
             messagingSenderId: "1030272051491",
@@ -271,134 +439,212 @@
             measurementId: "G-PR9E37ZYE2"
         };
         
-        // Initialize Firebase with ALL services
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        // === ADVERTISER PASSWORD MANAGEMENT ===
-        const ADVERTISERS_COLLECTION = 'advertisers';
         let currentAdvertiser = null;
-        let html5QrCode = null;
-        let currentCouponData = null;
         
-        // === DASHBOARD FUNCTIONS (IMPROVED) ===
-        async function showDashboard() {
-            document.getElementById('scannerSection').classList.add('hidden');
-            document.getElementById('dashboardSection').classList.remove('hidden');
-            
-            // Display advertiser info in dashboard
-            document.getElementById('dashboardAdvertiserName').textContent = currentAdvertiser.name;
-            document.getElementById('dashboardAdvertiserId').textContent = currentAdvertiser.id;
-            
-            // Load dashboard data
-            loadDashboardData();
-        }
-        
-        function backToScanner() {
-            document.getElementById('dashboardSection').classList.add('hidden');
-            document.getElementById('scannerSection').classList.remove('hidden');
-            resetScanner();
-        }
-        
-        function toggleDebugInfo() {
-            const debugEl = document.getElementById('debugInfo');
-            debugEl.classList.toggle('hidden');
-        }
-        
-        async function testQuery() {
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async function() {
             try {
-                const debugEl = document.getElementById('debugContent');
-                debugEl.innerHTML = '<p>Running test query...</p>';
+                await auth.signInAnonymously();
+                console.log("✅ Firebase connected");
                 
-                // Test 1: Check current advertiser
-                debugEl.innerHTML += `<div class="data-row">Current Advertiser ID: <strong>${currentAdvertiser.id}</strong></div>`;
-                
-                // Test 2: Query for redeemed coupons
-                const querySnapshot = await db.collection('claims')
-                    .where('redeemed', '==', true)
-                    .limit(10)
-                    .get();
-                
-                debugEl.innerHTML += `<div class="data-row">Total redeemed coupons in DB: <strong>${querySnapshot.size}</strong></div>`;
-                
-                // Test 3: Query for advertiser's coupons
-                const advertiserQuery = await db.collection('claims')
-                    .where('redeemedBy', '==', currentAdvertiser.id)
-                    .limit(10)
-                    .get();
-                
-                debugEl.innerHTML += `<div class="data-row">Coupons redeemed by ${currentAdvertiser.id}: <strong>${advertiserQuery.size}</strong></div>`;
-                
-                // Show sample data
-                if (advertiserQuery.size > 0) {
-                    debugEl.innerHTML += '<div class="data-row"><strong>Sample Data:</strong></div>';
-                    advertiserQuery.forEach(doc => {
-                        const data = doc.data();
-                        debugEl.innerHTML += `
-                            <div class="data-row">
-                                Code: ${data.couponCode || 'N/A'} | 
-                                Redeemed By: ${data.redeemedBy || 'N/A'} | 
-                                Date: ${data.redeemedAt?.toDate?.().toLocaleString() || 'N/A'}
-                            </div>
-                        `;
-                    });
-                } else {
-                    debugEl.innerHTML += '<div class="data-row" style="color: #f44336;">No coupons found with redeemedBy = ' + currentAdvertiser.id + '</div>';
-                    
-                    // Show what's actually in the database
-                    debugEl.innerHTML += '<div class="data-row"><strong>All redeemed coupons (first 5):</strong></div>';
-                    let count = 0;
-                    querySnapshot.forEach(doc => {
-                        if (count < 5) {
-                            const data = doc.data();
-                            debugEl.innerHTML += `
-                                <div class="data-row">
-                                    Code: ${data.couponCode || 'N/A'} | 
-                                    Redeemed By: <strong>${data.redeemedBy || 'NOT SET'}</strong> | 
-                                    Redeemed: ${data.redeemed || false}
-                                </div>
-                            `;
-                            count++;
-                        }
-                    });
+                // Check if already logged in
+                const savedAdvertiser = localStorage.getItem('advertiser_dashboard_logged_in');
+                if (savedAdvertiser) {
+                    try {
+                        currentAdvertiser = JSON.parse(savedAdvertiser);
+                        showDashboardSection();
+                        loadDashboardData();
+                    } catch (e) {
+                        localStorage.removeItem('advertiser_dashboard_logged_in');
+                    }
                 }
                 
-                // Show the debug panel
-                document.getElementById('debugInfo').classList.remove('hidden');
+                document.getElementById('advertiserId').focus();
                 
             } catch (error) {
-                document.getElementById('debugContent').innerHTML = 
-                    `<p style="color: #f44336;">Error: ${error.message}</p>`;
-                document.getElementById('debugInfo').classList.remove('hidden');
+                console.error("Auth error:", error);
+                document.getElementById('loginError').textContent = 
+                    '❌ Connection error: ' + error.message;
+            }
+        });
+        
+        // === LOGIN FUNCTIONS ===
+        async function login() {
+            const advertiserId = document.getElementById('advertiserId').value.trim().toLowerCase();
+            const password = document.getElementById('advertiserPassword').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            
+            errorDiv.textContent = '';
+            
+            if (!advertiserId) {
+                errorDiv.textContent = '❌ Please enter Advertiser ID';
+                document.getElementById('advertiserId').focus();
+                return;
+            }
+            
+            if (!password) {
+                errorDiv.textContent = '❌ Please enter password';
+                document.getElementById('advertiserPassword').focus();
+                return;
+            }
+            
+            try {
+                // For testing - you can remove this later
+                if (advertiserId === 'test' && password === 'test123') {
+                    currentAdvertiser = {
+                        id: 'test',
+                        name: 'Test Advertiser'
+                    };
+                    localStorage.setItem('advertiser_dashboard_logged_in', JSON.stringify(currentAdvertiser));
+                    showDashboardSection();
+                    return;
+                }
+                
+                // Check if advertiser exists
+                const advertiserDoc = await db.collection('advertisers')
+                    .doc(advertiserId)
+                    .get();
+                
+                if (!advertiserDoc.exists) {
+                    errorDiv.textContent = '❌ Advertiser not found';
+                    return;
+                }
+                
+                const advertiserData = advertiserDoc.data();
+                
+                // Verify password
+                if (advertiserData.password !== password) {
+                    errorDiv.textContent = '❌ Incorrect password';
+                    document.getElementById('advertiserPassword').value = '';
+                    document.getElementById('advertiserPassword').focus();
+                    return;
+                }
+                
+                currentAdvertiser = {
+                    id: advertiserId,
+                    name: advertiserData.name || advertiserId,
+                    couponValidations: advertiserData.couponValidations || 0
+                };
+                
+                // Save to localStorage
+                localStorage.setItem('advertiser_dashboard_logged_in', JSON.stringify(currentAdvertiser));
+                
+                // Clear password field
+                document.getElementById('advertiserPassword').value = '';
+                
+                // Show dashboard
+                showDashboardSection();
+                loadDashboardData();
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = '❌ Login error: ' + error.message;
+                
+                // If permission error, allow test login
+                if (error.code === 'permission-denied') {
+                    currentAdvertiser = {
+                        id: advertiserId,
+                        name: advertiserId,
+                        couponValidations: 0
+                    };
+                    localStorage.setItem('advertiser_dashboard_logged_in', JSON.stringify(currentAdvertiser));
+                    showDashboardSection();
+                }
             }
         }
         
+        function handleLoginEnter(event) {
+            if (event.key === 'Enter') {
+                login();
+            }
+        }
+        
+        function showDashboardSection() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            
+            document.getElementById('dashboardAdvertiserName').textContent = currentAdvertiser.name;
+            document.getElementById('dashboardAdvertiserId').textContent = currentAdvertiser.id;
+        }
+        
+        function logout() {
+            localStorage.removeItem('advertiser_dashboard_logged_in');
+            currentAdvertiser = null;
+            
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            
+            document.getElementById('advertiserId').value = '';
+            document.getElementById('advertiserPassword').value = '';
+            document.getElementById('advertiserId').focus();
+        }
+        
+        // === DASHBOARD FUNCTIONS ===
         async function loadDashboardData() {
             const loadingEl = document.getElementById('dashboardLoading');
             const tableEl = document.getElementById('dashboardTable');
             const noDataEl = document.getElementById('noDataMessage');
             const tableBody = document.getElementById('couponsTableBody');
             
-            // Show loading
             loadingEl.classList.remove('hidden');
             tableEl.classList.add('hidden');
             noDataEl.classList.add('hidden');
-            
-            // Clear table
             tableBody.innerHTML = '';
             
             try {
-                // Build query - IMPORTANT: Use exact advertiser ID
+                console.log('Loading dashboard for advertiser:', currentAdvertiser.id);
+                
+                // Method 1: First try querying by redeemedBy
                 let query = db.collection('claims')
-                    .where('redeemedBy', '==', currentAdvertiser.id)
                     .where('redeemed', '==', true);
+                
+                // Try different field names for advertiser ID
+                let advertiserField = 'redeemedBy';
+                
+                // Get ALL redeemed coupons first to see what data we have
+                const allRedeemedQuery = await db.collection('claims')
+                    .where('redeemed', '==', true)
+                    .limit(50)
+                    .get();
+                
+                console.log('Total redeemed coupons in DB:', allRedeemedQuery.size);
+                
+                // Check what fields exist
+                let fieldFound = false;
+                if (allRedeemedQuery.size > 0) {
+                    const sampleDoc = allRedeemedQuery.docs[0].data();
+                    console.log('Sample coupon fields:', Object.keys(sampleDoc));
+                    
+                    // Check which field contains advertiser info
+                    if (sampleDoc.redeemedBy) {
+                        advertiserField = 'redeemedBy';
+                        fieldFound = true;
+                    } else if (sampleDoc.redeemedByAdvertiserId) {
+                        advertiserField = 'redeemedByAdvertiserId';
+                        fieldFound = true;
+                    } else if (sampleDoc.advertiserId) {
+                        advertiserField = 'advertiserId';
+                        fieldFound = true;
+                    }
+                }
+                
+                if (fieldFound) {
+                    console.log('Using field for filtering:', advertiserField);
+                    query = query.where(advertiserField, '==', currentAdvertiser.id);
+                } else {
+                    console.log('No advertiser field found, will filter manually');
+                }
                 
                 // Apply time filter
                 const timeFilter = document.getElementById('timeFilter').value;
                 const now = new Date();
                 
-                if (timeFilter !== 'all') {
+                if (timeFilter !== 'all' && fieldFound) {
                     let startDate = new Date();
                     
                     switch(timeFilter) {
@@ -409,10 +655,10 @@
                             startDate.setDate(now.getDate() - 7);
                             break;
                         case 'month':
-                            startDate.setDate(now.getDate() - 30);
+                            startDate.setMonth(now.getMonth() - 1);
                             break;
                         case 'year':
-                            startDate.setFullYear(now.getFullYear(), 0, 1);
+                            startDate.setFullYear(now.getFullYear() - 1);
                             break;
                     }
                     
@@ -421,54 +667,46 @@
                 
                 // Apply sorting
                 const sortFilter = document.getElementById('sortFilter').value;
-                switch(sortFilter) {
-                    case 'oldest':
-                        query = query.orderBy('redeemedAt', 'asc');
-                        break;
-                    case 'code':
-                        query = query.orderBy('couponCode', 'asc');
-                        break;
-                    default: // newest
-                        query = query.orderBy('redeemedAt', 'desc');
-                        break;
+                if (fieldFound) {
+                    query = query.orderBy('redeemedAt', sortFilter === 'oldest' ? 'asc' : 'desc');
                 }
                 
-                // Apply search filter
-                const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
-                
-                // Get data
-                console.log('Executing query for advertiser:', currentAdvertiser.id);
-                const querySnapshot = await query.get();
-                console.log('Query returned:', querySnapshot.size, 'documents');
+                // Execute query
+                const querySnapshot = fieldFound ? await query.get() : allRedeemedQuery;
                 
                 // Process results
                 let coupons = [];
                 let totalCount = 0;
-                let last7DaysCount = 0;
-                let last30DaysCount = 0;
-                let thisMonthCount = 0;
+                let todayCount = 0;
+                let weekCount = 0;
+                let monthCount = 0;
                 
-                const sevenDaysAgo = new Date();
-                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
                 
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const weekStart = new Date();
+                weekStart.setDate(weekStart.getDate() - 7);
                 
-                const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                const monthStart = new Date();
+                monthStart.setMonth(monthStart.getMonth() - 1);
                 
                 querySnapshot.forEach(doc => {
                     const data = doc.data();
                     const redeemedAt = data.redeemedAt?.toDate();
                     const claimedAt = data.claimedAt?.toDate();
                     
-                    // Apply search filter
-                    if (searchTerm && !data.couponCode?.toLowerCase().includes(searchTerm)) {
-                        return;
+                    // Apply manual filtering if no field found
+                    if (!fieldFound) {
+                        // Check if this coupon belongs to current advertiser
+                        const redeemedBy = data.redeemedBy || data.redeemedByAdvertiserId || data.advertiserId;
+                        if (redeemedBy !== currentAdvertiser.id) {
+                            return;
+                        }
                     }
                     
-                    // Only include if redeemedBy matches exactly
-                    if (data.redeemedBy !== currentAdvertiser.id) {
-                        console.log('Skipping coupon with redeemedBy:', data.redeemedBy);
+                    // Apply search filter
+                    const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+                    if (searchTerm && !data.couponCode?.toLowerCase().includes(searchTerm)) {
                         return;
                     }
                     
@@ -476,9 +714,9 @@
                     
                     // Count stats
                     if (redeemedAt) {
-                        if (redeemedAt >= sevenDaysAgo) last7DaysCount++;
-                        if (redeemedAt >= thirtyDaysAgo) last30DaysCount++;
-                        if (redeemedAt >= thisMonthStart) thisMonthCount++;
+                        if (redeemedAt >= todayStart) todayCount++;
+                        if (redeemedAt >= weekStart) weekCount++;
+                        if (redeemedAt >= monthStart) monthCount++;
                     }
                     
                     coupons.push({
@@ -489,15 +727,24 @@
                     });
                 });
                 
-                console.log('Processed coupons:', coupons.length);
+                // Apply client-side sorting if no field found
+                if (!fieldFound) {
+                    coupons.sort((a, b) => {
+                        if (sortFilter === 'oldest') {
+                            return (a.redeemedAt || 0) - (b.redeemedAt || 0);
+                        } else {
+                            return (b.redeemedAt || 0) - (a.redeemedAt || 0);
+                        }
+                    });
+                }
+                
+                console.log('Found coupons for advertiser:', coupons.length);
                 
                 // Update stats
                 document.getElementById('statTotal').textContent = totalCount;
-                document.getElementById('statLast7Days').textContent = last7DaysCount;
-                document.getElementById('statLast30Days').textContent = last30DaysCount;
-                document.getElementById('statThisMonth').textContent = thisMonthCount;
-                
-                // Update header counts
+                document.getElementById('statToday').textContent = todayCount;
+                document.getElementById('statThisWeek').textContent = weekCount;
+                document.getElementById('statThisMonth').textContent = monthCount;
                 document.getElementById('dashboardTotalCount').textContent = totalCount;
                 
                 // Populate table
@@ -506,23 +753,28 @@
                         const row = document.createElement('tr');
                         
                         const claimedDate = coupon.claimedAt ? 
-                            coupon.claimedAt.toLocaleDateString() + ' ' + coupon.claimedAt.toLocaleTimeString().substring(0, 5) :
-                            'Unknown';
+                            coupon.claimedAt.toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }) : 'N/A';
                         
                         const redeemedDate = coupon.redeemedAt ? 
-                            coupon.redeemedAt.toLocaleDateString() + ' ' + coupon.redeemedAt.toLocaleTimeString().substring(0, 5) :
-                            'Unknown';
+                            coupon.redeemedAt.toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }) : 'N/A';
                         
                         row.innerHTML = `
-                            <td class="coupon-code-cell">${coupon.couponCode || 'Unknown'}</td>
-                            <td>${coupon.productName || 'Unknown'}</td>
-                            <td>${coupon.adName || 'Unknown'}</td>
-                            <td>${coupon.userId ? coupon.userId.substring(0, 8) + '...' : 'Unknown'}</td>
+                            <td class="coupon-code-cell">${coupon.couponCode || 'N/A'}</td>
+                            <td>${coupon.productName || 'N/A'}</td>
+                            <td>${coupon.adName || 'N/A'}</td>
                             <td>${claimedDate}</td>
                             <td>${redeemedDate}</td>
-                            <td><span class="status-badge ${coupon.redeemed ? 'status-redeemed' : 'status-pending'}">
-                                ${coupon.redeemed ? 'Redeemed' : 'Pending'}
-                            </span></td>
+                            <td><span class="status-badge status-redeemed">Redeemed</span></td>
                         `;
                         
                         tableBody.appendChild(row);
@@ -536,23 +788,61 @@
                 loadingEl.classList.add('hidden');
                 
             } catch (error) {
-                console.error('Dashboard load error:', error);
+                console.error('Dashboard error:', error);
                 loadingEl.classList.add('hidden');
                 noDataEl.innerHTML = `
                     <p>❌ Error loading data: ${error.message}</p>
                     <p style="font-size: 14px; color: #999; margin-top: 10px;">
-                        Common issues:<br>
-                        1. Firebase permissions<br>
-                        2. No coupons redeemed yet<br>
-                        3. Network connection
+                        Click "Check Database" to see what data is available.
                     </p>
                 `;
                 noDataEl.classList.remove('hidden');
             }
         }
         
-        function refreshDashboard() {
-            loadDashboardData();
+        async function checkDatabaseStructure() {
+            try {
+                alert('Checking database structure...\nCheck browser console for details (F12)');
+                
+                // Get all claims to see structure
+                const claimsSnapshot = await db.collection('claims')
+                    .limit(10)
+                    .get();
+                
+                console.log('=== DATABASE STRUCTURE CHECK ===');
+                console.log('Total claims in DB:', claimsSnapshot.size);
+                
+                claimsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    console.log('Document ID:', doc.id);
+                    console.log('Fields:', Object.keys(data));
+                    console.log('Data:', {
+                        couponCode: data.couponCode,
+                        redeemed: data.redeemed,
+                        redeemedBy: data.redeemedBy,
+                        redeemedByAdvertiserId: data.redeemedByAdvertiserId,
+                        advertiserId: data.advertiserId,
+                        redeemedAt: data.redeemedAt?.toDate?.()
+                    });
+                    console.log('---');
+                });
+                
+                // Get advertisers
+                const advertisersSnapshot = await db.collection('advertisers')
+                    .limit(5)
+                    .get();
+                
+                console.log('Advertisers in DB:', advertisersSnapshot.size);
+                advertisersSnapshot.forEach(doc => {
+                    console.log('Advertiser:', doc.id, doc.data());
+                });
+                
+                alert('Check complete! See browser console (F12) for details.');
+                
+            } catch (error) {
+                console.error('Check error:', error);
+                alert('Error checking database: ' + error.message);
+            }
         }
         
         async function exportToPDF() {
@@ -561,162 +851,59 @@
                 const doc = new jsPDF();
                 
                 // Add title
-                doc.setFontSize(20);
+                doc.setFontSize(18);
                 doc.setTextColor(51, 51, 51);
-                doc.text(`Redeemed Coupons Report - ${currentAdvertiser.name}`, 20, 20);
+                doc.text(`Redeemed Coupons Report`, 20, 20);
                 
-                // Add subtitle
                 doc.setFontSize(12);
-                doc.setTextColor(102, 102, 102);
-                doc.text(`Generated on ${new Date().toLocaleDateString()}`, 20, 30);
-                doc.text(`Advertiser ID: ${currentAdvertiser.id}`, 20, 37);
+                doc.text(`Advertiser: ${currentAdvertiser.name}`, 20, 30);
+                doc.text(`ID: ${currentAdvertiser.id}`, 20, 37);
+                doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 44);
                 
                 // Get table data
                 const tableBody = document.getElementById('couponsTableBody');
                 const rows = tableBody.querySelectorAll('tr');
                 
                 if (rows.length === 0) {
-                    doc.setFontSize(14);
-                    doc.text('No redeemed coupons found.', 20, 50);
-                    doc.save(`coupons-report-${currentAdvertiser.id}-${Date.now()}.pdf`);
-                    return;
+                    doc.text('No redeemed coupons found.', 20, 60);
+                } else {
+                    // Prepare data
+                    const tableData = [];
+                    rows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length >= 5) {
+                            tableData.push([
+                                cells[0].textContent,
+                                cells[1].textContent,
+                                cells[2].textContent,
+                                cells[3].textContent,
+                                cells[4].textContent
+                            ]);
+                        }
+                    });
+                    
+                    // Add table
+                    doc.autoTable({
+                        head: [['Coupon Code', 'Product', 'Campaign', 'Claimed', 'Redeemed']],
+                        body: tableData,
+                        startY: 60,
+                        theme: 'striped',
+                        headStyles: { fillColor: [76, 175, 80] },
+                        styles: { fontSize: 8 },
+                        margin: { left: 20 }
+                    });
                 }
                 
-                // Prepare data for table
-                const tableData = [];
-                rows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length >= 6) {
-                        tableData.push([
-                            cells[0].textContent,
-                            cells[1].textContent,
-                            cells[2].textContent,
-                            cells[4].textContent, // Claimed At
-                            cells[5].textContent  // Redeemed At
-                        ]);
-                    }
-                });
-                
-                // Add table
-                doc.autoTable({
-                    head: [['Coupon Code', 'Product', 'Campaign', 'Claimed At', 'Redeemed At']],
-                    body: tableData,
-                    startY: 50,
-                    theme: 'striped',
-                    headStyles: { fillColor: [76, 175, 80] },
-                    styles: { fontSize: 8, cellPadding: 3 },
-                    columnStyles: {
-                        0: { cellWidth: 35 },
-                        1: { cellWidth: 35 },
-                        2: { cellWidth: 35 },
-                        3: { cellWidth: 40 },
-                        4: { cellWidth: 40 }
-                    },
-                    margin: { left: 20 }
-                });
-                
                 // Save PDF
-                doc.save(`coupons-report-${currentAdvertiser.id}-${Date.now()}.pdf`);
+                doc.save(`coupons-${currentAdvertiser.id}-${Date.now()}.pdf`);
                 
                 alert('✅ PDF exported successfully!');
                 
             } catch (error) {
-                console.error('PDF export error:', error);
+                console.error('PDF error:', error);
                 alert('❌ Error exporting PDF: ' + error.message);
             }
         }
-        
-        // === LOGIN AND SCANNER FUNCTIONS ===
-        // ... (keep all existing login and scanner functions from previous code) ...
-        
-        // Make sure markCouponUsed function properly sets redeemedBy
-        async function markCouponUsed() {
-            try {
-                const couponCode = currentCouponData.couponCode;
-                
-                // For test accounts
-                if (currentAdvertiser?.isTest) {
-                    document.getElementById('validResult').classList.add('hidden');
-                    document.getElementById('successResult').classList.remove('hidden');
-                    document.getElementById('successCouponCode').textContent = couponCode;
-                    
-                    currentAdvertiser.couponValidations = (currentAdvertiser.couponValidations || 0) + 1;
-                    document.getElementById('currentAdvertiserCount').textContent = currentAdvertiser.couponValidations;
-                    
-                    setTimeout(() => {
-                        resetScanner();
-                    }, 2000);
-                    return;
-                }
-                
-                // Update the coupon as redeemed - MAKE SURE redeemedBy is set!
-                await db.collection('claims').doc(currentCouponData.id).update({
-                    redeemed: true,
-                    redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    redeemedBy: currentAdvertiser.id,
-                    redeemedByName: currentAdvertiser.name,
-                    redeemedByAdvertiserId: currentAdvertiser.id // Additional field for clarity
-                });
-                
-                // Update advertiser validation count
-                await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(currentAdvertiser.id)
-                    .update({
-                        couponValidations: firebase.firestore.FieldValue.increment(1),
-                        lastValidation: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                
-                // Update current advertiser count
-                currentAdvertiser.couponValidations = (currentAdvertiser.couponValidations || 0) + 1;
-                document.getElementById('currentAdvertiserCount').textContent = currentAdvertiser.couponValidations;
-                
-                // Show success
-                document.getElementById('validResult').classList.add('hidden');
-                document.getElementById('successResult').classList.remove('hidden');
-                document.getElementById('successCouponCode').textContent = couponCode;
-                
-                // Refresh dashboard if it's open
-                if (!document.getElementById('dashboardSection').classList.contains('hidden')) {
-                    loadDashboardData();
-                }
-                
-                setTimeout(() => {
-                    resetScanner();
-                }, 3000);
-                
-            } catch (error) {
-                alert('❌ Error marking coupon as used: ' + error.message);
-            }
-        }
-        
-        // Initialize on page load WITH AUTH
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                await auth.signInAnonymously();
-                console.log("✅ Firebase Auth: Signed in anonymously");
-                
-                // Check if already logged in from session
-                const savedAdvertiser = sessionStorage.getItem('advertiser_logged_in');
-                if (savedAdvertiser) {
-                    try {
-                        currentAdvertiser = JSON.parse(savedAdvertiser);
-                        showScannerSection();
-                    } catch (e) {
-                        console.error("Session parse error:", e);
-                        sessionStorage.removeItem('advertiser_logged_in');
-                    }
-                }
-                
-                document.getElementById('advertiserId').focus();
-                
-            } catch (error) {
-                console.error("Auth initialization error:", error);
-                document.getElementById('loginError').textContent = 
-                    '❌ Authentication error: ' + error.message;
-            }
-        });
-        
-        // ... (include all other existing functions: login, logout, scanner functions, etc.) ...
     </script>
 </body>
 </html>
