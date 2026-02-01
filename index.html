@@ -42,33 +42,41 @@
         .success { color: #2E7D32; }
         .blocked { color: #C62828; }
         
-        .coupon { 
-            font-size: 48px; 
-            font-weight: bold; 
-            color: #2E7D32; 
-            margin: 20px 0; 
-            font-family: 'Courier New', monospace; 
-            background: #E8F5E9; 
-            padding: 15px; 
-            border-radius: 10px; 
-            border: 2px dashed #4CAF50; 
-            text-align: center;
-            word-break: break-all;
-        }
-        
-        .coupon-blocked {
-            font-size: 36px;
-            font-weight: bold;
-            color: #c62828;
-            margin: 15px 0;
-            font-family: 'Courier New', monospace;
-            background: #FFEBEE;
-            padding: 12px;
-            border-radius: 8px;
-            border: 2px dashed #c62828;
-            text-align: center;
-            word-break: break-all;
-        }
+       .coupon { 
+    font-size: 42px; 
+    font-weight: bold; 
+    color: #2E7D32; 
+    margin: 20px 0; 
+    font-family: Consolas, 'Courier New', monospace; /* CLEAR FONT */
+    font-feature-settings: "tnum"; /* Better number spacing */
+    font-variant-numeric: slashed-zero; /* Slashed zero to distinguish from O */
+    background: #E8F5E9; 
+    padding: 15px; 
+    border-radius: 10px; 
+    border: 2px dashed #4CAF50; 
+    text-align: center;
+    word-break: break-all;
+    font-size: clamp(32px, 6vw, 42px);
+    letter-spacing: 2px; /* Add spacing between characters */
+}
+
+.coupon-blocked {
+    font-size: 36px;
+    font-weight: bold;
+    color: #c62828;
+    margin: 15px 0;
+    font-family: Consolas, 'Courier New', monospace; /* CLEAR FONT */
+    font-feature-settings: "tnum";
+    font-variant-numeric: slashed-zero;
+    background: #FFEBEE;
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px dashed #c62828;
+    text-align: center;
+    word-break: break-all;
+    font-size: clamp(28px, 5vw, 36px);
+    letter-spacing: 2px;
+}
         
         .info { 
             background: #E3F2FD; 
@@ -641,3 +649,4 @@
     </script>
 </body>
 </html>
+
