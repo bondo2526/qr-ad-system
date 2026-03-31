@@ -264,12 +264,10 @@
         
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-               const urlParams = new URLSearchParams(window.location.search);
-
-// Clean the advertiser name: remove spaces and make it lowercase to avoid "PH1" vs "ph1" mismatches
-const currentAd = (urlParams.get('ad') || "General").trim().toLowerCase();
-const currentProduct = urlParams.get('product') || "Special Offer";
-const currentHost = urlParams.get('host') || window.location.hostname;
+                const urlParams = new URLSearchParams(window.location.search);
+                currentAd = urlParams.get('ad') || 'unknown';
+                currentProduct = urlParams.get('product') || 'unknown';
+                currentHost = urlParams.get('host') || 'unknown';
                 
                 // Decode and clean up names
                 const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
@@ -358,7 +356,6 @@ const currentHost = urlParams.get('host') || window.location.hostname;
                     adId: currentAd,
                     adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
                     productId: currentProduct,
-                    adName: currentAd,
                     productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
                     hostId: currentHost,
                     hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
