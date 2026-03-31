@@ -1,291 +1,651 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claim Your Coupon</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .container { background: white; border-radius: 20px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        h1 { color: #333; text-align: center; margin-bottom: 30px; font-size: 28px; }
-        .loading { text-align: center; color: #667eea; font-size: 18px; padding: 40px; }
-        .success { text-align: center; }
-        .success h2 { color: #28a745; margin-bottom: 20px; font-size: 24px; }
-        .coupon-box { background: #f8f9fa; border: 2px dashed #667eea; border-radius: 15px; padding: 30px; margin: 20px 0; }
-        .coupon-code { font-size: 32px; font-weight: bold; color: #667eea; text-align: center; letter-spacing: 3px; margin: 20px 0; font-family: 'Courier New', monospace; }
-        .info-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .info-label { color: #666; font-weight: 500; }
-        .info-value { color: #333; font-weight: 600; }
-        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px; }
-        .warning ul { margin-left: 20px; color: #856404; }
-        .warning li { margin: 5px 0; }
-        .screenshot-notice { background: #e7f3ff; border: 2px solid #667eea; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0; }
-        .screenshot-notice p { color: #667eea; font-weight: 600; margin: 5px 0; }
-        .btn { display: block; width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin: 10px 0; transition: all 0.3s; }
-        .btn-copy { background: #667eea; color: white; }
-        .btn-copy:hover { background: #5568d3; }
-        .error { text-align: center; color: #dc3545; padding: 40px; }
-        .error h2 { color: #dc3545; margin-bottom: 10px; }
-        .already-claimed { background: #d4edda; border-left: 4px solid #28a745; padding: 20px; border-radius: 5px; margin: 20px 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
+        
+        /* Body with dynamic backgrounds */
+        body { 
+            min-height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px;
+            transition: background 0.5s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        /* Success background (green) */
+        body.success-bg {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%) !important;
+        }
+        
+        /* Blocked/Already claimed background (red) */
+        body.blocked-bg {
+            background: linear-gradient(135deg, #f44336 0%, #c62828 100%) !important;
+        }
+        
+        .container { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 40px; 
+            max-width: 500px; 
+            width: 100%; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+        }
+        
+        .success { color: #2E7D32; }
+        .blocked { color: #C62828; }
+        
+       .coupon { 
+    font-size: 42px; 
+    font-weight: bold; 
+    color: #2E7D32; 
+    margin: 20px 0; 
+    font-family: Consolas, 'Courier New', monospace; /* CLEAR FONT */
+    font-feature-settings: "tnum"; /* Better number spacing */
+    font-variant-numeric: slashed-zero; /* Slashed zero to distinguish from O */
+    background: #E8F5E9; 
+    padding: 15px; 
+    border-radius: 10px; 
+    border: 2px dashed #4CAF50; 
+    text-align: center;
+    word-break: break-all;
+    font-size: clamp(32px, 6vw, 42px);
+    letter-spacing: 2px; /* Add spacing between characters */
+}
+
+.coupon-blocked {
+    font-size: 36px;
+    font-weight: bold;
+    color: #c62828;
+    margin: 15px 0;
+    font-family: Consolas, 'Courier New', monospace; /* CLEAR FONT */
+    font-feature-settings: "tnum";
+    font-variant-numeric: slashed-zero;
+    background: #FFEBEE;
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px dashed #c62828;
+    text-align: center;
+    word-break: break-all;
+    font-size: clamp(28px, 5vw, 36px);
+    letter-spacing: 2px;
+}
+        
+        .info { 
+            background: #E3F2FD; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin: 20px 0; 
+            font-size: 14px; 
+        }
+        
+        .info.blocked-info { 
+            background: #FFEBEE; 
+            border-left: 4px solid #c62828;
+        }
+        
+        .info.warning-info { 
+            background: #FFF3E0; 
+            border-left: 4px solid #FF9800;
+        }
+        
+        .countdown { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #E65100; 
+            margin: 20px 0; 
+            text-align: center;
+        }
+        
+        .loading { 
+            text-align: center; 
+            padding: 40px; 
+        }
+        
+        .spinner { 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #667eea; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+            margin: 0 auto 20px; 
+        }
+        
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        
         .hidden { display: none; }
-        .timer { text-align: center; color: #667eea; font-weight: 600; margin: 15px 0; }
-        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: 600; }
-        .status-available { background: #d4edda; color: #155724; }
-        .status-redeemed { background: #f8d7da; color: #721c24; }
-        .status-expired { background: #fff3cd; color: #856404; }
+        
+        h1 { margin-bottom: 10px; }
+        h2 { color: #333; margin: 10px 0; }
+        h3 { color: #555; margin: 10px 0; }
+        p { margin: 10px 0; color: #555; }
+        
+        .instruction-box {
+            background: #F5F5F5;
+            border: 2px solid #E0E0E0;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .instruction-box h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .screenshot-instruction {
+            background: #FFF8E1;
+            border: 2px dashed #FFB300;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            color: #E65100;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .action-buttons:has(button:only-child) button {
+    width: 100%;
+    flex: none;
+}
+        
+        button {
+            padding: 12px 24px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            flex: 1;
+        }
+        
+        button:hover {
+            background: #1976D2;
+        }
+        
+        button.secondary {
+            background: #757575;
+        }
+        
+        button.secondary:hover {
+            background: #616161;
+        }
+        
+        .coupon-section {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #F9F9F9;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Loading State -->
-        <div id="loadingSection" class="loading">
-            <h1>🎁 Claim Your Coupon</h1>
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
             <p>Loading your coupon...</p>
         </div>
-
-        <!-- Success State -->
-        <div id="successSection" class="success hidden">
-            <h1>🎁 Claim Your Coupon</h1>
-            <div class="success">
-                <h2>✅ Coupon Claimed!</h2>
-                
-                <div class="coupon-box">
-                    <div class="info-row">
-                        <span class="info-label">Product:</span>
-                        <span class="info-value" id="displayProduct">-</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Location:</span>
-                        <span class="info-value" id="displayLocation">-</span>
-                    </div>
-                    <div class="coupon-code" id="displayCode">XXXXXX</div>
-                    <p style="text-align: center; color: #666; font-size: 14px;">Show this code at checkout</p>
-                </div>
-
-                <div class="screenshot-notice">
-                    <p>📸 TAKE A SCREENSHOT NOW!</p>
-                    <p style="font-size: 14px; color: #666;">This page will not be available again</p>
-                </div>
-
-                <div class="timer">
-                    <p>✅ Valid: 24 hours from now</p>
-                    <p>🕒 Claimed at: <span id="displayClaimedAt">-</span></p>
-                    <p>⏰ Expires: <span id="displayExpiresAt">-</span></p>
-                </div>
-
-                <div class="warning">
-                    <p><strong>⚠️ Limit: 1 coupon per ad per day (any location)</strong></p>
-                    <ul>
-                        <li>Note: You cannot claim this same ad at any other location today.</li>
-                        <li>You CAN claim different ads at any location.</li>
-                    </ul>
-                </div>
-
-                <div class="warning">
-                    <p><strong>How to Use:</strong></p>
-                    <ul>
-                        <li>1. Take screenshot of coupon code above</li>
-                        <li>2. Show screenshot at checkout</li>
-                        <li>3. Advertiser will scan to validate</li>
-                    </ul>
-                </div>
-
-                <button class="btn btn-copy" onclick="copyCode()">📋 Copy Code</button>
+        
+        <!-- Success -->
+        <div id="success" class="hidden">
+            <h1 class="success">✅ Coupon Claimed!</h1>
+            <h2 align="center" id="adName"></h2>
+            <p align="center"><strong>Product:</strong> <span id="productName"></span></p>
+            <p align="center"><strong>Location:</strong> <span id="hostName"></span></p>
+            
+            <div class="coupon-section">
+                <div class="coupon" id="couponCode"></div>
+                <p style="text-align: center; font-weight: bold; margin-top: 10px;">Show this code at checkout</p>
+            </div>
+            
+            <div class="screenshot-instruction">
+                📸 TAKE A SCREENSHOT NOW!<br>
+                This page will not be available again
+            </div>
+            
+            <div class="info">
+                <p><strong>✅ Valid:</strong> 24 hours from now</p>
+                <p><strong>⚠️ Limit:</strong> 1 coupon per ad per day (any location)</p>
+                <p><strong>🕒 Claimed at:</strong> <span id="claimTime"></span></p>
+                <p><strong>📍 Location:</strong> <span id="locationName"></span></p>
+            </div>
+            
+            <div class="info warning-info">
+                <p><strong>Note:</strong> You cannot claim <strong>this same ad</strong> at any other location today.</p>
+                <p>You CAN claim <strong>different ads</strong> at any location.</p>
+            </div>
+            
+            <div class="instruction-box">
+                <h4>How to Use:</h4>
+                <p>1. Take screenshot of coupon code above</p>
+                <p>2. Show screenshot at checkout</p>
+                <p>3. Advertiser will scan to validate</p>
             </div>
         </div>
-
-        <!-- Already Claimed State -->
-        <div id="alreadyClaimedSection" class="success hidden">
-            <h1>🎁 Claim Your Coupon</h1>
-            <div class="already-claimed">
-                <h2>⛔ Already Claimed</h2>
-                <p>Your previously claimed coupon:</p>
-                
-                <div class="coupon-box">
-                    <div class="info-row">
-                        <span class="info-label">Product:</span>
-                        <span class="info-value" id="prevProduct">-</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Location Claimed:</span>
-                        <span class="info-value" id="prevLocation">-</span>
-                    </div>
-                    <div class="coupon-code" id="prevCode">XXXXXX</div>
-                    <p style="text-align: center; color: #666; font-size: 14px;">Use this code at checkout</p>
-                    <div style="text-align: center; margin-top: 15px;">
-                        <span class="status-badge status-available" id="prevStatus">Available for use</span>
-                    </div>
-                </div>
-
-                <div class="screenshot-notice">
-                    <p>📸 Need a screenshot? Take one now!</p>
-                    <p style="font-size: 14px; color: #666;">You won't be able to see this code again</p>
-                </div>
-
-                <div class="warning">
-                    <p><strong>Coupon Rules:</strong></p>
-                    <ul>
-                        <li>✅ This coupon is valid for 24 hours from claim time</li>
-                        <li>✅ Show this code at checkout to advertiser</li>
-                        <li>❌ Cannot claim same ad again until tomorrow</li>
-                        <li>✅ You CAN claim different ads/products</li>
-                    </ul>
-                </div>
-
-                <button class="btn btn-copy" onclick="copyCode()">📋 Copy Code</button>
+        
+        <!-- Blocked -->
+        <div id="blocked" class="hidden">
+            <h1 class="blocked">⛔ Already Claimed</h1>
+            <h3 id="blockedAdName"></h3>
+            
+            <div class="coupon-section">
+                <p style="font-weight: bold; color: #333; margin-bottom: 10px;">Your previously claimed coupon:</p>
+                <div class="coupon-blocked" id="blockedCouponCode"></div>
+                <p style="color: #666; font-size: 14px; margin-top: 5px;">Use this code at checkout</p>
+            </div>
+            
+            <div class="info blocked-info">
+                <p>You've already claimed <strong>this ad</strong> today.</p>
+                <p><strong>Product:</strong> <span id="blockedProduct"></span></p>
+                <p><strong>Location Claimed:</strong> <span id="blockedLocation"></span></p>
+                <p><strong>Claimed at:</strong> <span id="blockedTime"></span></p>
+                <p><strong>Status:</strong> <span id="blockedStatus">Available for use</span></p>
+            </div>
+            
+            <div class="countdown" id="countdown"></div>
+            
+            <div class="screenshot-instruction">
+                📸 Need a screenshot? Take one now!<br>
+                You won't be able to see this code again
+            </div>
+            
+            <div class="info">
+                <p><strong>Coupon Rules:</strong></p>
+                <p>✅ <strong>This coupon is valid</strong> for 24 hours from claim time</p>
+                <p>✅ Show this code at checkout to advertiser</p>
+                <p>❌ <strong>Cannot claim same ad</strong> again until tomorrow</p>
+                <p>✅ You CAN claim <strong>different ads/products</strong></p>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="secondary" onclick="copyCouponCode()">Copy Code</button>
             </div>
         </div>
-
-        <!-- Error State -->
-        <div id="errorSection" class="error hidden">
-            <h1>🎁 Claim Your Coupon</h1>
-            <h2>❌ Error</h2>
-            <p id="errorMessage">Try Again</p>
-            <button class="btn btn-copy" onclick="location.reload()" style="margin-top: 20px;">🔄 Try Again</button>
+        
+        <!-- Error -->
+        <div id="error" class="hidden">
+            <h1 style="color: #FF5722;">❌ Error</h1>
+            <p id="errorMessage"></p>
+            <button onclick="location.reload()">
+                Try Again
+            </button>
         </div>
     </div>
 
     <script>
-        // Get URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('product') || 'Default Product';
-        const locationId = urlParams.get('location') || 'Default Location';
-        const campaignId = urlParams.get('campaign') || 'Default Campaign';
+        // === CONFIGURATION ===
+        const CONFIG = {
+            BLOCK_HOURS: 24,
+            MAX_CLAIMS_PER_AD_PER_DAY: 1
+        };
+
+        // === FIREBASE CONFIG ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
+            authDomain: "ad-coupon-system.firebaseapp.com",
+            projectId: "ad-coupon-system",
+            storageBucket: "ad-coupon-system.firebasestorage.app",
+            messagingSenderId: "1030272051491",
+            appId: "1:1030272051491:web:4ec6ce21336cf511cac496",
+            measurementId: "G-PR9E37ZYE2"
+        };
         
-        // 🔴 ADVERTISER ID - Set this based on your ad campaign
-        // This can be passed via URL parameter like: index.html?adv=ph1
-        const advertiserId = urlParams.get('adv') || 'ph1';
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
         
-        const userId = localStorage.getItem('userId') || generateUserId();
-        localStorage.setItem('userId', userId);
-
-        function generateUserId() {
-            return 'user_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        function generateCouponCode() {
-            return 'CPN' + Math.random().toString(36).substr(2, 6).toUpperCase();
-        }
-
-        function getCoupons() {
-            return JSON.parse(localStorage.getItem('coupons') || '[]');
-        }
-
-        function saveCoupons(coupons) {
-            localStorage.setItem('coupons', JSON.stringify(coupons));
-        }
-
-        function checkAlreadyClaimed() {
-            const coupons = getCoupons();
-            const today = new Date().toDateString();
-            
-            // Check if user already claimed this ad today
-            const existingCoupon = coupons.find(c => 
-                c.userId === userId && 
-                c.productId === productId && 
-                new Date(c.claimedAt).toDateString() === today
-            );
-            
-            return existingCoupon;
-        }
-
-        function claimCoupon() {
-            const alreadyClaimed = checkAlreadyClaimed();
-            
-            if (alreadyClaimed) {
-                showAlreadyClaimed(alreadyClaimed);
-                return;
+        // Global variables
+        let currentUser = null;
+        let currentAd = null;
+        let currentProduct = null;
+        let currentHost = null;
+        let userFingerprint = null;
+        let existingCouponCode = null;
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Get URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                currentAd = urlParams.get('ad') || 'unknown_ad';
+                currentProduct = urlParams.get('product') || 'unknown_product';
+                currentHost = urlParams.get('host') || 'unknown_location';
+                
+                // Decode names for display
+                const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
+                const displayProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
+                const displayHostName = decodeURIComponent(currentHost).replace(/_/g, ' ');
+                
+                // Update display elements
+                document.getElementById('adName').textContent = displayAdName;
+                document.getElementById('productName').textContent = displayProductName;
+                document.getElementById('hostName').textContent = displayHostName;
+                document.getElementById('locationName').textContent = displayHostName;
+                document.getElementById('blockedAdName').textContent = displayAdName;
+                document.getElementById('blockedProduct').textContent = displayProductName;
+                document.getElementById('blockedLocation').textContent = displayHostName;
+                
+                // Initialize Firebase Auth (anonymous)
+                const userCredential = await auth.signInAnonymously();
+                currentUser = userCredential.user;
+                
+                // Generate user fingerprint
+                userFingerprint = await generateUserFingerprint();
+                
+                // Check if user already claimed this ad TODAY
+                await checkIfAlreadyClaimed();
+                
+            } catch (error) {
+                showError('Initialization error: ' + error.message);
             }
-
-            const couponCode = generateCouponCode();
-            const now = new Date();
-            const expiresAt = new Date(now.getTime() + (24 * 60 * 60 * 1000));
-
-            const newCoupon = {
-                code: couponCode,
-                productId: productId,
-                product: productId,
-                locationId: locationId,
-                location: locationId,
-                campaignId: campaignId,
-                campaign: campaignId,
-                🔴 advertiserId: advertiserId, // 🔴 CRITICAL: Save advertiser ID with coupon
-                userId: userId,
-                claimedAt: now.toISOString(),
-                expiresAt: expiresAt.toISOString(),
-                status: 'available',
-                redeemedAt: null,
-                redeemedBy: null
-            };
-
-            const coupons = getCoupons();
-            coupons.push(newCoupon);
-            saveCoupons(coupons);
-
-            showSuccess(newCoupon);
+        });
+        
+        // === CORE LOGIC ===
+        async function checkIfAlreadyClaimed() {
+            try {
+                const twentyFourHoursAgo = new Date();
+                twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+                
+                // Query by user fingerprint
+                const claimsRef = db.collection('claims');
+                const querySnapshot = await claimsRef
+                    .where('userFingerprint', '==', userFingerprint)
+                    .orderBy('claimedAt', 'desc')
+                    .limit(10)
+                    .get();
+                
+                let alreadyClaimed = false;
+                let existingClaim = null;
+                
+                querySnapshot.forEach(doc => {
+                    const claim = doc.data();
+                    const claimTime = claim.claimedAt?.toDate();
+                    
+                    // Check conditions: same ad AND same product AND within 24h
+                    const isSameAd = claim.adId === currentAd;
+                    const isSameProduct = claim.productId === currentProduct;
+                    const isWithin24h = claimTime >= twentyFourHoursAgo;
+                    
+                    if (isSameAd && isSameProduct && isWithin24h) {
+                        alreadyClaimed = true;
+                        existingClaim = {
+                            ...claim,
+                            id: doc.id,
+                            claimedAt: claim.claimedAt
+                        };
+                        existingCouponCode = claim.couponCode;
+                    }
+                });
+                
+                if (alreadyClaimed) {
+                    showBlockedPage(existingClaim);
+                    return true;
+                }
+                
+                // No recent claim found - generate new coupon
+                await generateNewCoupon();
+                return false;
+                
+            } catch (error) {
+                console.error("Check error:", error);
+                showError('Database error: ' + error.message);
+                return false;
+            }
         }
-
-        function showSuccess(coupon) {
-            document.getElementById('loadingSection').classList.add('hidden');
-            document.getElementById('successSection').classList.remove('hidden');
-            
-            document.getElementById('displayProduct').textContent = coupon.product;
-            document.getElementById('displayLocation').textContent = coupon.location;
-            document.getElementById('displayCode').textContent = coupon.code;
-            document.getElementById('displayClaimedAt').textContent = new Date(coupon.claimedAt).toLocaleString();
-            document.getElementById('displayExpiresAt').textContent = new Date(coupon.expiresAt).toLocaleString();
+        
+        async function generateNewCoupon() {
+            try {
+                // Generate unique coupon code
+                const couponCode = 'SAVE' + 
+                    Math.floor(Math.random() * 9000 + 1000) + 
+                    String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                
+                // Get client IP
+                const clientIP = await getClientIP();
+                
+                // Prepare claim data with product
+                const claimData = {
+                    userId: currentUser.uid,
+                    userFingerprint: userFingerprint,
+                    userIP: clientIP,
+                    adId: currentAd,
+                    adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
+                    productId: currentProduct,
+                    productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
+                    hostId: currentHost,
+                    hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
+                    couponCode: couponCode,
+                    claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
+                    clientIP: clientIP,
+                    userAgent: navigator.userAgent,
+                    status: 'claimed',
+                    redeemed: false,
+                    redeemedAt: null,
+                    redeemedBy: null
+                };
+                
+                // Save to Firestore
+                await db.collection('claims').add(claimData);
+                
+                // Store in localStorage to prevent refresh abuse
+                localStorage.setItem(`claimed_${currentAd}_${currentProduct}_${currentUser.uid}`, 
+                    JSON.stringify({
+                        coupon: couponCode,
+                        time: new Date().toISOString(),
+                        expires: claimData.expiresAt
+                    }));
+                
+                // Show success page
+                showSuccessPage(claimData);
+                
+            } catch (error) {
+                showError('Failed to generate coupon: ' + error.message);
+            }
         }
-
-        function showAlreadyClaimed(coupon) {
-            document.getElementById('loadingSection').classList.add('hidden');
-            document.getElementById('alreadyClaimedSection').classList.remove('hidden');
+        
+        // === UTILITY FUNCTIONS ===
+        async function generateUserFingerprint() {
+            try {
+                // Get client IP
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                const clientIP = ipData.ip;
+                
+                // Create fingerprint from multiple stable sources
+                const fingerprintData = {
+                    ip: clientIP,
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    screen: `${screen.width}x${screen.height}`,
+                    cookiesEnabled: navigator.cookieEnabled
+                };
+                
+                // Generate stable hash
+                const dataString = JSON.stringify(fingerprintData);
+                let hash = 0;
+                for (let i = 0; i < dataString.length; i++) {
+                    const char = dataString.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                
+                return `fp_${Math.abs(hash).toString(36)}`;
+                
+            } catch (error) {
+                // Fallback to simpler fingerprint
+                return `fallback_${navigator.userAgent.substring(0, 50)}_${navigator.language}`;
+            }
+        }
+        
+        async function getClientIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (error) {
+                return 'unknown';
+            }
+        }
+        
+        // === UI FUNCTIONS ===
+        function showSuccessPage(data) {
+            // Change background to GREEN
+            document.body.className = 'success-bg';
             
-            document.getElementById('prevProduct').textContent = coupon.product;
-            document.getElementById('prevLocation').textContent = coupon.location;
-            document.getElementById('prevCode').textContent = coupon.code;
+            // Hide loading, show success
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('success').classList.remove('hidden');
+            document.getElementById('blocked').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
             
-            const statusEl = document.getElementById('prevStatus');
-            if (coupon.status === 'redeemed') {
-                statusEl.textContent = 'Redeemed';
-                statusEl.className = 'status-badge status-redeemed';
-            } else if (new Date() > new Date(coupon.expiresAt)) {
-                statusEl.textContent = 'Expired';
-                statusEl.className = 'status-badge status-expired';
+            document.getElementById('couponCode').textContent = data.couponCode;
+            document.getElementById('claimTime').textContent = new Date().toLocaleString();
+            
+            // Setup refresh protection
+            setupRefreshProtection();
+        }
+        
+        function showBlockedPage(existingClaim) {
+            // Change background to RED
+            document.body.className = 'blocked-bg';
+            
+            // Hide loading, show blocked
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('success').classList.add('hidden');
+            document.getElementById('blocked').classList.remove('hidden');
+            document.getElementById('error').classList.add('hidden');
+            
+            const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
+            document.getElementById('blockedTime').textContent = claimedTime.toLocaleString();
+            
+            // Display the existing coupon code
+            if (existingCouponCode) {
+                document.getElementById('blockedCouponCode').textContent = existingCouponCode;
             } else {
-                statusEl.textContent = 'Available for use';
-                statusEl.className = 'status-badge status-available';
+                document.getElementById('blockedCouponCode').textContent = 'Not available';
             }
+            
+            // Check if coupon is redeemed
+            if (existingClaim.redeemed) {
+                document.getElementById('blockedStatus').textContent = 'Already redeemed';
+                document.getElementById('blockedStatus').style.color = '#c62828';
+                document.getElementById('blockedStatus').style.fontWeight = 'bold';
+            }
+            
+            const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
+            startCountdown(nextAvailable);
         }
-
+        
         function showError(message) {
-            document.getElementById('loadingSection').classList.add('hidden');
-            document.getElementById('errorSection').classList.remove('hidden');
+            // Keep default background for errors
+            document.body.className = '';
+            
+            // Hide all, show error
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('success').classList.add('hidden');
+            document.getElementById('blocked').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
             document.getElementById('errorMessage').textContent = message;
         }
-
-        function copyCode() {
-            const code = document.getElementById('displayCode').textContent || 
-                        document.getElementById('prevCode').textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                alert('✅ Code copied to clipboard!');
-            }).catch(() => {
-                alert('❌ Failed to copy code');
-            });
-        }
-
-        // Initialize
-        window.onload = function() {
-            // Simulate loading
-            setTimeout(() => {
-                try {
-                    claimCoupon();
-                } catch (e) {
-                    showError('Failed to claim coupon. Please try again.');
-                    console.error(e);
+        
+        function startCountdown(targetTime) {
+            function updateCountdown() {
+                const now = new Date();
+                const diff = targetTime - now;
+                
+                if (diff <= 0) {
+                    document.getElementById('countdown').innerHTML = 
+                        '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
+                    return;
                 }
-            }, 1000);
-        };
+                
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                document.getElementById('countdown').innerHTML = 
+                    `<div style="font-size: 28px;">
+                        ${hours.toString().padStart(2, '0')}:
+                        ${minutes.toString().padStart(2, '0')}:
+                        ${seconds.toString().padStart(2, '0')}
+                    </div>
+                    <p>Time until you can claim this ad again</p>`;
+                
+                // Continue updating every second
+                setTimeout(updateCountdown, 1000);
+            }
+            
+            // Start the countdown
+            updateCountdown();
+        }
+        
+        function copyCouponCode() {
+            const couponCode = document.getElementById('blockedCouponCode').textContent;
+            if (couponCode && couponCode !== 'Not available') {
+                navigator.clipboard.writeText(couponCode).then(() => {
+                    alert('Coupon code copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Failed to copy code. Please take a screenshot instead.');
+                });
+            } else {
+                alert('No coupon code available to copy.');
+            }
+        }
+        function setupRefreshProtection() {
+            // Replace URL to prevent re-submission
+            const newUrl = window.location.origin + window.location.pathname + 
+                '?ad=' + encodeURIComponent(currentAd) + 
+                '&product=' + encodeURIComponent(currentProduct) +
+                '&host=' + encodeURIComponent(currentHost) + 
+                '&claimed=true&t=' + Date.now();
+            history.replaceState(null, null, newUrl);
+            
+            // Block refresh attempts
+            window.onbeforeunload = function() {
+                return "Your coupon has been saved. Do not refresh or you'll lose it!";
+            };
+            
+            // Check if page was already loaded
+            if (performance.navigation.type === 1) {
+                const stored = localStorage.getItem(`claimed_${currentAd}_${currentProduct}_${currentUser.uid}`);
+                if (stored) {
+                    const storedData = JSON.parse(stored);
+                    const mockClaim = {
+                        claimedAt: { toDate: () => new Date(storedData.time) },
+                        couponCode: storedData.coupon,
+                        redeemed: false
+                    };
+                    existingCouponCode = storedData.coupon;
+                    showBlockedPage(mockClaim);
+                    return;
+                }
+            }
+        }
     </script>
 </body>
 </html>
