@@ -337,12 +337,12 @@
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
             <h1>🔐 Advertiser Scanner</h1>
-            <p>Login with your advertiser credentials</p>
+            <p>Login with your store/brand name</p>
             
             <div class="advertiser-id-section">
                 <input type="text" 
-                       id="advertiserId" 
-                       placeholder="Your Advertiser ID (e.g., pharmacy1, storeA, cafeB)"
+                       id="advertiserName" 
+                       placeholder="Your Store/Brand Name (e.g., Pharmacy One, Cafe Central)"
                        autocomplete="off">
                 
                 <input type="password" 
@@ -359,16 +359,16 @@
             
             <div class="scanner-instruction">
                 <p><strong>📌 Important:</strong></p>
-                <p>You can only validate coupons that belong to YOUR advertiser ID.</p>
-                <p>Each coupon is linked to a specific advertiser at creation.</p>
-                <p><strong>Demo credentials:</strong> pharmacy1 / pass123</p>
+                <p>You can only validate coupons that belong to YOUR store/brand name.</p>
+                <p>Each coupon is linked to the store/brand where it was claimed.</p>
+                <p><strong>Demo credentials:</strong> Pharmacy One / pass123</p>
             </div>
             
             <div class="advertiser-info">
                 <h3>📱 How to Use:</h3>
-                <p>1. Login with your advertiser credentials</p>
+                <p>1. Login with your store/brand name and password</p>
                 <p>2. Scan or enter customer's coupon code</p>
-                <p>3. System will verify if coupon belongs to YOU</p>
+                <p>3. System will verify if coupon belongs to YOUR store</p>
                 <p>4. Validate and mark coupons as used</p>
             </div>
         </div>
@@ -379,8 +379,8 @@
             
             <div class="advertiser-info">
                 <h3>Logged in as: <span id="loggedInAdvertiser"></span></h3>
-                <p>Advertiser ID: <strong><span id="currentAdvertiserId"></span></strong></p>
-                <p style="color: #2E7D32; margin-top: 5px;">✅ You can only validate your own coupons</p>
+                <p>Store/Brand: <strong><span id="currentAdvertiserName"></span></strong></p>
+                <p style="color: #2E7D32; margin-top: 5px;">✅ You can only validate coupons from your store</p>
             </div>
             
             <div class="header-controls">
@@ -420,7 +420,7 @@
                     <h2 style="color: #4CAF50;">✅ VALID COUPON</h2>
                     <div class="info-item"><strong>Ad Campaign:</strong> <span id="resultAd"></span></div>
                     <div class="info-item"><strong>Product:</strong> <span id="resultProduct"></span></div>
-                    <div class="info-item"><strong>Advertiser Owner:</strong> <span id="resultAdvertiserOwner"></span></div>
+                    <div class="info-item"><strong>Store/Brand:</strong> <span id="resultStore"></span></div>
                     <div class="info-item"><strong>Location Claimed:</strong> <span id="resultLocation"></span></div>
                     <div class="info-item"><strong>Claimed At:</strong> <span id="resultTime"></span></div>
                     <div class="info-item"><strong>Expires:</strong> <span id="resultExpires"></span></div>
@@ -554,7 +554,7 @@
                     }
                 }
                 
-                document.getElementById('advertiserId').focus();
+                document.getElementById('advertiserName').focus();
                 
             } catch (error) {
                 console.error("Auth initialization error:", error);
@@ -564,15 +564,15 @@
         });
         
         async function login() {
-            const advertiserId = document.getElementById('advertiserId').value.trim().toLowerCase();
+            const advertiserName = document.getElementById('advertiserName').value.trim();
             const password = document.getElementById('advertiserPassword').value.trim();
             const errorDiv = document.getElementById('loginError');
             
             errorDiv.textContent = '';
             
-            if (!advertiserId) {
-                errorDiv.textContent = '❌ Please enter your Advertiser ID';
-                document.getElementById('advertiserId').focus();
+            if (!advertiserName) {
+                errorDiv.textContent = '❌ Please enter your store/brand name';
+                document.getElementById('advertiserName').focus();
                 return;
             }
             
@@ -584,11 +584,11 @@
             
             try {
                 const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(advertiserId)
+                    .doc(advertiserName)
                     .get();
                 
                 if (!advertiserDoc.exists) {
-                    await createNewAdvertiser(advertiserId, password);
+                    await createNewAdvertiser(advertiserName, password);
                     showSuccessMessage('✅ Account created successfully!');
                 } else {
                     const advertiserData = advertiserDoc.data();
@@ -601,9 +601,8 @@
                     }
                     
                     currentAdvertiser = {
-                        id: advertiserId,
-                        name: advertiserData.name || advertiserId,
-                        createdAt: advertiserData.createdAt,
+                        name: advertiserName,
+                        password: advertiserData.password,
                         couponValidations: advertiserData.couponValidations || 0
                     };
                     
@@ -612,7 +611,7 @@
                 
                 sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
                 
-                document.getElementById('advertiserId').value = '';
+                document.getElementById('advertiserName').value = '';
                 document.getElementById('advertiserPassword').value = '';
                 
                 showScannerSection();
@@ -620,18 +619,19 @@
             } catch (error) {
                 console.error('Login error:', error);
                 
-                if (advertiserId === 'pharmacy1' && password === 'pass123') {
-                    currentAdvertiser = { id: 'pharmacy1', name: 'Pharmacy One', isDemo: true };
+                // Demo accounts for testing
+                if ((advertiserName === 'Pharmacy One' || advertiserName === 'pharmacy one') && password === 'pass123') {
+                    currentAdvertiser = { name: 'Pharmacy One', isDemo: true };
                     sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
                     showScannerSection();
                     errorDiv.textContent = '';
-                } else if (advertiserId === 'storeA' && password === 'store123') {
-                    currentAdvertiser = { id: 'storeA', name: 'Store A', isDemo: true };
+                } else if ((advertiserName === 'Cafe Central' || advertiserName === 'cafe central') && password === 'cafe123') {
+                    currentAdvertiser = { name: 'Cafe Central', isDemo: true };
                     sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
                     showScannerSection();
                     errorDiv.textContent = '';
                 } else {
-                    errorDiv.textContent = '❌ Login error. Demo: pharmacy1 / pass123';
+                    errorDiv.innerHTML = '❌ Login error. Demo: "Pharmacy One" / pass123';
                 }
             }
         }
@@ -650,10 +650,9 @@
             }, 3000);
         }
         
-        async function createNewAdvertiser(advertiserId, password) {
+        async function createNewAdvertiser(advertiserName, password) {
             const newAdvertiser = {
-                id: advertiserId,
-                name: advertiserId,
+                name: advertiserName,
                 password: password,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
@@ -662,13 +661,11 @@
             };
             
             await db.collection(ADVERTISERS_COLLECTION)
-                .doc(advertiserId)
+                .doc(advertiserName)
                 .set(newAdvertiser);
             
             currentAdvertiser = {
-                id: advertiserId,
-                name: advertiserId,
-                createdAt: new Date(),
+                name: advertiserName,
                 couponValidations: 0
             };
         }
@@ -685,7 +682,7 @@
             document.getElementById('resultSection').classList.add('hidden');
             
             document.getElementById('loggedInAdvertiser').textContent = currentAdvertiser.name;
-            document.getElementById('currentAdvertiserId').textContent = currentAdvertiser.id;
+            document.getElementById('currentAdvertiserName').textContent = currentAdvertiser.name;
             
             initializeScanner();
         }
@@ -705,9 +702,9 @@
             document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('resultSection').classList.add('hidden');
             
-            document.getElementById('advertiserId').value = '';
+            document.getElementById('advertiserName').value = '';
             document.getElementById('advertiserPassword').value = '';
-            document.getElementById('advertiserId').focus();
+            document.getElementById('advertiserName').focus();
         }
         
         function showChangePasswordModal() {
@@ -762,7 +759,7 @@
             
             try {
                 const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(currentAdvertiser.id)
+                    .doc(currentAdvertiser.name)
                     .get();
                 
                 if (!advertiserDoc.exists) {
@@ -778,7 +775,7 @@
                 }
                 
                 await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(currentAdvertiser.id)
+                    .doc(currentAdvertiser.name)
                     .update({
                         password: newPass,
                         passwordChangedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -882,17 +879,17 @@
                     ...doc.data()
                 };
                 
-                // CRITICAL: Check if coupon belongs to this advertiser
-                const couponAdvertiserId = currentCouponData.advertiserId ? 
-                    currentCouponData.advertiserId.toLowerCase() : null;
+                // CRITICAL: Check if coupon belongs to this advertiser (by store/brand name)
+                const couponStore = currentCouponData.advertiserName;
                 
-                if (!couponAdvertiserId) {
-                    showInvalidResult("❌ This coupon has no advertiser association. Cannot validate.");
+                if (!couponStore) {
+                    showInvalidResult("❌ This coupon has no store/brand association. Cannot validate.");
                     return;
                 }
                 
-                if (couponAdvertiserId !== currentAdvertiser.id) {
-                    showInvalidResult(`🔒 UNAUTHORIZED: This coupon belongs to advertiser "${couponAdvertiserId}". You (${currentAdvertiser.id}) cannot validate it.`);
+                // Case-insensitive comparison
+                if (couponStore.toLowerCase() !== currentAdvertiser.name.toLowerCase()) {
+                    showInvalidResult(`🔒 UNAUTHORIZED: This coupon belongs to "${couponStore}". You (${currentAdvertiser.name}) cannot validate it.`);
                     return;
                 }
                 
@@ -928,7 +925,7 @@
             
             document.getElementById('resultAd').textContent = currentCouponData.adName || 'Unknown';
             document.getElementById('resultProduct').textContent = currentCouponData.productName || 'Unknown';
-            document.getElementById('resultAdvertiserOwner').innerHTML = `<strong style="color: #2E7D32;">${currentCouponData.advertiserName || currentCouponData.advertiserId}</strong> ✓ matches your account`;
+            document.getElementById('resultStore').innerHTML = `<strong style="color: #2E7D32;">${currentCouponData.advertiserName}</strong> ✓ matches your store`;
             document.getElementById('resultLocation').textContent = currentCouponData.hostName || 'Unknown';
             document.getElementById('resultTime').textContent = claimedTime ? claimedTime.toLocaleString() : 'Unknown';
             document.getElementById('resultExpires').textContent = expiresTime ? expiresTime.toLocaleString() : 'Unknown';
@@ -975,12 +972,12 @@
                 await db.collection('claims').doc(currentCouponData.id).update({
                     redeemed: true,
                     redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    redeemedBy: currentAdvertiser.id,
+                    redeemedBy: currentAdvertiser.name,
                     redeemedByName: currentAdvertiser.name
                 });
                 
                 await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(currentAdvertiser.id)
+                    .doc(currentAdvertiser.name)
                     .update({
                         couponValidations: firebase.firestore.FieldValue.increment(1),
                         lastValidation: firebase.firestore.FieldValue.serverTimestamp()
