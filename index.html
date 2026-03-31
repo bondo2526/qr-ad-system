@@ -269,10 +269,10 @@
                 currentProduct = urlParams.get('product') || 'unknown';
                 currentHost = urlParams.get('host') || 'unknown';
                 
-                // Decode and clean up names
-                const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
-                const displayProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
-                const displayHostName = decodeURIComponent(currentHost).replace(/_/g, ' ');
+                // Decode and keep the original string (preserve case)
+                const displayAdName = decodeURIComponent(currentAd);
+                const displayProductName = decodeURIComponent(currentProduct);
+                const displayHostName = decodeURIComponent(currentHost);
                 
                 document.getElementById('adName').textContent = displayAdName;
                 document.getElementById('productName').textContent = displayProductName;
@@ -349,17 +349,20 @@
                 
                 const clientIP = await getClientIP();
                 
+                // Store advertiserName exactly as it appears in the URL (preserve case)
+                const advertiserName = decodeURIComponent(currentAd);
+                
                 const claimData = {
                     userId: currentUser.uid,
                     userFingerprint: userFingerprint,
                     userIP: clientIP,
                     adId: currentAd,
-                    adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
+                    adName: decodeURIComponent(currentAd),
                     productId: currentProduct,
-                    productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
+                    productName: decodeURIComponent(currentProduct),
                     hostId: currentHost,
-                    hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
-                    advertiserName: decodeURIComponent(currentAd).replace(/_/g, ' '),
+                    hostName: decodeURIComponent(currentHost),
+                    advertiserName: advertiserName,  // Store exactly as provided
                     couponCode: couponCode,
                     claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     expiresAt: new Date(Date.now() + (24 * 60 * 60 * 1000)),
@@ -428,7 +431,6 @@
             document.getElementById('couponCode').textContent = data.couponCode;
             document.getElementById('claimTime').textContent = new Date().toLocaleString();
             
-            // Block refresh
             window.onbeforeunload = function() {
                 return "Your coupon has been saved. Do not refresh!";
             };
