@@ -1,464 +1,170 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coupon Validator - Advertiser Portal</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
-        
-        body { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container { 
-            background: white; 
-            border-radius: 20px; 
-            padding: 30px; 
-            max-width: 500px; 
-            width: 100%; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
-        }
-        
-        h1 { 
-            color: #333; 
-            margin-bottom: 10px; 
-            text-align: center;
-        }
-        
-        h2 {
-            color: #333;
-            margin: 20px 0 10px 0;
-            text-align: center;
-        }
-        
-        p {
-            color: #666;
-            margin: 10px 0;
-            text-align: center;
-        }
-        
-        #reader {
-            width: 100%;
-            max-width: 300px;
-            margin: 20px auto;
-            border: 3px solid #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .result {
-            margin: 20px 0;
-            padding: 20px;
-            border-radius: 10px;
-        }
-        
-        .valid { background: #E8F5E9; border: 2px solid #4CAF50; }
-        .invalid { background: #FFEBEE; border: 2px solid #F44336; }
-        .used { background: #FFF3E0; border: 2px solid #FF9800; }
-        
-        .coupon-display {
-            font-size: 24px;
-            font-weight: bold;
-            font-family: monospace;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 8px;
-            margin: 15px 0;
-            text-align: center;
-            word-break: break-all;
-        }
-        
-        .info-item {
-            margin: 12px 0;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .btn {
-            padding: 14px 24px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            flex: 1;
-        }
-        
-        .btn-validate { background: #4CAF50; color: white; }
-        .btn-mark-used { background: #2196F3; color: white; }
-        .btn-reset { background: #9E9E9E; color: white; }
-        .btn-login { background: #4CAF50; color: white; width: 100%; }
-        .btn-logout { background: #f44336; color: white; }
-        
+        body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
+        .box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
         .hidden { display: none; }
-        
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .error-message {
-            color: #f44336;
-            margin: 10px 0;
-            text-align: center;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .header-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .advertiser-info {
-            background: #E8F5E9;
-            border: 2px solid #4CAF50;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        .validation-result {
-            text-align: center;
-            padding: 30px;
-        }
-        
-        .validation-icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-        }
-        
-        @media (max-width: 480px) {
-            .container { padding: 20px; }
-            .action-buttons { flex-direction: column; }
-            .btn { width: 100%; margin: 5px 0; }
-            .header-controls { flex-direction: column; }
-        }
+        .error { color: red; border: 1px solid red; background: #ffe6e6; }
+        .success { color: green; border: 1px solid green; background: #e6ffe6; }
+        input { width: 90%; padding: 8px; margin: 10px 0; }
+        button { padding: 10px 20px; cursor: pointer; margin: 5px; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Login Section -->
-        <div id="loginSection">
-            <h1>🔐 Advertiser Scanner</h1>
-            <p>Login with your store name</p>
-            
-            <input type="text" id="advertiserName" placeholder="Your Store Name (e.g., pharmacy2)" autocomplete="off">
-            <input type="password" id="advertiserPassword" placeholder="Password" onkeypress="handleLoginEnter(event)">
-            <div class="error-message" id="loginError"></div>
-            <button class="btn btn-login" onclick="login()">🔓 Login</button>
-            
-            <div style="margin-top: 20px; padding: 15px; background: #E3F2FD; border-radius: 10px;">
-                <p><strong>📌 How it works:</strong></p>
-                <p>You can only validate coupons from YOUR store.</p>
-                <p>First time? Account created automatically.</p>
-            </div>
+
+    <!-- Login Screen -->
+    <div id="loginSection" class="box">
+        <h2>🔐 Advertiser Scanner</h2>
+        <p>Login with your store name</p>
+        <input type="text" id="storeNameInput" placeholder="Enter Store Name (e.g. StoreA)">
+        <button onclick="login()">🔓 Login</button>
+        <p class="error" id="loginError"></p>
+        <p><small>📌 How it works: You can only validate coupons from YOUR store.</small></p>
+    </div>
+
+    <!-- Validator Screen -->
+    <div id="validatorSection" class="box hidden">
+        <div class="header">
+            <span>Store: <strong id="displayStoreName"></strong></span>
+            <button onclick="logout()" style="font-size:0.8em">🚪 Logout</button>
         </div>
-        
-        <!-- Scanner Section -->
-        <div id="scannerSection" class="hidden">
-            <h1>📱 Coupon Validator</h1>
-            
-            <div class="advertiser-info">
-                <strong>Store: <span id="currentAdvertiserName"></span></strong>
-            </div>
-            
-            <div class="header-controls">
-                <button class="btn btn-logout" onclick="logout()">🚪 Logout</button>
-            </div>
-            
-            <input type="text" id="manualCode" placeholder="Enter coupon code" onkeypress="handleManualCodeEnter(event)">
-            
-            <div class="action-buttons">
-                <button class="btn btn-validate" onclick="validateManualCode()">✅ Validate</button>
-                <button class="btn btn-reset" onclick="resetScanner()">🔄 Reset</button>
-            </div>
-            
-            <div id="reader"></div>
-            
-            <div id="resultSection" class="hidden">
-                <div class="coupon-display" id="scannedCoupon"></div>
-                
-                <div id="validResult" class="result valid hidden">
-                    <h2 style="color: #4CAF50;">✅ VALID COUPON</h2>
-                    <div class="info-item"><strong>Campaign:</strong> <span id="resultAd"></span></div>
-                    <div class="info-item"><strong>Product:</strong> <span id="resultProduct"></span></div>
-                    <div class="info-item"><strong>Location:</strong> <span id="resultLocation"></span></div>
-                    <div class="info-item"><strong>Expires:</strong> <span id="resultExpires"></span></div>
-                    <button class="btn btn-mark-used" onclick="markCouponUsed()">✅ Mark as Used</button>
-                    <button class="btn btn-reset" onclick="resetScanner()">🔄 Scan Another</button>
-                </div>
-                
-                <div id="invalidResult" class="result invalid hidden">
-                    <div class="validation-icon">❌</div>
-                    <h2 style="color: #F44336;">ACCESS DENIED</h2>
-                    <p>This coupon code belongs to another advertiser.</p>
-                    <button class="btn btn-reset" onclick="resetScanner()">Try Again</button>
-                </div>
-                
-                <div id="usedResult" class="validation-result hidden">
-                    <div class="validation-icon">⚠️</div>
-                    <h2 style="color: #FF9800;">ALREADY REDEEMED</h2>
-                    <p>This coupon has already been used.</p>
-                    <button class="btn btn-reset" onclick="resetScanner()">Scan Another</button>
-                </div>
-                
-                <div id="successResult" class="validation-result hidden">
-                    <div class="validation-icon">✅</div>
-                    <h2 style="color: #4CAF50;">VALIDATED!</h2>
-                    <p>Coupon marked as used.</p>
-                    <button class="btn btn-reset" onclick="resetScanner()">Scan Another</button>
-                </div>
-            </div>
+        <hr>
+        <h3>📱 Coupon Validator</h3>
+        <input type="text" id="scanInput" placeholder="Enter Coupon Code">
+        <button onclick="validateCoupon()">✅ Validate</button>
+        <button onclick="resetScan()">🔄 Reset</button>
+
+        <div id="resultArea" class="hidden" style="margin-top: 20px;">
+            <!-- Results injected here -->
         </div>
     </div>
 
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
-            authDomain: "ad-coupon-system.firebaseapp.com",
-            projectId: "ad-coupon-system",
-            storageBucket: "ad-coupon-system.firebasestorage.app",
-            messagingSenderId: "1030272051491",
-            appId: "1:1030272051491:web:4ec6ce21336cf511cac496"
-        };
-        
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        
-        const ADVERTISERS_COLLECTION = 'advertisers';
-        let currentAdvertiser = null;
-        let html5QrCode = null;
-        let currentCouponData = null;
-        
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                await auth.signInAnonymously();
-                const saved = sessionStorage.getItem('advertiser_logged_in');
-                if (saved) {
-                    currentAdvertiser = JSON.parse(saved);
-                    showScannerSection();
-                }
-                document.getElementById('advertiserName').focus();
-            } catch (error) {
-                console.error("Auth error:", error);
-            }
-        });
-        
-        async function login() {
-            const name = document.getElementById('advertiserName').value.trim();
-            const password = document.getElementById('advertiserPassword').value.trim();
-            const errorDiv = document.getElementById('loginError');
-            
-            errorDiv.textContent = '';
-            
+        let currentStoreName = "";
+
+        function login() {
+            const name = document.getElementById('storeNameInput').value.trim();
             if (!name) {
-                errorDiv.textContent = '❌ Enter store name';
+                document.getElementById('loginError').textContent = "Please enter a store name.";
                 return;
             }
-            if (!password || password.length < 6) {
-                errorDiv.textContent = '❌ Password must be 6+ characters';
-                return;
-            }
+            currentStoreName = name;
+            sessionStorage.setItem('validator_store', name);
             
-            try {
-                const docRef = db.collection(ADVERTISERS_COLLECTION).doc(name);
-                const docSnap = await docRef.get();
-                
-                if (!docSnap.exists) {
-                    await docRef.set({
-                        name: name,
-                        password: password,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                } else {
-                    const data = docSnap.data();
-                    if (data.password !== password) {
-                        errorDiv.textContent = '❌ Incorrect password';
-                        document.getElementById('advertiserPassword').value = '';
-                        return;
-                    }
-                }
-                
-                currentAdvertiser = { name: name };
-                sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
-                
-                document.getElementById('advertiserName').value = '';
-                document.getElementById('advertiserPassword').value = '';
-                showScannerSection();
-                
-            } catch (error) {
-                errorDiv.textContent = '❌ Error: ' + error.message;
-            }
-        }
-        
-        function handleLoginEnter(e) { if (e.key === 'Enter') login(); }
-        
-        function showScannerSection() {
             document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('scannerSection').classList.remove('hidden');
-            document.getElementById('resultSection').classList.add('hidden');
-            document.getElementById('currentAdvertiserName').textContent = currentAdvertiser.name;
-            initializeScanner();
+            document.getElementById('validatorSection').classList.remove('hidden');
+            document.getElementById('displayStoreName').textContent = name;
         }
-        
+
+        // Check session on load
+        window.onload = function() {
+            const stored = sessionStorage.getItem('validator_store');
+            if (stored) {
+                currentStoreName = stored;
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('validatorSection').classList.remove('hidden');
+                document.getElementById('displayStoreName').textContent = stored;
+            }
+        };
+
         function logout() {
-            if (html5QrCode) { try { html5QrCode.stop(); } catch(e) {} }
-            sessionStorage.removeItem('advertiser_logged_in');
-            currentAdvertiser = null;
-            document.getElementById('scannerSection').classList.add('hidden');
-            document.getElementById('loginSection').classList.remove('hidden');
-            document.getElementById('advertiserName').focus();
+            sessionStorage.removeItem('validator_store');
+            location.reload();
         }
-        
-        function initializeScanner() {
-            if (html5QrCode) {
-                try { html5QrCode.stop(); } catch(e) {}
-                html5QrCode = null;
+
+        function resetScan() {
+            document.getElementById('scanInput').value = '';
+            document.getElementById('resultArea').classList.add('hidden');
+            document.getElementById('resultArea').innerHTML = '';
+        }
+
+        function validateCoupon() {
+            const code = document.getElementById('scanInput').value.trim();
+            const resultArea = document.getElementById('resultArea');
+            resultArea.classList.remove('hidden');
+            resultArea.innerHTML = '';
+
+            // Get Database
+            const db = JSON.parse(localStorage.getItem('coupon_database') || '[]');
+            const coupon = db.find(c => c.code === code);
+
+            if (!coupon) {
+                resultArea.innerHTML = `
+                    <div class="box error">
+                        <h3>❌ Error</h3>
+                        <p>Coupon code not found.</p>
+                        <button onclick="resetScan()">Try Again</button>
+                    </div>`;
+                return;
             }
-            
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                onScanSuccess,
-                onScanError
-            ).catch(err => console.log("Camera error:", err));
-        }
-        
-        function onScanSuccess(decodedText) {
-            if (html5QrCode) html5QrCode.stop();
-            validateCoupon(decodedText);
-        }
-        
-        function onScanError(error) { console.debug(error); }
-        
-        function handleManualCodeEnter(e) { if (e.key === 'Enter') validateManualCode(); }
-        
-        function validateManualCode() {
-            const code = document.getElementById('manualCode').value.trim();
-            if (code) validateCoupon(code);
-            else alert("Enter coupon code");
-        }
-        
-        async function validateCoupon(couponCode) {
-            if (!currentAdvertiser) return;
-            
-            try {
-                document.getElementById('resultSection').classList.remove('hidden');
-                document.getElementById('validResult').classList.add('hidden');
-                document.getElementById('invalidResult').classList.add('hidden');
-                document.getElementById('usedResult').classList.add('hidden');
-                document.getElementById('successResult').classList.add('hidden');
-                document.getElementById('scannedCoupon').textContent = couponCode;
-                
-                const querySnapshot = await db.collection('claims')
-                    .where('couponCode', '==', couponCode)
-                    .limit(1)
-                    .get();
-                
-                if (querySnapshot.empty) {
-                    showInvalidResult();
-                    return;
-                }
-                
-                const doc = querySnapshot.docs[0];
-                currentCouponData = { id: doc.id, ...doc.data() };
-                
-                // Check ownership - case insensitive
-                const couponOwner = currentCouponData.advertiserName;
-                if (!couponOwner || couponOwner.toLowerCase() !== currentAdvertiser.name.toLowerCase()) {
-                    showInvalidResult();
-                    return;
-                }
-                
-                const expiresTime = currentCouponData.expiresAt?.toDate();
-                if (expiresTime && expiresTime < new Date()) {
-                    showInvalidResult();
-                    return;
-                }
-                
-                if (currentCouponData.redeemed) {
-                    showUsedResult();
-                    return;
-                }
-                
-                showValidResult();
-                
-            } catch (error) {
-                console.error(error);
-                showInvalidResult();
+
+            // SECURITY CHECK: Compare Advertiser Name
+            // The coupon's stored advertiserName MUST match the logged in storeName
+            if (coupon.advertiserName !== currentStoreName) {
+                resultArea.innerHTML = `
+                    <div class="box error">
+                        <h3>❌ ACCESS DENIED</h3>
+                        <p>This coupon code belongs to another advertiser.</p>
+                        <p><small>Expected: <strong>${coupon.advertiserName}</strong></small></p>
+                        <p><small>You are logged in as: <strong>${currentStoreName}</strong></small></p>
+                        <button onclick="resetScan()">Try Again</button>
+                    </div>`;
+                return;
             }
-        }
-        
-        function showValidResult() {
-            document.getElementById('validResult').classList.remove('hidden');
-            const claimedTime = currentCouponData.claimedAt?.toDate();
-            const expiresTime = currentCouponData.expiresAt?.toDate();
-            
-            document.getElementById('resultAd').textContent = currentCouponData.adName || 'Unknown';
-            document.getElementById('resultProduct').textContent = currentCouponData.productName || 'Unknown';
-            document.getElementById('resultLocation').textContent = currentCouponData.hostName || 'Unknown';
-            document.getElementById('resultExpires').textContent = expiresTime ? expiresTime.toLocaleString() : 'Unknown';
-        }
-        
-        function showInvalidResult() {
-            document.getElementById('invalidResult').classList.remove('hidden');
-            currentCouponData = null;
-        }
-        
-        function showUsedResult() {
-            document.getElementById('usedResult').classList.remove('hidden');
-        }
-        
-        async function markCouponUsed() {
-            if (!currentCouponData) return;
-            
-            try {
-                await db.collection('claims').doc(currentCouponData.id).update({
-                    redeemed: true,
-                    redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    redeemedBy: currentAdvertiser.name
-                });
-                
-                document.getElementById('validResult').classList.add('hidden');
-                document.getElementById('successResult').classList.remove('hidden');
-                
-                setTimeout(() => resetScanner(), 2000);
-                
-            } catch (error) {
-                alert('Error: ' + error.message);
+
+            // Check Expiry
+            if (new Date(coupon.expiresAt) < new Date()) {
+                resultArea.innerHTML = `
+                    <div class="box error">
+                        <h3>❌ EXPIRED</h3>
+                        <p>This coupon has expired.</p>
+                        <button onclick="resetScan()">Scan Another</button>
+                    </div>`;
+                return;
             }
+
+            // Check Used Status
+            if (coupon.used) {
+                resultArea.innerHTML = `
+                    <div class="box error">
+                        <h3>⚠️ ALREADY REDEEMED</h3>
+                        <p>This coupon has already been used.</p>
+                        <p>Campaign: ${coupon.advertiserName}</p>
+                        <button onclick="resetScan()">Scan Another</button>
+                    </div>`;
+                return;
+            }
+
+            // SUCCESS
+            // Mark as used in DB
+            coupon.used = true;
+            localStorage.setItem('coupon_database', JSON.stringify(db));
+
+            resultArea.innerHTML = `
+                <div class="box success">
+                    <h3>✅ VALID COUPON</h3>
+                    <p>Campaign: ${coupon.advertiserName}</p>
+                    <p>Product: ${coupon.product}</p>
+                    <p>Location: ${coupon.location}</p>
+                    <p>Expires: ${new Date(coupon.expiresAt).toLocaleDateString()}</p>
+                    <button onclick="markAsUsedFinal()">✅ Mark as Used</button>
+                    <button onclick="resetScan()">🔄 Scan Another</button>
+                </div>`;
         }
-        
-        function resetScanner() {
-            currentCouponData = null;
-            document.getElementById('resultSection').classList.add('hidden');
-            document.getElementById('manualCode').value = '';
-            if (html5QrCode) initializeScanner();
-            document.getElementById('manualCode').focus();
+
+        function markAsUsedFinal() {
+            const resultArea = document.getElementById('resultArea');
+            resultArea.innerHTML = `
+                <div class="box success">
+                    <h3>✅ VALIDATED!</h3>
+                    <p>Coupon marked as used.</p>
+                    <button onclick="resetScan()">Scan Another</button>
+                </div>`;
         }
     </script>
 </body>
