@@ -208,7 +208,7 @@
             <h2 align="center" id="adName"></h2>
             <p align="center"><strong>Product:</strong> <span id="productName"></span></p>
             <p align="center"><strong>Location:</strong> <span id="hostName"></span></p>
-            <p align="center"><strong>Advertiser:</strong> <span id="advertiserName"></span></p>
+            <p align="center"><strong>Store/Brand:</strong> <span id="storeName"></span></p>
             
             <div class="coupon-section">
                 <div class="coupon" id="couponCode"></div>
@@ -311,7 +311,6 @@
         let currentAd = null;
         let currentProduct = null;
         let currentHost = null;
-        let currentAdvertiserId = null;
         let currentAdvertiserName = null;
         let userFingerprint = null;
         let existingCouponCode = null;
@@ -322,8 +321,7 @@
                 currentAd = urlParams.get('ad') || 'unknown_ad';
                 currentProduct = urlParams.get('product') || 'unknown_product';
                 currentHost = urlParams.get('host') || 'unknown_location';
-                currentAdvertiserId = urlParams.get('advertiserId') || currentAd;
-                currentAdvertiserName = urlParams.get('advertiserName') || decodeURIComponent(currentAd).replace(/_/g, ' ');
+                currentAdvertiserName = urlParams.get('advertiser') || decodeURIComponent(currentAd).replace(/_/g, ' ');
                 
                 const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
                 const displayProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
@@ -333,7 +331,7 @@
                 document.getElementById('productName').textContent = displayProductName;
                 document.getElementById('hostName').textContent = displayHostName;
                 document.getElementById('locationName').textContent = displayHostName;
-                document.getElementById('advertiserName').textContent = currentAdvertiserName;
+                document.getElementById('storeName').textContent = currentAdvertiserName;
                 document.getElementById('blockedAdName').textContent = displayAdName;
                 document.getElementById('blockedProduct').textContent = displayProductName;
                 document.getElementById('blockedLocation').textContent = displayHostName;
@@ -417,7 +415,6 @@
                     productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
                     hostId: currentHost,
                     hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
-                    advertiserId: currentAdvertiserId,
                     advertiserName: currentAdvertiserName,
                     couponCode: couponCode,
                     claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -585,8 +582,7 @@
                 '?ad=' + encodeURIComponent(currentAd) + 
                 '&product=' + encodeURIComponent(currentProduct) +
                 '&host=' + encodeURIComponent(currentHost) + 
-                '&advertiserId=' + encodeURIComponent(currentAdvertiserId) +
-                '&advertiserName=' + encodeURIComponent(currentAdvertiserName) +
+                '&advertiser=' + encodeURIComponent(currentAdvertiserName) +
                 '&claimed=true&t=' + Date.now();
             history.replaceState(null, null, newUrl);
             
