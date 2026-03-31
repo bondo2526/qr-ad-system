@@ -9,7 +9,6 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
         
-        /* Body with dynamic backgrounds */
         body { 
             min-height: 100vh; 
             display: flex; 
@@ -20,12 +19,10 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
-        /* Success background (green) */
         body.success-bg {
             background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%) !important;
         }
         
-        /* Blocked/Already claimed background (red) */
         body.blocked-bg {
             background: linear-gradient(135deg, #f44336 0%, #c62828 100%) !important;
         }
@@ -42,41 +39,41 @@
         .success { color: #2E7D32; }
         .blocked { color: #C62828; }
         
-       .coupon { 
-    font-size: 42px; 
-    font-weight: bold; 
-    color: #2E7D32; 
-    margin: 20px 0; 
-    font-family: Consolas, 'Courier New', monospace; /* CLEAR FONT */
-    font-feature-settings: "tnum"; /* Better number spacing */
-    font-variant-numeric: slashed-zero; /* Slashed zero to distinguish from O */
-    background: #E8F5E9; 
-    padding: 15px; 
-    border-radius: 10px; 
-    border: 2px dashed #4CAF50; 
-    text-align: center;
-    word-break: break-all;
-    font-size: clamp(32px, 6vw, 42px);
-    letter-spacing: 2px; /* Add spacing between characters */
-}
-
-.coupon-blocked {
-    font-size: 36px;
-    font-weight: bold;
-    color: #c62828;
-    margin: 15px 0;
-    font-family: Consolas, 'Courier New', monospace; /* CLEAR FONT */
-    font-feature-settings: "tnum";
-    font-variant-numeric: slashed-zero;
-    background: #FFEBEE;
-    padding: 12px;
-    border-radius: 8px;
-    border: 2px dashed #c62828;
-    text-align: center;
-    word-break: break-all;
-    font-size: clamp(28px, 5vw, 36px);
-    letter-spacing: 2px;
-}
+        .coupon { 
+            font-size: 42px; 
+            font-weight: bold; 
+            color: #2E7D32; 
+            margin: 20px 0; 
+            font-family: Consolas, 'Courier New', monospace;
+            font-feature-settings: "tnum";
+            font-variant-numeric: slashed-zero;
+            background: #E8F5E9; 
+            padding: 15px; 
+            border-radius: 10px; 
+            border: 2px dashed #4CAF50; 
+            text-align: center;
+            word-break: break-all;
+            font-size: clamp(32px, 6vw, 42px);
+            letter-spacing: 2px;
+        }
+        
+        .coupon-blocked {
+            font-size: 36px;
+            font-weight: bold;
+            color: #c62828;
+            margin: 15px 0;
+            font-family: Consolas, 'Courier New', monospace;
+            font-feature-settings: "tnum";
+            font-variant-numeric: slashed-zero;
+            background: #FFEBEE;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px dashed #c62828;
+            text-align: center;
+            word-break: break-all;
+            font-size: clamp(28px, 5vw, 36px);
+            letter-spacing: 2px;
+        }
         
         .info { 
             background: #E3F2FD; 
@@ -162,9 +159,9 @@
             margin-top: 20px;
         }
         .action-buttons:has(button:only-child) button {
-    width: 100%;
-    flex: none;
-}
+            width: 100%;
+            flex: none;
+        }
         
         button {
             padding: 12px 24px;
@@ -201,18 +198,17 @@
 </head>
 <body>
     <div class="container">
-        <!-- Loading -->
         <div id="loading" class="loading">
             <div class="spinner"></div>
             <p>Loading your coupon...</p>
         </div>
         
-        <!-- Success -->
         <div id="success" class="hidden">
             <h1 class="success">✅ Coupon Claimed!</h1>
             <h2 align="center" id="adName"></h2>
             <p align="center"><strong>Product:</strong> <span id="productName"></span></p>
             <p align="center"><strong>Location:</strong> <span id="hostName"></span></p>
+            <p align="center"><strong>Advertiser:</strong> <span id="advertiserName"></span></p>
             
             <div class="coupon-section">
                 <div class="coupon" id="couponCode"></div>
@@ -244,7 +240,6 @@
             </div>
         </div>
         
-        <!-- Blocked -->
         <div id="blocked" class="hidden">
             <h1 class="blocked">⛔ Already Claimed</h1>
             <h3 id="blockedAdName"></h3>
@@ -283,7 +278,6 @@
             </div>
         </div>
         
-        <!-- Error -->
         <div id="error" class="hidden">
             <h1 style="color: #FF5722;">❌ Error</h1>
             <p id="errorMessage"></p>
@@ -294,13 +288,11 @@
     </div>
 
     <script>
-        // === CONFIGURATION ===
         const CONFIG = {
             BLOCK_HOURS: 24,
             MAX_CLAIMS_PER_AD_PER_DAY: 1
         };
 
-        // === FIREBASE CONFIG ===
         const firebaseConfig = {
             apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
             authDomain: "ad-coupon-system.firebaseapp.com",
@@ -311,50 +303,46 @@
             measurementId: "G-PR9E37ZYE2"
         };
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
         
-        // Global variables
         let currentUser = null;
         let currentAd = null;
         let currentProduct = null;
         let currentHost = null;
+        let currentAdvertiserId = null;
+        let currentAdvertiserName = null;
         let userFingerprint = null;
         let existingCouponCode = null;
         
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                // Get URL parameters
                 const urlParams = new URLSearchParams(window.location.search);
                 currentAd = urlParams.get('ad') || 'unknown_ad';
                 currentProduct = urlParams.get('product') || 'unknown_product';
                 currentHost = urlParams.get('host') || 'unknown_location';
+                currentAdvertiserId = urlParams.get('advertiserId') || currentAd;
+                currentAdvertiserName = urlParams.get('advertiserName') || decodeURIComponent(currentAd).replace(/_/g, ' ');
                 
-                // Decode names for display
                 const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
                 const displayProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
                 const displayHostName = decodeURIComponent(currentHost).replace(/_/g, ' ');
                 
-                // Update display elements
                 document.getElementById('adName').textContent = displayAdName;
                 document.getElementById('productName').textContent = displayProductName;
                 document.getElementById('hostName').textContent = displayHostName;
                 document.getElementById('locationName').textContent = displayHostName;
+                document.getElementById('advertiserName').textContent = currentAdvertiserName;
                 document.getElementById('blockedAdName').textContent = displayAdName;
                 document.getElementById('blockedProduct').textContent = displayProductName;
                 document.getElementById('blockedLocation').textContent = displayHostName;
                 
-                // Initialize Firebase Auth (anonymous)
                 const userCredential = await auth.signInAnonymously();
                 currentUser = userCredential.user;
                 
-                // Generate user fingerprint
                 userFingerprint = await generateUserFingerprint();
                 
-                // Check if user already claimed this ad TODAY
                 await checkIfAlreadyClaimed();
                 
             } catch (error) {
@@ -362,13 +350,11 @@
             }
         });
         
-        // === CORE LOGIC ===
         async function checkIfAlreadyClaimed() {
             try {
                 const twentyFourHoursAgo = new Date();
                 twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
                 
-                // Query by user fingerprint
                 const claimsRef = db.collection('claims');
                 const querySnapshot = await claimsRef
                     .where('userFingerprint', '==', userFingerprint)
@@ -383,7 +369,6 @@
                     const claim = doc.data();
                     const claimTime = claim.claimedAt?.toDate();
                     
-                    // Check conditions: same ad AND same product AND within 24h
                     const isSameAd = claim.adId === currentAd;
                     const isSameProduct = claim.productId === currentProduct;
                     const isWithin24h = claimTime >= twentyFourHoursAgo;
@@ -404,7 +389,6 @@
                     return true;
                 }
                 
-                // No recent claim found - generate new coupon
                 await generateNewCoupon();
                 return false;
                 
@@ -417,15 +401,12 @@
         
         async function generateNewCoupon() {
             try {
-                // Generate unique coupon code
                 const couponCode = 'SAVE' + 
                     Math.floor(Math.random() * 9000 + 1000) + 
                     String.fromCharCode(65 + Math.floor(Math.random() * 26));
                 
-                // Get client IP
                 const clientIP = await getClientIP();
                 
-                // Prepare claim data with product
                 const claimData = {
                     userId: currentUser.uid,
                     userFingerprint: userFingerprint,
@@ -436,6 +417,8 @@
                     productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
                     hostId: currentHost,
                     hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
+                    advertiserId: currentAdvertiserId,
+                    advertiserName: currentAdvertiserName,
                     couponCode: couponCode,
                     claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
@@ -447,10 +430,8 @@
                     redeemedBy: null
                 };
                 
-                // Save to Firestore
                 await db.collection('claims').add(claimData);
                 
-                // Store in localStorage to prevent refresh abuse
                 localStorage.setItem(`claimed_${currentAd}_${currentProduct}_${currentUser.uid}`, 
                     JSON.stringify({
                         coupon: couponCode,
@@ -458,7 +439,6 @@
                         expires: claimData.expiresAt
                     }));
                 
-                // Show success page
                 showSuccessPage(claimData);
                 
             } catch (error) {
@@ -466,15 +446,12 @@
             }
         }
         
-        // === UTILITY FUNCTIONS ===
         async function generateUserFingerprint() {
             try {
-                // Get client IP
                 const ipResponse = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipResponse.json();
                 const clientIP = ipData.ip;
                 
-                // Create fingerprint from multiple stable sources
                 const fingerprintData = {
                     ip: clientIP,
                     userAgent: navigator.userAgent,
@@ -484,7 +461,6 @@
                     cookiesEnabled: navigator.cookieEnabled
                 };
                 
-                // Generate stable hash
                 const dataString = JSON.stringify(fingerprintData);
                 let hash = 0;
                 for (let i = 0; i < dataString.length; i++) {
@@ -496,7 +472,6 @@
                 return `fp_${Math.abs(hash).toString(36)}`;
                 
             } catch (error) {
-                // Fallback to simpler fingerprint
                 return `fallback_${navigator.userAgent.substring(0, 50)}_${navigator.language}`;
             }
         }
@@ -511,12 +486,9 @@
             }
         }
         
-        // === UI FUNCTIONS ===
         function showSuccessPage(data) {
-            // Change background to GREEN
             document.body.className = 'success-bg';
             
-            // Hide loading, show success
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('success').classList.remove('hidden');
             document.getElementById('blocked').classList.add('hidden');
@@ -525,15 +497,12 @@
             document.getElementById('couponCode').textContent = data.couponCode;
             document.getElementById('claimTime').textContent = new Date().toLocaleString();
             
-            // Setup refresh protection
             setupRefreshProtection();
         }
         
         function showBlockedPage(existingClaim) {
-            // Change background to RED
             document.body.className = 'blocked-bg';
             
-            // Hide loading, show blocked
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('success').classList.add('hidden');
             document.getElementById('blocked').classList.remove('hidden');
@@ -542,14 +511,12 @@
             const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
             document.getElementById('blockedTime').textContent = claimedTime.toLocaleString();
             
-            // Display the existing coupon code
             if (existingCouponCode) {
                 document.getElementById('blockedCouponCode').textContent = existingCouponCode;
             } else {
                 document.getElementById('blockedCouponCode').textContent = 'Not available';
             }
             
-            // Check if coupon is redeemed
             if (existingClaim.redeemed) {
                 document.getElementById('blockedStatus').textContent = 'Already redeemed';
                 document.getElementById('blockedStatus').style.color = '#c62828';
@@ -561,10 +528,8 @@
         }
         
         function showError(message) {
-            // Keep default background for errors
             document.body.className = '';
             
-            // Hide all, show error
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('success').classList.add('hidden');
             document.getElementById('blocked').classList.add('hidden');
@@ -595,11 +560,9 @@
                     </div>
                     <p>Time until you can claim this ad again</p>`;
                 
-                // Continue updating every second
                 setTimeout(updateCountdown, 1000);
             }
             
-            // Start the countdown
             updateCountdown();
         }
         
@@ -616,21 +579,21 @@
                 alert('No coupon code available to copy.');
             }
         }
+        
         function setupRefreshProtection() {
-            // Replace URL to prevent re-submission
             const newUrl = window.location.origin + window.location.pathname + 
                 '?ad=' + encodeURIComponent(currentAd) + 
                 '&product=' + encodeURIComponent(currentProduct) +
                 '&host=' + encodeURIComponent(currentHost) + 
+                '&advertiserId=' + encodeURIComponent(currentAdvertiserId) +
+                '&advertiserName=' + encodeURIComponent(currentAdvertiserName) +
                 '&claimed=true&t=' + Date.now();
             history.replaceState(null, null, newUrl);
             
-            // Block refresh attempts
             window.onbeforeunload = function() {
                 return "Your coupon has been saved. Do not refresh or you'll lose it!";
             };
             
-            // Check if page was already loaded
             if (performance.navigation.type === 1) {
                 const stored = localStorage.getItem(`claimed_${currentAd}_${currentProduct}_${currentUser.uid}`);
                 if (stored) {
