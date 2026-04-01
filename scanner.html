@@ -349,7 +349,7 @@
     <div class="container">
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner v3.0</h1>
+            <h1>🔐 Advertiser Scanner v2.0</h1>
             <p>Login with your advertiser credentials</p>
             
             <div class="advertiser-id-section">
@@ -458,19 +458,19 @@
                     </div>
                 </div>
                 
-                <!-- USED COUPON RESULT -->
-                <div id="usedResult" class="validation-result hidden">
-                    <div class="validation-icon">⚠️</div>
-                    <h2 style="color: #FF9800;">COUPON ALREADY REDEEMED</h2>
-                    <p class="validation-message">
-                        This coupon was already redeemed.
-                    </p>
-                    <div class="action-buttons">
-                        <button class="btn btn-reset" onclick="resetScanner()">
-                            🔄 Scan Another Coupon
-                        </button>
-                    </div>
-                </div>
+<!-- USED COUPON RESULT -->
+<div id="usedResult" class="validation-result hidden">
+    <div class="validation-icon">⚠️</div>
+    <h2 style="color: #FF9800;">COUPON ALREADY REDEEMED</h2>
+    <p class="validation-message">
+        This coupon was already redeemed on <strong><span id="redeemedTime"></span></strong>.
+    </p>
+    <div class="action-buttons">
+        <button class="btn btn-reset" onclick="resetScanner()">
+            🔄 Scan Another Coupon
+        </button>
+    </div>
+</div>
                 
                 <!-- SUCCESS VALIDATION MESSAGE -->
                 <div id="successResult" class="validation-result hidden">
@@ -1052,14 +1052,20 @@
             document.getElementById('invalidMessage').textContent = message;
         }
         
-        function showUsedResult() {
-            document.getElementById('validResult').classList.add('hidden');
-            document.getElementById('invalidResult').classList.add('hidden');
-            document.getElementById('usedResult').classList.remove('hidden');
-            document.getElementById('successResult').classList.add('hidden');
-            document.getElementById('unauthorizedResult').classList.add('hidden');
-        }
-        
+function showUsedResult() {
+    document.getElementById('validResult').classList.add('hidden');
+    document.getElementById('invalidResult').classList.add('hidden');
+    document.getElementById('usedResult').classList.remove('hidden');
+    document.getElementById('successResult').classList.add('hidden');
+    document.getElementById('unauthorizedResult').classList.add('hidden');
+    
+    // Display redeemed time if available
+    const redeemedTime = currentCouponData.redeemedAt?.toDate();
+    const redeemedTimeSpan = document.getElementById('redeemedTime');
+    if (redeemedTimeSpan) {
+        redeemedTimeSpan.textContent = redeemedTime ? formatCompactDate(redeemedTime) : 'an earlier date';
+    }
+}
         async function markCouponUsed() {
             try {
                 const couponCode = currentCouponData.couponCode;
