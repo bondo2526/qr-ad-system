@@ -349,7 +349,7 @@
     <div class="container">
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner v2.0</h1>
+            <h1>🔐 Advertiser Scanner v3.0</h1>
             <p>Login with your advertiser credentials</p>
             
             <div class="advertiser-id-section">
@@ -489,16 +489,15 @@
                     </div>
                 </div>
                 
-              <!-- UNAUTHORIZED COUPON RESULT -->
+<!-- UNAUTHORIZED COUPON RESULT -->
 <div id="unauthorizedResult" class="validation-result hidden">
     <div class="validation-icon">🚫</div>
     <h2 style="color: #FF5722;">UNAUTHORIZED ACCESS</h2>
     <p class="validation-message">
-        This coupon belongs to a different advertiser.<br>
-        <strong>Coupon Owner ID:</strong> <span id="unauthorizedOwner"></span><br>
-        <strong>Your ID:</strong> <span id="yourIdDisplay"></span><br>
-        You can only validate coupons that match your unique system ID.
+        <strong>Coupon belongs to:</strong> <span id="unauthorizedOwner"></span><br>
+        <strong>Your business name:</strong> <span id="yourIdDisplay"></span><br>
     </p>
+    <p id="unauthorizedMessage" style="color: #666; font-size: 14px; margin-top: 10px;"></p>
     <div class="action-buttons">
         <button class="btn btn-reset" onclick="resetScanner()">
             🔄 Try Another Coupon
@@ -917,8 +916,9 @@
             }
         }
         
-   // ============================================
+// ============================================
 // FIXED VALIDATE COUPON FUNCTION
+// Compares coupon's advertiser name to logged-in advertiser's ID lookup
 // ============================================
 async function validateCoupon(couponCode) {
     try {
@@ -931,8 +931,9 @@ async function validateCoupon(couponCode) {
         
         document.getElementById('scannedCoupon').textContent = couponCode;
         
-        // Get logged-in advertiser's unique system ID
-        const loggedInUniqueId = currentAdvertiser.id;
+        // Get logged-in advertiser's info
+        const loggedInAdvertiserId = currentAdvertiser.id; // This is the random ID
+        const loggedInAdvertiserName = currentAdvertiser.name; // This is the display name
         
         const claimsRef = db.collection('claims');
         const querySnapshot = await claimsRef
@@ -948,8 +949,8 @@ async function validateCoupon(couponCode) {
         const doc = querySnapshot.docs[0];
         const couponData = doc.data();
         
-        // Get the adId from coupon
-        let couponAdId = couponData.adId || couponData.advertiserId || couponData.campaignOwnerId || '';
+        // Get the advertiser name from coupon (this is what customer sees)
+        let couponAdvertiserName = couponData.advertiserName || couponData.adName || couponData.businessName || '';
         
         currentCouponData = {
             id: doc.id,
@@ -979,12 +980,42 @@ async function validateCoupon(couponCode) {
             return;
         }
         
-        // CRITICAL: Compare unique system IDs (exact match)
-        if (couponAdId !== loggedInUniqueId) {
-            // Show detailed error message with instructions
-            const errorMessage = `This coupon belongs to advertiser ID: "${couponAdId}".\n\nYour unique system ID is: "${loggedInUniqueId}".\n\nWhen creating coupons, make sure to use YOUR unique ID in the "adId" field.\n\nTo fix existing coupons, run this in console:\nfixCouponAdId("${couponAdId}", "${loggedInUniqueId}")`;
-            showUnauthorizedResultWithDetails(couponAdId, errorMessage);
+        // CRITICAL: Look up the advertiser by name to get their random ID
+        // Query the advertisers collection to find the advertiser by display name
+        const advertiserQuery = await db.collection('advertisers')
+            .where('displayName', '==', couponAdvertiserName)
+            .limit(1)
+            .get();
+        
+        if (advertiserQuery.empty) {
+            // No advertiser found with this name
+            showUnauthorizedResultWithDetails(
+                couponAdvertiserName, 
+                `No advertiser found with name "${couponAdvertiserName}". Please check the coupon data.`
+            );
             return;
+        }
+        
+        const advertiserDoc = advertiserQuery.docs[0];
+        const advertiserData = advertiserDoc.data();
+        const expectedAdvertiserId = advertiserData.id; // This is the random ID
+        
+        // Compare the random ID with logged-in user's random ID
+        if (expectedAdvertiserId !== loggedInAdvertiserId) {
+            // Coupon belongs to a different advertiser
+            showUnauthorizedResultWithDetails(
+                couponAdvertiserName,
+                `This coupon belongs to "${couponAdvertiserName}". Your business name is "${loggedInAdvertiserName}". Only the business that issued the coupon can validate it.`
+            );
+            return;
+        }
+        
+        // Store the advertiser ID in coupon data for future reference (optional)
+        if (!currentCouponData.advertiserId) {
+            await doc.ref.update({
+                advertiserId: loggedInAdvertiserId
+            });
+            currentCouponData.advertiserId = loggedInAdvertiserId;
         }
         
         showValidResult();
@@ -992,6 +1023,24 @@ async function validateCoupon(couponCode) {
     } catch (error) {
         console.error("Validation error:", error);
         showInvalidResult("Error validating coupon: " + error.message);
+    }
+}
+
+// Updated showUnauthorizedResult function with better messaging
+function showUnauthorizedResultWithDetails(ownerName, details) {
+    document.getElementById('validResult').classList.add('hidden');
+    document.getElementById('invalidResult').classList.add('hidden');
+    document.getElementById('usedResult').classList.add('hidden');
+    document.getElementById('successResult').classList.add('hidden');
+    document.getElementById('unauthorizedResult').classList.remove('hidden');
+    
+    document.getElementById('unauthorizedOwner').textContent = ownerName;
+    document.getElementById('yourIdDisplay').textContent = currentAdvertiser.name;
+    
+    // Add detailed message
+    const messageDiv = document.getElementById('unauthorizedMessage');
+    if (messageDiv) {
+        messageDiv.innerHTML = details;
     }
 }
 
@@ -1102,25 +1151,25 @@ window.fixAllMyCoupons = async function() {
     return count;
 };
         
-        function showValidResult() {
-            document.getElementById('validResult').classList.remove('hidden');
-            document.getElementById('invalidResult').classList.add('hidden');
-            document.getElementById('usedResult').classList.add('hidden');
-            document.getElementById('successResult').classList.add('hidden');
-            document.getElementById('unauthorizedResult').classList.add('hidden');
-            
-            const claimedTime = currentCouponData.claimedAt?.toDate();
-            const expiresTime = currentCouponData.expiresAt?.toDate();
-            const couponOwner = currentCouponData.adId || currentCouponData.advertiserId || 'Unknown';
-            
-            document.getElementById('resultAd').textContent = currentCouponData.adName || 'Unknown';
-            document.getElementById('resultProduct').textContent = currentCouponData.productName || 'Unknown';
-            document.getElementById('resultLocation').textContent = currentCouponData.hostName || 'Unknown';
-            document.getElementById('resultTime').textContent = claimedTime ? claimedTime.toLocaleString() : 'Unknown';
-            document.getElementById('resultExpires').textContent = expiresTime ? expiresTime.toLocaleString() : 'Unknown';
-            document.getElementById('resultCustomer').textContent = currentCouponData.userId ? currentCouponData.userId.substring(0, 8) + '...' : 'Unknown';
-            document.getElementById('resultAdvertiserOwner').textContent = couponOwner;
-        }
+    function showValidResult() {
+    document.getElementById('validResult').classList.remove('hidden');
+    document.getElementById('invalidResult').classList.add('hidden');
+    document.getElementById('usedResult').classList.add('hidden');
+    document.getElementById('successResult').classList.add('hidden');
+    document.getElementById('unauthorizedResult').classList.add('hidden');
+    
+    const claimedTime = currentCouponData.claimedAt?.toDate();
+    const expiresTime = currentCouponData.expiresAt?.toDate();
+    const advertiserName = currentCouponData.advertiserName || currentCouponData.adName || currentCouponData.businessName || currentAdvertiser.name;
+    
+    document.getElementById('resultAd').textContent = currentCouponData.adName || 'Unknown';
+    document.getElementById('resultProduct').textContent = currentCouponData.productName || 'Unknown';
+    document.getElementById('resultLocation').textContent = currentCouponData.hostName || 'Unknown';
+    document.getElementById('resultTime').textContent = claimedTime ? claimedTime.toLocaleString() : 'Unknown';
+    document.getElementById('resultExpires').textContent = expiresTime ? expiresTime.toLocaleString() : 'Unknown';
+    document.getElementById('resultCustomer').textContent = currentCouponData.userId ? currentCouponData.userId.substring(0, 8) + '...' : 'Unknown';
+    document.getElementById('resultAdvertiserOwner').textContent = advertiserName;
+}
         
         function showInvalidResult(message) {
             document.getElementById('validResult').classList.add('hidden');
