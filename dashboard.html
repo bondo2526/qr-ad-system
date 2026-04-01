@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>QR Ad Dashboard</title>
+    <title>Coupon system Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -438,7 +438,7 @@
     <!-- Login Screen -->
     <div class="login-screen" id="loginScreen">
         <div class="login-container">
-            <h1>🔐 Advertiser Dashboard v2.0</h1>
+            <h1>🔐 Advertiser Dashboard Admin V 2.0</h1>
             <p>Enter your password to access analytics</p>
             
             <input type="password" 
@@ -454,15 +454,6 @@
             <div class="error-message" id="loginError">
                 ❌ Incorrect password. Please try again.
             </div>
-            
-            <div class="password-change">
-                <p style="color: #666; margin-bottom: 10px; font-size: 14px;">
-                    First time? Default password is: <strong>admin123</strong>
-                </p>
-                <button class="btn btn-change-password" onclick="showChangePasswordModal()" style="width: 100%;">
-                    🔑 Change Password
-                </button>
-            </div>
         </div>
     </div>
     
@@ -470,8 +461,8 @@
     <div class="dashboard-content" id="dashboardContent">
         <div class="header">
             <div class="container">
-                <h1 class="header-title">📊 QR Ad Campaign Dashboard</h1>
-                <p class="header-subtitle">Real-time analytics & management for your QR campaigns</p>
+                <h1 class="header-title">📊 Advertisers Campaigns Dashboard</h1>
+                <p class="header-subtitle">Real-time analytics & management for advertisers campaigns data</p>
                 
                 <div class="header-controls">
                     <button class="btn btn-change-password" onclick="showChangePasswordModal()">
@@ -559,7 +550,7 @@
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-label">Top Location</div>
+                    <div class="stat-label">Top Station</div>
                     <div class="stat-value" id="topLocation">-</div>
                 </div>
             </div>
