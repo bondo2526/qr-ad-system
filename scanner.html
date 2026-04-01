@@ -349,7 +349,7 @@
     <div class="container">
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner v2.0</h1>
+            <h1>🔐 Advertiser Scanner v3.0</h1>
             <p>Login with your advertiser credentials</p>
             
             <div class="advertiser-id-section">
@@ -374,16 +374,16 @@
                 <p><strong>First time?</strong></p>
                 <p>Enter your business name and password (min 6 chars).</p>
                 <p>A unique ID will be generated automatically for your account.</p>
+                <p><strong>Important:</strong> Save your unique ID! You'll need it when creating coupons.</p>
             </div>
             
             <div class="advertiser-info">
                 <h3>📱 How to Use:</h3>
                 <p>1. Login with your business name and password</p>
                 <p>2. Your unique system ID will be generated automatically</p>
-                <p>3. Enter customer coupon code manually as shown on their phone</p>
-                <p>4. Only your own coupons will validate</p>
-				<p>5. Press on mark as used to redeem after customers pay</p>
-				<p>6. Redeemed/Expired coupons are rejected</p>
+                <p>3. When creating coupons, use YOUR unique ID in the <strong>adId</strong> field</p>
+                <p>4. Scan/validate customer coupons</p>
+                <p>5. Only coupons with your unique ID will validate</p>
             </div>
         </div>
         
@@ -392,11 +392,13 @@
             <h1>📱 Coupon Validator</h1>
             
             <div class="advertiser-info">
-        <h3>Logged in as: <span id="loggedInAdvertiserName"></span></h3>
-        <p style="font-size: 14px; margin-top: 5px; color: #666;">
-            You are validating coupons for your business
-        </p>
-             </div>
+                <h3>Welcome, <span id="loggedInAdvertiserName"></span>!</h3>
+                <p><strong>Your Unique System ID:</strong></p>
+                <div class="random-id-box" id="currentAdvertiserId"></div>
+                <p style="font-size: 12px; margin-top: 10px; color: #666;">
+                    ⚠️ Use this ID when creating coupons (adId field)
+                </p>
+            </div>
             
             <div class="header-controls">
                 <button class="btn btn-change-password" onclick="showChangePasswordModal()">
@@ -435,6 +437,9 @@
                     <div class="info-item"><strong>Location Claimed:</strong> <span id="resultLocation"></span></div>
                     <div class="info-item"><strong>Claimed At:</strong> <span id="resultTime"></span></div>
                     <div class="info-item"><strong>Expires:</strong> <span id="resultExpires"></span></div>
+                    <div class="info-item"><strong>Customer ID:</strong> <span id="resultCustomer"></span></div>
+                    <div class="info-item" style="background: #E3F2FD;"><strong>Campaign Owner ID:</strong> <span id="resultAdvertiserOwner"></span></div>
+                    
                     <div class="action-buttons">
                         <button class="btn btn-mark-used" onclick="markCouponUsed()">
                             ✅ Mark as Used
@@ -489,7 +494,8 @@
     <div class="validation-icon">🚫</div>
     <h2 style="color: #FF5722;">UNAUTHORIZED ACCESS</h2>
     <p class="validation-message">
-        <strong>Coupon belongs to another business</strong><br>
+        <strong>Coupon belongs to:</strong> <span id="unauthorizedOwner"></span><br>
+        <strong>Your business name:</strong> <span id="yourIdDisplay"></span><br>
     </p>
     <p id="unauthorizedMessage" style="color: #666; font-size: 14px; margin-top: 10px;"></p>
     <div class="action-buttons">
@@ -1074,6 +1080,15 @@ function showUnauthorizedResultWithDetails(ownerId, details) {
     helpDiv.style.borderRadius = '8px';
     helpDiv.style.fontSize = '12px';
     helpDiv.style.textAlign = 'left';
+    helpDiv.innerHTML = `
+        <strong>💡 How to fix:</strong><br>
+        1. When creating coupons, use <strong>${currentAdvertiser.id}</strong> as the adId<br>
+        2. To fix this specific coupon, run this in browser console:<br>
+        <code style="background:#eee; padding:4px; display:block; margin-top:5px; word-break:break-all;">
+        db.collection('claims').doc('${currentCouponData.id}').update({adId: '${currentAdvertiser.id}'})
+        </code>
+    `;
+    
     // Remove old help message if exists
     const oldHelp = document.getElementById('unauthorizedHelp');
     if (oldHelp) oldHelp.remove();
