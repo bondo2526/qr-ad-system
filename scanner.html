@@ -310,15 +310,14 @@
             margin: 0 5px;
         }
         
-        .warning-badge {
-            background: #FF9800;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-bottom: 15px;
-            text-align: center;
-            display: inline-block;
+        .random-id-box {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 18px;
+            letter-spacing: 1px;
+            word-break: break-all;
         }
         
         /* Mobile optimizations */
@@ -350,18 +349,18 @@
     <div class="container">
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner v3.0</h1>
+            <h1>🔐 Advertiser Scanner</h1>
             <p>Login with your advertiser credentials</p>
             
             <div class="advertiser-id-section">
                 <input type="text" 
-                       id="advertiserId" 
-                       placeholder="Your Advertiser ID (e.g., pharmacy1)"
+                       id="advertiserName" 
+                       placeholder="Your Business Name (e.g., Special Offer)"
                        autocomplete="off">
                 
                 <input type="password" 
                        id="advertiserPassword" 
-                       placeholder="Your Password"
+                       placeholder="Your Password (min 6 characters)"
                        onkeypress="handleLoginEnter(event)">
                 
                 <div class="error-message" id="loginError"></div>
@@ -373,16 +372,18 @@
             
             <div class="scanner-instruction">
                 <p><strong>First time?</strong></p>
-                <p>Use any advertiser ID and password (min 6 chars).</p>
-                <p>Account will be created automatically.</p>
+                <p>Enter your business name and password (min 6 chars).</p>
+                <p>A unique ID will be generated automatically for your account.</p>
+                <p><strong>Important:</strong> Save your unique ID! You'll need it when creating coupons.</p>
             </div>
             
             <div class="advertiser-info">
                 <h3>📱 How to Use:</h3>
-                <p>1. Login with your advertiser credentials</p>
-                <p>2. Enter customer's coupon code manually</p>
-                <p>3. Validate and mark coupons as used</p>
-                <p>4. <strong>IMPORTANT:</strong> You can only validate coupons from YOUR own ad campaigns</p>
+                <p>1. Login with your business name and password</p>
+                <p>2. Your unique system ID will be generated automatically</p>
+                <p>3. When creating coupons, use YOUR unique ID in the <strong>adId</strong> field</p>
+                <p>4. Scan/validate customer coupons</p>
+                <p>5. Only coupons with your unique ID will validate</p>
             </div>
         </div>
         
@@ -391,8 +392,12 @@
             <h1>📱 Coupon Validator</h1>
             
             <div class="advertiser-info">
-                <h3>Logged in as: <span id="loggedInAdvertiser"></span></h3>
-                <p>Advertiser ID: <strong><span id="currentAdvertiserId"></span></strong></p>
+                <h3>Welcome, <span id="loggedInAdvertiserName"></span>!</h3>
+                <p><strong>Your Unique System ID:</strong></p>
+                <div class="random-id-box" id="currentAdvertiserId"></div>
+                <p style="font-size: 12px; margin-top: 10px; color: #666;">
+                    ⚠️ Use this ID when creating coupons (adId field)
+                </p>
             </div>
             
             <div class="header-controls">
@@ -433,7 +438,7 @@
                     <div class="info-item"><strong>Claimed At:</strong> <span id="resultTime"></span></div>
                     <div class="info-item"><strong>Expires:</strong> <span id="resultExpires"></span></div>
                     <div class="info-item"><strong>Customer ID:</strong> <span id="resultCustomer"></span></div>
-                    <div class="info-item" id="advertiserOwnerInfo" style="background: #E3F2FD;"><strong>Campaign Owner:</strong> <span id="resultAdvertiserOwner"></span></div>
+                    <div class="info-item" style="background: #E3F2FD;"><strong>Campaign Owner ID:</strong> <span id="resultAdvertiserOwner"></span></div>
                     
                     <div class="action-buttons">
                         <button class="btn btn-mark-used" onclick="markCouponUsed()">
@@ -489,8 +494,10 @@
                     <div class="validation-icon">🚫</div>
                     <h2 style="color: #FF5722;">UNAUTHORIZED ACCESS</h2>
                     <p class="validation-message">
-                        This coupon belongs to <strong><span id="unauthorizedOwner"></span></strong>'s campaign.<br>
-                        You can only validate coupons from your own ad campaigns.
+                        This coupon belongs to a different advertiser.<br>
+                        <strong>Coupon Owner ID:</strong> <span id="unauthorizedOwner"></span><br>
+                        <strong>Your ID:</strong> <span id="yourIdDisplay"></span><br>
+                        You can only validate coupons that match your unique system ID.
                     </p>
                     <div class="action-buttons">
                         <button class="btn btn-reset" onclick="resetScanner()">
@@ -555,31 +562,33 @@
             measurementId: "G-PR9E37ZYE2"
         };
         
-        // Initialize Firebase with ALL services
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        // === ADVERTISER PASSWORD MANAGEMENT ===
+        // === ADVERTISER MANAGEMENT ===
         const ADVERTISERS_COLLECTION = 'advertisers';
         let currentAdvertiser = null;
         let html5QrCode = null;
         let currentCouponData = null;
         
-        // Helper function for case-insensitive, space-insensitive comparison
-        const normalizeForComparison = (str) => {
-            if (!str) return '';
-            return str.toString().trim().toLowerCase().replace(/\s+/g, ' ');
-        };
+        // Generate random unique ID (letters + numbers, 8 characters)
+        function generateRandomId() {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
         
-        // Initialize on page load WITH AUTH
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                // First, sign in anonymously to Firebase Auth
                 await auth.signInAnonymously();
                 console.log("✅ Firebase Auth: Signed in anonymously");
                 
-                // Check if already logged in from session
                 const savedAdvertiser = sessionStorage.getItem('advertiser_logged_in');
                 if (savedAdvertiser) {
                     try {
@@ -591,29 +600,25 @@
                     }
                 }
                 
-                // Focus on advertiser ID input
-                document.getElementById('advertiserId').focus();
+                document.getElementById('advertiserName').focus();
                 
             } catch (error) {
                 console.error("Auth initialization error:", error);
-                document.getElementById('loginError').textContent = 
-                    '❌ Authentication error: ' + error.message;
+                document.getElementById('loginError').textContent = '❌ Authentication error: ' + error.message;
             }
         });
         
         // === ADVERTISER LOGIN FUNCTIONS ===
         async function login() {
-            const advertiserId = document.getElementById('advertiserId').value.trim();
+            const advertiserName = document.getElementById('advertiserName').value.trim();
             const password = document.getElementById('advertiserPassword').value.trim();
             const errorDiv = document.getElementById('loginError');
             
-            // Clear previous error
             errorDiv.textContent = '';
             
-            // Validate inputs
-            if (!advertiserId) {
-                errorDiv.textContent = '❌ Please enter your Advertiser ID';
-                document.getElementById('advertiserId').focus();
+            if (!advertiserName) {
+                errorDiv.textContent = '❌ Please enter your business name';
+                document.getElementById('advertiserName').focus();
                 return;
             }
             
@@ -629,17 +634,20 @@
             }
             
             try {
-                // Check if advertiser exists in Firestore
-                const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION)
-                    .doc(advertiserId)
+                // Check if advertiser exists with this name
+                const nameQuery = await db.collection(ADVERTISERS_COLLECTION)
+                    .where('displayName', '==', advertiserName)
+                    .limit(1)
                     .get();
                 
-                if (!advertiserDoc.exists) {
-                    // Create new advertiser
-                    await createNewAdvertiser(advertiserId, password);
-                    showSuccessMessage('✅ Account created successfully!');
+                if (nameQuery.empty) {
+                    // Create new advertiser with random ID
+                    const randomId = generateRandomId();
+                    await createNewAdvertiser(advertiserName, randomId, password);
+                    showSuccessMessage(`✅ Account created! Your unique ID: ${randomId}\nSAVE THIS ID for creating coupons!`);
                 } else {
                     // Verify existing advertiser password
+                    const advertiserDoc = nameQuery.docs[0];
                     const advertiserData = advertiserDoc.data();
                     
                     if (advertiserData.password !== password) {
@@ -650,23 +658,20 @@
                     }
                     
                     currentAdvertiser = {
-                        id: advertiserId,
-                        name: advertiserData.name || advertiserId,
+                        id: advertiserData.id,
+                        name: advertiserData.displayName,
                         createdAt: advertiserData.createdAt,
                         couponValidations: advertiserData.couponValidations || 0
                     };
                     
-                    showSuccessMessage('✅ Login successful!');
+                    showSuccessMessage(`✅ Welcome back, ${advertiserName}!`);
                 }
                 
-                // Save to session
                 sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
                 
-                // Clear password fields
-                document.getElementById('advertiserId').value = '';
+                document.getElementById('advertiserName').value = '';
                 document.getElementById('advertiserPassword').value = '';
                 
-                // Show scanner section
                 showScannerSection();
                 
             } catch (error) {
@@ -675,20 +680,17 @@
                 if (error.code === 'permission-denied') {
                     errorDiv.innerHTML = `
                         ❌ Permission denied<br>
-                        <small style="color: #666;">
-                            Using demo mode - try test credentials below
-                        </small>
+                        <small>Using demo mode - try test credentials below</small>
                         <div style="margin-top: 10px; padding: 10px; background: #FFF3E0; border-radius: 5px;">
                             <strong>Test Login:</strong><br>
-                            ID: <code>testshop</code><br>
+                            Name: <code>Test Shop</code><br>
                             Password: <code>test123</code>
                         </div>
                     `;
                     
-                    // Allow test login without Firebase
-                    if (advertiserId === 'testshop' && password === 'test123') {
+                    if (advertiserName === 'Test Shop' && password === 'test123') {
                         currentAdvertiser = {
-                            id: 'testshop',
+                            id: 'test_shop_demo',
                             name: 'Test Shop',
                             isTest: true
                         };
@@ -704,6 +706,7 @@
         function showSuccessMessage(message) {
             const successDiv = document.createElement('div');
             successDiv.className = 'success-message';
+            successDiv.style.whiteSpace = 'pre-line';
             successDiv.textContent = message;
             successDiv.id = 'tempSuccess';
             document.getElementById('loginError').parentNode.insertBefore(successDiv, document.getElementById('loginError'));
@@ -712,13 +715,13 @@
                 if (document.getElementById('tempSuccess')) {
                     document.getElementById('tempSuccess').remove();
                 }
-            }, 3000);
+            }, 5000);
         }
         
-        async function createNewAdvertiser(advertiserId, password) {
+        async function createNewAdvertiser(displayName, uniqueId, password) {
             const newAdvertiser = {
-                id: advertiserId,
-                name: advertiserId,
+                id: uniqueId,
+                displayName: displayName,
                 password: password,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
@@ -727,12 +730,12 @@
             };
             
             await db.collection(ADVERTISERS_COLLECTION)
-                .doc(advertiserId)
+                .doc(uniqueId)
                 .set(newAdvertiser);
             
             currentAdvertiser = {
-                id: advertiserId,
-                name: advertiserId,
+                id: uniqueId,
+                name: displayName,
                 createdAt: new Date(),
                 couponValidations: 0
             };
@@ -749,38 +752,31 @@
             document.getElementById('scannerSection').classList.remove('hidden');
             document.getElementById('resultSection').classList.add('hidden');
             
-            // Display advertiser info
-            document.getElementById('loggedInAdvertiser').textContent = currentAdvertiser.name;
+            document.getElementById('loggedInAdvertiserName').textContent = currentAdvertiser.name;
             document.getElementById('currentAdvertiserId').textContent = currentAdvertiser.id;
+            document.getElementById('yourIdDisplay').textContent = currentAdvertiser.id;
             
-            // Initialize scanner
             initializeScanner();
         }
         
         function logout() {
-            // Clear session
             sessionStorage.removeItem('advertiser_logged_in');
             currentAdvertiser = null;
             currentCouponData = null;
             
-            // Stop scanner if running
             if (html5QrCode) {
                 try {
                     html5QrCode.stop();
-                } catch (e) {
-                    // Ignore stop errors
-                }
+                } catch (e) {}
             }
             
-            // Show login section
             document.getElementById('scannerSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('resultSection').classList.add('hidden');
             
-            // Reset form and focus
-            document.getElementById('advertiserId').value = '';
+            document.getElementById('advertiserName').value = '';
             document.getElementById('advertiserPassword').value = '';
-            document.getElementById('advertiserId').focus();
+            document.getElementById('advertiserName').focus();
         }
         
         // === PASSWORD CHANGE FUNCTIONS ===
@@ -801,8 +797,6 @@
             document.getElementById('currentPassword').value = '';
             document.getElementById('newPassword').value = '';
             document.getElementById('confirmPassword').value = '';
-            document.getElementById('passwordError').textContent = '';
-            document.getElementById('passwordSuccess').textContent = '';
         }
         
         function handlePasswordModalEnter(event) {
@@ -861,7 +855,6 @@
                     });
                 
                 successDiv.textContent = '✅ Password changed successfully!';
-                successDiv.style.display = 'block';
                 
                 document.getElementById('currentPassword').value = '';
                 document.getElementById('newPassword').value = '';
@@ -924,88 +917,77 @@
         }
         
         // ============================================
-        // UPDATED VALIDATE COUPON FUNCTION WITH OWNERSHIP CHECK
+        // VALIDATE COUPON - Uses random system ID
         // ============================================
-async function validateCoupon(couponCode) {
-    try {
-        // Show loading state and hide all result sections
-        document.getElementById('resultSection').classList.remove('hidden');
-        document.getElementById('validResult').classList.add('hidden');
-        document.getElementById('invalidResult').classList.add('hidden');
-        document.getElementById('usedResult').classList.add('hidden');
-        document.getElementById('successResult').classList.add('hidden');
-        document.getElementById('unauthorizedResult').classList.add('hidden');
-        
-        document.getElementById('scannedCoupon').textContent = couponCode;
-        
-        // Get the logged-in advertiser's ACTUAL ID (stored in database)
-        const loggedInAdvertiserId = currentAdvertiser.id;
-        
-        // Query Firestore for this coupon
-        const claimsRef = db.collection('claims');
-        const querySnapshot = await claimsRef
-            .where('couponCode', '==', couponCode)
-            .limit(1)
-            .get();
-        
-        // If coupon doesn't exist at all
-        if (querySnapshot.empty) {
-            showInvalidResult("Coupon not found in database");
-            return;
+        async function validateCoupon(couponCode) {
+            try {
+                document.getElementById('resultSection').classList.remove('hidden');
+                document.getElementById('validResult').classList.add('hidden');
+                document.getElementById('invalidResult').classList.add('hidden');
+                document.getElementById('usedResult').classList.add('hidden');
+                document.getElementById('successResult').classList.add('hidden');
+                document.getElementById('unauthorizedResult').classList.add('hidden');
+                
+                document.getElementById('scannedCoupon').textContent = couponCode;
+                
+                // Get logged-in advertiser's unique system ID
+                const loggedInUniqueId = currentAdvertiser.id;
+                
+                const claimsRef = db.collection('claims');
+                const querySnapshot = await claimsRef
+                    .where('couponCode', '==', couponCode)
+                    .limit(1)
+                    .get();
+                
+                if (querySnapshot.empty) {
+                    showInvalidResult("Coupon not found in database");
+                    return;
+                }
+                
+                const doc = querySnapshot.docs[0];
+                const couponData = doc.data();
+                
+                // Get the adId from coupon (should be the random system ID)
+                let couponAdId = couponData.adId || couponData.advertiserId || couponData.campaignOwnerId || '';
+                
+                currentCouponData = {
+                    id: doc.id,
+                    ...couponData
+                };
+                
+                const claimedTime = currentCouponData.claimedAt?.toDate();
+                const expiresTime = currentCouponData.expiresAt?.toDate();
+                const now = new Date();
+                
+                if (expiresTime && expiresTime < now) {
+                    showInvalidResult("Coupon has expired");
+                    return;
+                }
+                
+                if (currentCouponData.redeemed === true || currentCouponData.status === 'redeemed' || currentCouponData.status === 'used') {
+                    showUsedResult();
+                    return;
+                }
+                
+                if (currentAdvertiser?.isTest) {
+                    console.log("Test mode: bypassing ownership check");
+                    showValidResult();
+                    return;
+                }
+                
+                // CRITICAL: Compare unique system IDs (exact match)
+                if (couponAdId !== loggedInUniqueId) {
+                    showUnauthorizedResult(couponAdId || 'unknown');
+                    return;
+                }
+                
+                showValidResult();
+                
+            } catch (error) {
+                console.error("Validation error:", error);
+                showInvalidResult("Error validating coupon: " + error.message);
+            }
         }
-        
-        const doc = querySnapshot.docs[0];
-        const couponData = doc.data();
-        
-        // Get the adId from coupon - this should match the advertiser's ID exactly
-        let couponAdId = couponData.adId || couponData.advertiserId || couponData.campaignOwnerId || '';
-        
-        // Store the coupon data
-        currentCouponData = {
-            id: doc.id,
-            ...couponData
-        };
-        
-        // Format dates
-        const claimedTime = currentCouponData.claimedAt?.toDate();
-        const expiresTime = currentCouponData.expiresAt?.toDate();
-        const now = new Date();
-        
-        // Check if expired
-        if (expiresTime && expiresTime < now) {
-            showInvalidResult("Coupon has expired");
-            return;
-        }
-        
-        // Check if already redeemed (check both redeemed flag AND status field)
-        if (currentCouponData.redeemed === true || currentCouponData.status === 'redeemed' || currentCouponData.status === 'used') {
-            showUsedResult();
-            return;
-        }
-        
-        // For test accounts, bypass for demo purposes
-        if (currentAdvertiser?.isTest) {
-            console.log("Test mode: bypassing ownership check");
-            showValidResult();
-            return;
-        }
-        
-        // CRITICAL FIX: Compare the actual IDs directly (case-sensitive exact match)
-        // The ID should match exactly as stored in database
-        if (couponAdId !== loggedInAdvertiserId) {
-            // Coupon belongs to a different advertiser
-            showUnauthorizedResult(couponAdId || 'another advertiser');
-            return;
-        }
-        
-        // All checks passed - show valid result
-        showValidResult();
-        
-    } catch (error) {
-        console.error("Validation error:", error);
-        showInvalidResult("Error validating coupon: " + error.message);
-    }
-}
         
         function showValidResult() {
             document.getElementById('validResult').classList.remove('hidden');
@@ -1016,7 +998,7 @@ async function validateCoupon(couponCode) {
             
             const claimedTime = currentCouponData.claimedAt?.toDate();
             const expiresTime = currentCouponData.expiresAt?.toDate();
-            const couponOwner = currentCouponData.adId || currentCouponData.advertiserId || currentCouponData.advertiser || 'Your Campaign';
+            const couponOwner = currentCouponData.adId || currentCouponData.advertiserId || 'Unknown';
             
             document.getElementById('resultAd').textContent = currentCouponData.adName || 'Unknown';
             document.getElementById('resultProduct').textContent = currentCouponData.productName || 'Unknown';
@@ -1055,23 +1037,20 @@ async function validateCoupon(couponCode) {
             document.getElementById('unauthorizedResult').classList.remove('hidden');
             
             document.getElementById('unauthorizedOwner').textContent = ownerId;
+            document.getElementById('yourIdDisplay').textContent = currentAdvertiser.id;
         }
         
         async function markCouponUsed() {
             try {
                 const couponCode = currentCouponData.couponCode;
-                
-                // Double-check ownership before marking as used
                 const couponAdId = currentCouponData.adId || currentCouponData.advertiserId || currentCouponData.campaignOwnerId;
                 
-                if (!currentAdvertiser?.isTest && couponAdId && 
-                    normalizeForComparison(couponAdId) !== normalizeForComparison(currentAdvertiser.id)) {
-                    alert("❌ Unauthorized: This coupon belongs to another advertiser's campaign");
+                if (!currentAdvertiser?.isTest && couponAdId !== currentAdvertiser.id) {
+                    alert("❌ Unauthorized: This coupon belongs to a different advertiser");
                     resetScanner();
                     return;
                 }
                 
-                // For test accounts, just show success
                 if (currentAdvertiser?.isTest) {
                     document.getElementById('validResult').classList.add('hidden');
                     document.getElementById('successResult').classList.remove('hidden');
@@ -1083,7 +1062,6 @@ async function validateCoupon(couponCode) {
                     return;
                 }
                 
-                // Update the coupon as redeemed with BOTH redeemed flag AND status field
                 await db.collection('claims').doc(currentCouponData.id).update({
                     redeemed: true,
                     status: 'redeemed',
@@ -1092,7 +1070,6 @@ async function validateCoupon(couponCode) {
                     redeemedByName: currentAdvertiser.name
                 });
                 
-                // Update advertiser validation count
                 await db.collection(ADVERTISERS_COLLECTION)
                     .doc(currentAdvertiser.id)
                     .update({
@@ -1100,15 +1077,12 @@ async function validateCoupon(couponCode) {
                         lastValidation: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 
-                // Update current advertiser count
                 currentAdvertiser.couponValidations = (currentAdvertiser.couponValidations || 0) + 1;
                 
-                // Show success message
                 document.getElementById('validResult').classList.add('hidden');
                 document.getElementById('successResult').classList.remove('hidden');
                 document.getElementById('successCouponCode').textContent = couponCode;
                 
-                // Auto-reset after 3 seconds
                 setTimeout(() => {
                     resetScanner();
                 }, 3000);
@@ -1124,7 +1098,6 @@ async function validateCoupon(couponCode) {
             document.getElementById('manualCode').value = '';
             document.getElementById('manualCode').focus();
             
-            // Restart scanner
             if (html5QrCode) {
                 try {
                     html5QrCode.stop();
