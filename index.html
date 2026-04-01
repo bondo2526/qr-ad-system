@@ -42,41 +42,41 @@
         .success { color: #2E7D32; }
         .blocked { color: #C62828; }
         
-       .coupon { 
-    font-size: 42px; 
-    font-weight: bold; 
-    color: #2E7D32; 
-    margin: 20px 0; 
-    font-family: Consolas, 'Courier New', monospace; /* CLEAR FONT */
-    font-feature-settings: "tnum"; /* Better number spacing */
-    font-variant-numeric: slashed-zero; /* Slashed zero to distinguish from O */
-    background: #E8F5E9; 
-    padding: 15px; 
-    border-radius: 10px; 
-    border: 2px dashed #4CAF50; 
-    text-align: center;
-    word-break: break-all;
-    font-size: clamp(32px, 6vw, 42px);
-    letter-spacing: 2px; /* Add spacing between characters */
-}
-
-.coupon-blocked {
-    font-size: 36px;
-    font-weight: bold;
-    color: #c62828;
-    margin: 15px 0;
-    font-family: Consolas, 'Courier New', monospace; /* CLEAR FONT */
-    font-feature-settings: "tnum";
-    font-variant-numeric: slashed-zero;
-    background: #FFEBEE;
-    padding: 12px;
-    border-radius: 8px;
-    border: 2px dashed #c62828;
-    text-align: center;
-    word-break: break-all;
-    font-size: clamp(28px, 5vw, 36px);
-    letter-spacing: 2px;
-}
+        .coupon { 
+            font-size: 42px; 
+            font-weight: bold; 
+            color: #2E7D32; 
+            margin: 20px 0; 
+            font-family: Consolas, 'Courier New', monospace;
+            font-feature-settings: "tnum";
+            font-variant-numeric: slashed-zero;
+            background: #E8F5E9; 
+            padding: 15px; 
+            border-radius: 10px; 
+            border: 2px dashed #4CAF50; 
+            text-align: center;
+            word-break: break-all;
+            font-size: clamp(32px, 6vw, 42px);
+            letter-spacing: 2px;
+        }
+        
+        .coupon-blocked {
+            font-size: 36px;
+            font-weight: bold;
+            color: #c62828;
+            margin: 15px 0;
+            font-family: Consolas, 'Courier New', monospace;
+            font-feature-settings: "tnum";
+            font-variant-numeric: slashed-zero;
+            background: #FFEBEE;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px dashed #c62828;
+            text-align: center;
+            word-break: break-all;
+            font-size: clamp(28px, 5vw, 36px);
+            letter-spacing: 2px;
+        }
         
         .info { 
             background: #E3F2FD; 
@@ -162,9 +162,9 @@
             margin-top: 20px;
         }
         .action-buttons:has(button:only-child) button {
-    width: 100%;
-    flex: none;
-}
+            width: 100%;
+            flex: none;
+        }
         
         button {
             padding: 12px 24px;
@@ -294,6 +294,19 @@
     </div>
 
     <script>
+        // Helper function to format date to compact style
+        function formatCompactDate(date) {
+            if (!date) return 'Unknown';
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const dayName = days[date.getDay()];
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
+        }
+        
         // === CONFIGURATION ===
         const CONFIG = {
             BLOCK_HOURS: 24,
@@ -417,10 +430,10 @@
         
         async function generateNewCoupon() {
             try {
-                // Generate unique coupon code
-                const couponCode = 'SAVE' + 
-                    Math.floor(Math.random() * 9000 + 1000) + 
-                    String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                // Generate unique coupon code - LOWERCASE 'save' and lowercase letters
+                const randomNum = Math.floor(Math.random() * 9000 + 1000);
+                const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26)); // lowercase a-z
+                const couponCode = 'save' + randomNum + randomLetter;
                 
                 // Get client IP
                 const clientIP = await getClientIP();
@@ -523,7 +536,8 @@
             document.getElementById('error').classList.add('hidden');
             
             document.getElementById('couponCode').textContent = data.couponCode;
-            document.getElementById('claimTime').textContent = new Date().toLocaleString();
+            const claimDate = new Date();
+            document.getElementById('claimTime').textContent = formatCompactDate(claimDate);
             
             // Setup refresh protection
             setupRefreshProtection();
@@ -540,7 +554,7 @@
             document.getElementById('error').classList.add('hidden');
             
             const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
-            document.getElementById('blockedTime').textContent = claimedTime.toLocaleString();
+            document.getElementById('blockedTime').textContent = formatCompactDate(claimedTime);
             
             // Display the existing coupon code
             if (existingCouponCode) {
@@ -616,6 +630,7 @@
                 alert('No coupon code available to copy.');
             }
         }
+        
         function setupRefreshProtection() {
             // Replace URL to prevent re-submission
             const newUrl = window.location.origin + window.location.pathname + 
