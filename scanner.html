@@ -349,7 +349,7 @@
     <div class="container">
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner v2.0</h1>
+            <h1>🔐 Advertiser Scanner v3.0</h1>
             <p>Login with your advertiser credentials</p>
             
             <div class="advertiser-id-section">
@@ -949,7 +949,7 @@ async function validateCoupon(couponCode) {
         const doc = querySnapshot.docs[0];
         const couponData = doc.data();
         
-        // Get the advertiser name from coupon (this is what customer sees)
+        // Get the advertiser name from coupon - EXACT match required
         let couponAdvertiserName = couponData.advertiserName || couponData.adName || couponData.businessName || '';
         
         currentCouponData = {
@@ -980,7 +980,18 @@ async function validateCoupon(couponCode) {
             return;
         }
         
-        // Look up the advertiser by name to get their random ID
+        // CRITICAL: EXACT MATCH REQUIRED - case and space sensitive
+        // First, check if the coupon's advertiser name exactly matches the logged-in advertiser's name
+        if (couponAdvertiserName !== loggedInAdvertiserName) {
+            // Show unauthorized with the exact names
+            showUnauthorizedResultWithDetails(
+                couponAdvertiserName,
+                `This coupon was issued by "${couponAdvertiserName}".\nYou are logged in as "${loggedInAdvertiserName}".\n\nOnly the exact business name that issued the coupon can validate it.\n\n"${couponAdvertiserName}" and "${loggedInAdvertiserName}" are different business names.`
+            );
+            return;
+        }
+        
+        // Now verify that this advertiser exists in the database with this exact name
         const advertiserQuery = await db.collection('advertisers')
             .where('displayName', '==', couponAdvertiserName)
             .limit(1)
@@ -989,7 +1000,7 @@ async function validateCoupon(couponCode) {
         if (advertiserQuery.empty) {
             showUnauthorizedResultWithDetails(
                 couponAdvertiserName,
-                `No advertiser found with name "${couponAdvertiserName}". Please check the coupon data.`
+                `No advertiser found with the exact name "${couponAdvertiserName}".`
             );
             return;
         }
@@ -998,16 +1009,16 @@ async function validateCoupon(couponCode) {
         const advertiserData = advertiserDoc.data();
         const expectedAdvertiserId = advertiserData.id;
         
-        // Compare the random ID with logged-in user's random ID
+        // Double-check the random ID matches
         if (expectedAdvertiserId !== loggedInAdvertiserId) {
             showUnauthorizedResultWithDetails(
                 couponAdvertiserName,
-                `This coupon belongs to "${couponAdvertiserName}". Your business name is "${loggedInAdvertiserName}". Only the business that issued the coupon can validate it.`
+                `System error: Name matches but ID mismatch. Please contact support.`
             );
             return;
         }
         
-        // Store the advertiser ID in coupon data for future reference (optional)
+        // Store the advertiser ID in coupon data for future reference
         const updates = {};
         if (!currentCouponData.advertiserId) {
             updates.advertiserId = loggedInAdvertiserId;
@@ -1205,14 +1216,21 @@ window.fixAllMyCoupons = async function() {
             document.getElementById('yourIdDisplay').textContent = currentAdvertiser.id;
         }
         
-     async function markCouponUsed() {
+   async function markCouponUsed() {
     try {
         const couponCode = currentCouponData.couponCode;
         
-        // Get the advertiser name from coupon
-        const couponAdvertiserName = currentCouponData.advertiserName || currentCouponData.adName || currentCouponData.businessName || '';
+        // Get the advertiser name from coupon - EXACT match required
+        let couponAdvertiserName = currentCouponData.advertiserName || currentCouponData.adName || currentCouponData.businessName || '';
         
-        // Look up the advertiser by name to get their random ID
+        // CRITICAL: EXACT MATCH CHECK
+        if (couponAdvertiserName !== currentAdvertiser.name) {
+            alert(`❌ Unauthorized: This coupon belongs to "${couponAdvertiserName}".\nYou are logged in as "${currentAdvertiser.name}".\n\nOnly the exact business name that issued the coupon can validate it.`);
+            resetScanner();
+            return;
+        }
+        
+        // Verify the advertiser exists with this exact name
         const advertiserQuery = await db.collection('advertisers')
             .where('displayName', '==', couponAdvertiserName)
             .limit(1)
@@ -1225,14 +1243,16 @@ window.fixAllMyCoupons = async function() {
         }
         
         let expectedAdvertiserId = null;
+        
         if (!currentAdvertiser?.isTest && !advertiserQuery.empty) {
             const advertiserDoc = advertiserQuery.docs[0];
-            expectedAdvertiserId = advertiserDoc.data().id;
+            const advertiserData = advertiserDoc.data();
+            expectedAdvertiserId = advertiserData.id;
         }
         
-        // Check if the logged-in advertiser owns this coupon
+        // Double-check ID match
         if (!currentAdvertiser?.isTest && expectedAdvertiserId !== currentAdvertiser.id) {
-            alert(`❌ Unauthorized: This coupon belongs to "${couponAdvertiserName}". You can only mark coupons from your own business.`);
+            alert(`❌ System error: Name matches but ID mismatch. Please contact support.`);
             resetScanner();
             return;
         }
@@ -1256,8 +1276,8 @@ window.fixAllMyCoupons = async function() {
             redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
             redeemedBy: currentAdvertiser.id,
             redeemedByName: currentAdvertiser.name,
-            // Also store the advertiserId for future reference
-            advertiserId: currentAdvertiser.id
+            advertiserId: currentAdvertiser.id,
+            advertiserName: currentAdvertiser.name
         });
         
         // Update advertiser validation count
