@@ -349,7 +349,7 @@
     <div class="container">
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner v3.0</h1>
+            <h1>🔐 Advertiser Scanner v2.0</h1>
             <p>Login with your advertiser credentials</p>
             
             <div class="advertiser-id-section">
@@ -949,7 +949,7 @@ async function validateCoupon(couponCode) {
         const doc = querySnapshot.docs[0];
         const couponData = doc.data();
         
-        // Get the advertiser name from coupon - EXACT match required
+        // Get the advertiser name from coupon
         let couponAdvertiserName = couponData.advertiserName || couponData.adName || couponData.businessName || '';
         
         currentCouponData = {
@@ -961,13 +961,54 @@ async function validateCoupon(couponCode) {
         const expiresTime = currentCouponData.expiresAt?.toDate();
         const now = new Date();
         
-        // Check if expired
+        // STEP 1: Check ownership FIRST (before checking redeemed/expired)
+        // This ensures coupons from other advertisers don't show as "redeemed"
+        if (!currentAdvertiser?.isTest) {
+            // Check if the coupon belongs to this advertiser (exact name match)
+            if (couponAdvertiserName !== loggedInAdvertiserName) {
+                // Coupon belongs to a different advertiser
+                showUnauthorizedResultWithDetails(
+                    couponAdvertiserName,
+                    `This coupon was issued by "${couponAdvertiserName}".\nYou are logged in as "${loggedInAdvertiserName}".\n\nOnly the business that issued the coupon can validate it.`
+                );
+                return;
+            }
+            
+            // Verify the advertiser exists with this exact name
+            const advertiserQuery = await db.collection('advertisers')
+                .where('displayName', '==', couponAdvertiserName)
+                .limit(1)
+                .get();
+            
+            if (advertiserQuery.empty) {
+                showUnauthorizedResultWithDetails(
+                    couponAdvertiserName,
+                    `No advertiser found with the exact name "${couponAdvertiserName}".`
+                );
+                return;
+            }
+            
+            const advertiserDoc = advertiserQuery.docs[0];
+            const advertiserData = advertiserDoc.data();
+            const expectedAdvertiserId = advertiserData.id;
+            
+            // Double-check the random ID matches
+            if (expectedAdvertiserId !== loggedInAdvertiserId) {
+                showUnauthorizedResultWithDetails(
+                    couponAdvertiserName,
+                    `System error: Name matches but ID mismatch. Please contact support.`
+                );
+                return;
+            }
+        }
+        
+        // STEP 2: After ownership is confirmed, check if expired
         if (expiresTime && expiresTime < now) {
             showInvalidResult("Coupon has expired");
             return;
         }
         
-        // Check if already redeemed
+        // STEP 3: After ownership and expiry, check if already redeemed
         if (currentCouponData.redeemed === true || currentCouponData.status === 'redeemed' || currentCouponData.status === 'used') {
             showUsedResult();
             return;
@@ -977,44 +1018,6 @@ async function validateCoupon(couponCode) {
         if (currentAdvertiser?.isTest) {
             console.log("Test mode: bypassing ownership check");
             showValidResult();
-            return;
-        }
-        
-        // CRITICAL: EXACT MATCH REQUIRED - case and space sensitive
-        // First, check if the coupon's advertiser name exactly matches the logged-in advertiser's name
-        if (couponAdvertiserName !== loggedInAdvertiserName) {
-            // Show unauthorized with the exact names
-            showUnauthorizedResultWithDetails(
-                couponAdvertiserName,
-                `This coupon was issued by "${couponAdvertiserName}".\nYou are logged in as "${loggedInAdvertiserName}".\n\nOnly the exact business name that issued the coupon can validate it.\n\n"${couponAdvertiserName}" and "${loggedInAdvertiserName}" are different business names.`
-            );
-            return;
-        }
-        
-        // Now verify that this advertiser exists in the database with this exact name
-        const advertiserQuery = await db.collection('advertisers')
-            .where('displayName', '==', couponAdvertiserName)
-            .limit(1)
-            .get();
-        
-        if (advertiserQuery.empty) {
-            showUnauthorizedResultWithDetails(
-                couponAdvertiserName,
-                `No advertiser found with the exact name "${couponAdvertiserName}".`
-            );
-            return;
-        }
-        
-        const advertiserDoc = advertiserQuery.docs[0];
-        const advertiserData = advertiserDoc.data();
-        const expectedAdvertiserId = advertiserData.id;
-        
-        // Double-check the random ID matches
-        if (expectedAdvertiserId !== loggedInAdvertiserId) {
-            showUnauthorizedResultWithDetails(
-                couponAdvertiserName,
-                `System error: Name matches but ID mismatch. Please contact support.`
-            );
             return;
         }
         
@@ -1216,14 +1219,14 @@ window.fixAllMyCoupons = async function() {
             document.getElementById('yourIdDisplay').textContent = currentAdvertiser.id;
         }
         
-   async function markCouponUsed() {
+ async function markCouponUsed() {
     try {
         const couponCode = currentCouponData.couponCode;
         
-        // Get the advertiser name from coupon - EXACT match required
+        // Get the advertiser name from coupon
         let couponAdvertiserName = currentCouponData.advertiserName || currentCouponData.adName || currentCouponData.businessName || '';
         
-        // CRITICAL: EXACT MATCH CHECK
+        // STEP 1: Check ownership FIRST
         if (couponAdvertiserName !== currentAdvertiser.name) {
             alert(`❌ Unauthorized: This coupon belongs to "${couponAdvertiserName}".\nYou are logged in as "${currentAdvertiser.name}".\n\nOnly the exact business name that issued the coupon can validate it.`);
             resetScanner();
@@ -1253,6 +1256,13 @@ window.fixAllMyCoupons = async function() {
         // Double-check ID match
         if (!currentAdvertiser?.isTest && expectedAdvertiserId !== currentAdvertiser.id) {
             alert(`❌ System error: Name matches but ID mismatch. Please contact support.`);
+            resetScanner();
+            return;
+        }
+        
+        // STEP 2: Check if already redeemed (only after ownership is confirmed)
+        if (currentCouponData.redeemed === true || currentCouponData.status === 'redeemed' || currentCouponData.status === 'used') {
+            alert(`❌ This coupon has already been redeemed on ${currentCouponData.redeemedAt?.toDate?.().toLocaleString() || 'an earlier date'}`);
             resetScanner();
             return;
         }
