@@ -917,97 +917,93 @@
             }
         }
         
-        // ============================================
-        // UPDATED VALIDATE COUPON FUNCTION WITH OWNERSHIP CHECK
-        // ============================================
-        async function validateCoupon(couponCode) {
-            try {
-                // Show loading state and hide all result sections
-                document.getElementById('resultSection').classList.remove('hidden');
-                document.getElementById('validResult').classList.add('hidden');
-                document.getElementById('invalidResult').classList.add('hidden');
-                document.getElementById('usedResult').classList.add('hidden');
-                document.getElementById('successResult').classList.add('hidden');
-                document.getElementById('unauthorizedResult').classList.add('hidden');
-                
-                document.getElementById('scannedCoupon').textContent = couponCode;
-                
-                // Query Firestore for this coupon
-                const claimsRef = db.collection('claims');
-                const querySnapshot = await claimsRef
-                    .where('couponCode', '==', couponCode)
-                    .limit(1)
-                    .get();
-                
-                if (querySnapshot.empty) {
-                    showInvalidResult("Coupon not found in database");
-                    return;
-                }
-                
-                const doc = querySnapshot.docs[0];
-                currentCouponData = {
-                    id: doc.id,
-                    ...doc.data()
-                };
-                
-                // Format dates
-                const claimedTime = currentCouponData.claimedAt?.toDate();
-                const expiresTime = currentCouponData.expiresAt?.toDate();
-                const now = new Date();
-                
-                // Check if expired
-                if (expiresTime && expiresTime < now) {
-                    showInvalidResult("Coupon has expired");
-                    return;
-                }
-                
-                // Check if already redeemed
-                if (currentCouponData.redeemed) {
-                    showUsedResult();
-                    return;
-                }
-                
-                // ========== CRITICAL: OWNERSHIP VALIDATION ==========
-                // Get the advertiser ID who owns this coupon campaign
-                // The coupon document should have an 'advertiserId' field that links to the campaign owner
-                const couponAdvertiserId = currentCouponData.advertiserId || currentCouponData.campaignOwnerId || currentCouponData.advertiser;
-                const loggedInAdvertiserId = currentAdvertiser.id;
-                
-                // For test accounts, bypass for demo purposes
-                if (currentAdvertiser?.isTest) {
-                    console.log("Test mode: bypassing ownership check");
-                    showValidResult();
-                    return;
-                }
-                
-                // If coupon has an advertiserId and it doesn't match the logged-in advertiser, show unauthorized
-                if (couponAdvertiserId && couponAdvertiserId !== loggedInAdvertiserId) {
-                    showUnauthorizedResult(couponAdvertiserId);
-                    return;
-                }
-                
-                // If coupon doesn't have advertiserId field, try to check via adName or other fields
-                // For backward compatibility, check if adName contains advertiser reference
-                if (!couponAdvertiserId) {
-                    console.warn("Coupon has no advertiserId field, checking via adName");
-                    const adName = (currentCouponData.adName || '').toLowerCase();
-                    const advertiserName = currentAdvertiser.name.toLowerCase();
-                    
-                    // If adName doesn't contain the advertiser name, it might be from another advertiser
-                    if (adName && !adName.includes(advertiserName) && !advertiserName.includes(adName)) {
-                        // Still allow if it's a generic coupon, but show warning
-                        console.log("Coupon adName doesn't match advertiser name");
-                    }
-                }
-                
-                // All checks passed - show valid result
-                showValidResult();
-                
-            } catch (error) {
-                console.error("Validation error:", error);
-                showInvalidResult("Error validating coupon: " + error.message);
+// ============================================
+// REPLACE THE ENTIRE validateCoupon FUNCTION WITH THIS
+// ============================================
+async function validateCoupon(couponCode) {
+    try {
+        // Show loading state and hide all result sections
+        document.getElementById('resultSection').classList.remove('hidden');
+        document.getElementById('validResult').classList.add('hidden');
+        document.getElementById('invalidResult').classList.add('hidden');
+        document.getElementById('usedResult').classList.add('hidden');
+        document.getElementById('successResult').classList.add('hidden');
+        document.getElementById('unauthorizedResult').classList.add('hidden');
+        
+        document.getElementById('scannedCoupon').textContent = couponCode;
+        
+        // STEP 1: First get the logged-in advertiser ID
+        const loggedInAdvertiserId = currentAdvertiser.id;
+        
+        // STEP 2: Query Firestore for coupon with BOTH conditions:
+        // - couponCode matches
+        // - adId matches the logged-in advertiser's ID
+        const claimsRef = db.collection('claims');
+        const querySnapshot = await claimsRef
+            .where('couponCode', '==', couponCode)
+            .where('adId', '==', loggedInAdvertiserId)  // CRITICAL: Only get coupons owned by this advertiser
+            .limit(1)
+            .get();
+        
+        // If no coupon found with matching adId, check if coupon exists at all (for error messaging)
+        if (querySnapshot.empty) {
+            // Check if coupon exists but belongs to another advertiser
+            const anyCouponQuery = await claimsRef
+                .where('couponCode', '==', couponCode)
+                .limit(1)
+                .get();
+            
+            if (!anyCouponQuery.empty) {
+                // Coupon exists but belongs to a different advertiser
+                const otherDoc = anyCouponQuery.docs[0];
+                const otherAdId = otherDoc.data().adId || 'another advertiser';
+                showUnauthorizedResult(otherAdId);
+                return;
+            } else {
+                // Coupon doesn't exist at all
+                showInvalidResult("Coupon not found in database");
+                return;
             }
         }
+        
+        const doc = querySnapshot.docs[0];
+        currentCouponData = {
+            id: doc.id,
+            ...doc.data()
+        };
+        
+        // Format dates
+        const claimedTime = currentCouponData.claimedAt?.toDate();
+        const expiresTime = currentCouponData.expiresAt?.toDate();
+        const now = new Date();
+        
+        // Check if expired
+        if (expiresTime && expiresTime < now) {
+            showInvalidResult("Coupon has expired");
+            return;
+        }
+        
+        // Check if already redeemed
+        if (currentCouponData.redeemed) {
+            showUsedResult();
+            return;
+        }
+        
+        // For test accounts, bypass for demo purposes
+        if (currentAdvertiser?.isTest) {
+            console.log("Test mode: bypassing ownership check");
+            showValidResult();
+            return;
+        }
+        
+        // All checks passed - show valid result
+        showValidResult();
+        
+    } catch (error) {
+        console.error("Validation error:", error);
+        showInvalidResult("Error validating coupon: " + error.message);
+    }
+}
         
         function showValidResult() {
             document.getElementById('validResult').classList.remove('hidden');
