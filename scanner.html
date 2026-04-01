@@ -349,7 +349,7 @@
     <div class="container">
         <!-- Login Section -->
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner v2.0</h1>
+            <h1>🔐 Advertiser Scanner v3.0</h1>
             <p>Login with your advertiser credentials</p>
             
             <div class="advertiser-id-section">
@@ -394,7 +394,7 @@
             <div class="advertiser-info">
                 <h3>Logged in as: <span id="loggedInAdvertiserName"></span></h3>
                 <p style="font-size: 14px; margin-top: 5px; color: #666;">
-                    You are validating coupons for your business
+                    --You can only validate coupons for your own business--
                 </p>
                 <p style="font-size: 12px; margin-top: 5px; color: #888;">
                     Your ID: <span id="yourIdDisplay"></span>
@@ -433,11 +433,11 @@
                 
                 <div id="validResult" class="result hidden">
                     <h2 style="color: #4CAF50;">✅ VALID COUPON</h2>
-                    <div class="info-item"><strong>Ad Campaign:</strong> <span id="resultAd"></span></div>
-                    <div class="info-item"><strong>Product:</strong> <span id="resultProduct"></span></div>
-                    <div class="info-item"><strong>Location Claimed:</strong> <span id="resultLocation"></span></div>
-                    <div class="info-item"><strong>Claimed At:</strong> <span id="resultTime"></span></div>
-                    <div class="info-item"><strong>Expires:</strong> <span id="resultExpires"></span></div>
+                    <div class="info-item"><strong><u>Campaign Advertiser</u>:</strong> <span id="resultAd"></span></div>
+                    <div class="info-item"><strong><u>Product</u>:</strong> <span id="resultProduct"></span></div>
+                    <div class="info-item"><strong><u>Location Claimed</u>:</strong> <span id="resultLocation"></span></div>
+                    <div class="info-item"><strong><u>Claimed At</u>:</strong> <span id="resultTime"></span></div>
+                    <div class="info-item"><strong><u>Expires</u>:</strong> <span id="resultExpires"></span></div>
                     <div class="action-buttons">
                         <button class="btn btn-mark-used" onclick="markCouponUsed()">
                             ✅ Mark as Used
@@ -492,9 +492,7 @@
                     <div class="validation-icon">🚫</div>
                     <h2 style="color: #FF5722;">UNAUTHORIZED ACCESS</h2>
                     <p class="validation-message">
-                        <strong>Coupon belongs to another business</strong><br>
-                        Owner: <span id="unauthorizedOwner"></span>
-                    </p>
+                        <strong>Coupon belongs to another business ! </strong> </p>
                     <p id="unauthorizedMessage" style="color: #666; font-size: 14px; margin-top: 10px;"></p>
                     <div class="action-buttons">
                         <button class="btn btn-reset" onclick="resetScanner()">
@@ -983,7 +981,7 @@
                     const ownerDisplay = couponOwner || 'Unknown Business';
                     showUnauthorizedResultWithDetails(
                         ownerDisplay,
-                        `This coupon belongs to "${ownerDisplay}".\nYou are logged in as "${loggedInAdvertiserName}".\n\nOnly the business that issued the coupon can validate it.`
+                        `This coupon belongs to another business.\nYou are logged in as "${loggedInAdvertiserName}".\n\nOnly the business that issued the coupon can validate it.`
                     );
                     return;
                 }
