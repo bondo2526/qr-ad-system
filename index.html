@@ -1,321 +1,423 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Claim Your Coupon</title>
+    <title>QR Ad Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
     
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f5f7fa; color: #333; min-height: 100vh; }
         
-        body { 
-            min-height: 100vh; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            padding: 20px;
-            transition: background 0.5s ease;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        body.success-bg {
-            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%) !important;
-        }
-        
-        body.blocked-bg {
-            background: linear-gradient(135deg, #f44336 0%, #c62828 100%) !important;
-        }
-        
-        body.limit-bg {
-            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%) !important;
-        }
-        
-        .container { 
-            background: white; 
-            border-radius: 20px; 
-            padding: 40px; 
-            max-width: 500px; 
-            width: 100%; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
-        }
-        
-        .success { color: #2E7D32; }
-        .blocked { color: #C62828; }
-        .limit { color: #F57C00; }
-        
-        .coupon { 
-            font-size: 42px; 
-            font-weight: bold; 
-            color: #2E7D32; 
-            margin: 20px 0; 
-            font-family: Consolas, 'Courier New', monospace;
-            background: #E8F5E9; 
-            padding: 15px; 
-            border-radius: 10px; 
-            border: 2px dashed #4CAF50; 
-            text-align: center;
-            word-break: break-all;
-        }
-        
-        .coupon-blocked {
-            font-size: 36px;
-            font-weight: bold;
-            color: #c62828;
-            margin: 15px 0;
-            font-family: Consolas, 'Courier New', monospace;
-            background: #FFEBEE;
-            padding: 12px;
-            border-radius: 8px;
-            border: 2px dashed #c62828;
-            text-align: center;
-            word-break: break-all;
-        }
-        
-        .info { 
-            background: #E3F2FD; 
-            padding: 15px; 
-            border-radius: 10px; 
-            margin: 20px 0; 
-            font-size: 14px; 
-        }
-        
-        .info.blocked-info { 
-            background: #FFEBEE; 
-            border-left: 4px solid #c62828;
-        }
-        
-        .info.limit-info { 
-            background: #FFF3E0; 
-            border-left: 4px solid #FF9800;
-        }
-        
-        .countdown { 
-            font-size: 24px; 
-            font-weight: bold; 
-            color: #E65100; 
-            margin: 20px 0; 
-            text-align: center;
-        }
-        
-        .loading { 
-            text-align: center; 
-            padding: 40px; 
-        }
-        
-        .spinner { 
-            border: 4px solid #f3f3f3; 
-            border-top: 4px solid #667eea; 
-            border-radius: 50%; 
-            width: 40px; 
-            height: 40px; 
-            animation: spin 1s linear infinite; 
-            margin: 0 auto 20px; 
-        }
-        
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
-        
-        .hidden { display: none; }
-        
-        h1 { margin-bottom: 10px; }
-        h2 { color: #333; margin: 10px 0; }
-        h3 { color: #555; margin: 10px 0; }
-        p { margin: 10px 0; color: #555; }
-        
-        .instruction-box {
-            background: #F5F5F5;
-            border: 2px solid #E0E0E0;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        .screenshot-instruction {
-            background: #FFF8E1;
-            border: 2px dashed #FFB300;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
-            text-align: center;
-            font-weight: bold;
-            color: #E65100;
-        }
-        
-        .action-buttons {
+        .login-screen {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
         }
         
-        button {
-            padding: 12px 24px;
-            background: #2196F3;
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .login-container h1 { color: #333; margin-bottom: 10px; font-size: 32px; }
+        .login-container p { color: #666; margin-bottom: 30px; }
+        
+        .password-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .password-input:focus { outline: none; border-color: #667eea; }
+        
+        .login-btn {
+            background: #4CAF50;
             color: white;
             border: none;
-            border-radius: 8px;
-            cursor: pointer;
+            padding: 16px 32px;
+            border-radius: 10px;
+            font-size: 18px;
             font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .login-btn:hover { background: #45a049; }
+        .error-message { color: #f44336; margin-top: 15px; display: none; }
+        .password-change { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+        
+        .dashboard-content { display: none; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #666;
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .tab-btn:hover { background: #f5f5f5; color: #667eea; }
+        .tab-btn.active { color: #667eea; border-bottom: 3px solid #667eea; background: #f8f9ff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+        
+        .btn:hover { background: #45a049; transform: translateY(-2px); }
+        .btn-export { background: #2196F3; }
+        .btn-export:hover { background: #1976D2; }
+        .btn-pdf { background: #f44336; }
+        .btn-pdf:hover { background: #d32f2f; }
+        .btn-refresh { background: #FF9800; }
+        .btn-refresh:hover { background: #F57C00; }
+        .btn-clear { background: #757575; }
+        .btn-clear:hover { background: #616161; }
+        .btn-logout { background: #9C27B0; }
+        .btn-logout:hover { background: #7B1FA2; }
+        .btn-add { background: #4CAF50; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 42px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            font-size: 16px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            overflow-x: auto;
+        }
+        
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background: #f8f9fa; padding: 16px; text-align: left; font-weight: 600; border-bottom: 2px solid #e9ecef; }
+        td { padding: 16px; border-bottom: 1px solid #e9ecef; }
+        tr:hover { background: #f8f9fa; }
+        
+        .filter-input, .budget-input {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
             font-size: 16px;
             flex: 1;
+            min-width: 200px;
         }
         
-        button:hover {
-            background: #1976D2;
-        }
+        .date-range { display: flex; gap: 10px; align-items: center; }
+        .date-input { padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; }
         
-        button.secondary {
-            background: #757575;
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
         }
+        .badge-claimed { background: #E3F2FD; color: #1976D2; }
+        .badge-redeemed { background: #E8F5E9; color: #2E7D32; }
+        .badge-expired { background: #FFEBEE; color: #C62828; }
+        .badge-active { background: #E8F5E9; color: #2E7D32; }
+        .badge-exhausted { background: #FFEBEE; color: #C62828; }
+        .badge-low { background: #FFF3E0; color: #FF9800; }
         
-        .coupon-section {
+        .coupon-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #D32F2F;
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 8px;
             text-align: center;
-            margin: 20px 0;
-            padding: 15px;
-            background: #F9F9F9;
-            border-radius: 10px;
         }
         
-        .budget-bar {
-            background: #e0e0e0;
-            border-radius: 10px;
-            height: 20px;
-            margin: 15px 0;
-            overflow: hidden;
+        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .page-btn { padding: 10px 18px; border: 1px solid #ddd; background: white; border-radius: 8px; cursor: pointer; }
+        .page-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        
+        .loading { text-align: center; padding: 40px; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
         
-        .budget-fill {
-            background: #4CAF50;
-            height: 100%;
-            transition: width 0.3s;
-            width: 0%;
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
         }
         
-        .budget-fill.low {
-            background: #FF9800;
+        .modal h2 { margin-bottom: 20px; text-align: center; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .modal-btn-primary { background: #4CAF50; color: white; }
+        .modal-btn-secondary { background: #f5f5f5; color: #333; }
+        
+        .budget-progress { background: #e0e0e0; border-radius: 10px; height: 8px; margin-top: 8px; overflow: hidden; }
+        .budget-progress-fill { background: #4CAF50; height: 100%; transition: width 0.3s; }
+        .budget-progress-fill.low { background: #FF9800; }
+        .budget-progress-fill.critical { background: #f44336; }
+        
+        .header-controls { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+        
+        @media (max-width: 768px) {
+            .controls, .date-range { flex-direction: column; align-items: stretch; }
+            .filter-input, .date-input, .btn { width: 100%; }
+            .tabs { flex-direction: column; }
+            .tab-btn { text-align: center; }
         }
         
-        .budget-fill.critical {
-            background: #f44336;
-        }
+        .btn-edit { background: #FF9800; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; margin-right: 5px; }
+        .btn-delete { background: #f44336; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; }
+        .btn-edit:hover { background: #F57C00; }
+        .btn-delete:hover { background: #d32f2f; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Loading your coupon...</p>
+    <div class="login-screen" id="loginScreen">
+        <div class="login-container">
+            <h1>🔐 Advertiser Dashboard</h1>
+            <p>Enter your password to access analytics</p>
+            <input type="password" id="passwordInput" class="password-input" placeholder="Enter dashboard password" onkeypress="handlePasswordEnter(event)">
+            <button class="login-btn" onclick="login()">🔓 Login to Dashboard</button>
+            <div class="error-message" id="loginError">❌ Incorrect password. Please try again.</div>
+            <div class="password-change">
+                <p style="color: #666; margin-bottom: 10px;">Default password: <strong>admin123</strong></p>
+                <button class="btn btn-add" onclick="showChangePasswordModal()" style="width: 100%;">🔑 Change Password</button>
+            </div>
         </div>
-        
-        <div id="success" class="hidden">
-            <h1 class="success">✅ Coupon Claimed!</h1>
-            <h2 align="center" id="adName"></h2>
-            <p align="center"><strong>Product:</strong> <span id="productName"></span></p>
-            <p align="center"><strong>Location:</strong> <span id="hostName"></span></p>
-            
-            <div class="coupon-section">
-                <div class="coupon" id="couponCode"></div>
-                <p style="text-align: center; font-weight: bold; margin-top: 10px;">Show this code at checkout</p>
-            </div>
-            
-            <div class="budget-bar">
-                <div class="budget-fill" id="budgetFill"></div>
-            </div>
-            <p style="text-align: center; font-size: 12px; color: #666;">
-                <span id="remainingCoupons"></span> coupons remaining
-            </p>
-            
-            <div class="screenshot-instruction">
-                📸 TAKE A SCREENSHOT NOW!<br>
-                This page will not be available again
-            </div>
-            
-            <div class="info">
-                <p><strong>✅ Valid:</strong> 24 hours from now</p>
-                <p><strong>🕒 Claimed at:</strong> <span id="claimTime"></span></p>
-                <p><strong>📍 Location:</strong> <span id="locationName"></span></p>
-            </div>
-            
-            <div class="instruction-box">
-                <h4>How to Use:</h4>
-                <p>1. Take screenshot of coupon code above</p>
-                <p>2. Show screenshot at checkout</p>
-                <p>3. Advertiser will validate</p>
+    </div>
+    
+    <div class="dashboard-content" id="dashboardContent">
+        <div class="header">
+            <div class="container">
+                <h1>📊 QR Ad Campaign Dashboard</h1>
+                <p>Real-time analytics & budget management for your QR campaigns</p>
+                <div class="header-controls">
+                    <button class="btn btn-add" onclick="showChangePasswordModal()">🔑 Change Password</button>
+                    <button class="btn btn-logout" onclick="logout()">🚪 Logout</button>
+                </div>
             </div>
         </div>
         
-        <div id="blocked" class="hidden">
-            <h1 class="blocked">⛔ Already Claimed</h1>
-            <h3 id="blockedAdName"></h3>
-            
-            <div class="coupon-section">
-                <p style="font-weight: bold; color: #333; margin-bottom: 10px;">Your previously claimed coupon:</p>
-                <div class="coupon-blocked" id="blockedCouponCode"></div>
-                <p style="color: #666; font-size: 14px; margin-top: 5px;">Use this code at checkout</p>
+        <div class="container">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('claims')">📋 Claims History</button>
+                <button class="tab-btn" onclick="switchTab('budgets')">💰 Budget Management</button>
             </div>
             
-            <div class="info blocked-info">
-                <p>You've already claimed this offer today.</p>
-                <p><strong>Product:</strong> <span id="blockedProduct"></span></p>
-                <p><strong>Claimed at:</strong> <span id="blockedTime"></span></p>
+            <div id="claimsTab" class="tab-content active">
+                <div class="controls">
+                    <input type="text" id="searchInput" class="filter-input" placeholder="Search..." onkeyup="filterTable()">
+                    <div class="date-range">
+                        <input type="date" id="dateFrom" class="date-input" onchange="filterByDate()">
+                        <span>to</span>
+                        <input type="date" id="dateTo" class="date-input" onchange="filterByDate()">
+                    </div>
+                    <select id="adFilter" class="filter-input" onchange="filterTable()"><option value="">All Ads</option></select>
+                    <select id="statusFilter" class="filter-input" onchange="filterTable()">
+                        <option value="">All Status</option>
+                        <option value="claimed">Claimed</option>
+                        <option value="redeemed">Redeemed</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                    <button class="btn btn-refresh" onclick="loadData()">🔄 Refresh</button>
+                    <button class="btn btn-export" onclick="exportToExcel()">📊 Export Excel</button>
+                    <button class="btn btn-pdf" onclick="exportToPDF()">📄 Export PDF</button>
+                    <button class="btn btn-clear" onclick="clearFilters()">🗑️ Clear</button>
+                </div>
+                
+                <div class="stats-grid" id="statsGrid"></div>
+                
+                <div class="table-container">
+                    <h2>Claim History</h2>
+                    <div id="loadingData" class="loading"><div class="spinner"></div><p>Loading data...</p></div>
+                    <div id="tableWrapper" style="display: none;">
+                        <table>
+                            <thead><tr><th>Date</th><th>Advertiser</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Expires</th></tr></thead>
+                            <tbody id="claimsBody"></tbody>
+                        </table>
+                        <div class="pagination" id="pagination"></div>
+                    </div>
+                    <div id="noData" style="display: none; text-align: center; padding: 40px;">No claims found.</div>
+                </div>
             </div>
             
-            <div class="countdown" id="countdown"></div>
-            
-            <div class="action-buttons">
-                <button class="secondary" onclick="copyCouponCode()">Copy Code</button>
+            <div id="budgetsTab" class="tab-content">
+                <div class="controls">
+                    <input type="text" id="budgetSearch" class="filter-input" placeholder="Search by advertiser or product..." onkeyup="filterBudgets()">
+                    <button class="btn btn-add" onclick="showAddBudgetModal()">➕ Add Budget</button>
+                    <button class="btn btn-refresh" onclick="loadBudgets()">🔄 Refresh</button>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-label">Total Campaigns</div><div class="stat-value" id="totalCampaigns">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Total Budget</div><div class="stat-value" id="totalBudget">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" id="totalRemaining">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Usage Rate</div><div class="stat-value" id="usageRate">0%</div></div>
+                </div>
+                
+                <div class="table-container">
+                    <h2>Coupon Budgets</h2>
+                    <div id="loadingBudgets" class="loading"><div class="spinner"></div><p>Loading budgets...</p></div>
+                    <div id="budgetsTableWrapper" style="display: none;">
+                        <table>
+                            <thead><tr><th>Advertiser</th><th>Product</th><th>Total</th><th>Remaining</th><th>Claimed</th><th>Usage</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="budgetsBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="noBudgets" style="display: none; text-align: center; padding: 40px;">No budgets configured. Click "Add Budget" to start.</div>
+                </div>
             </div>
         </div>
-        
-        <div id="budgetLimit" class="hidden">
-            <h1 class="limit">⚠️ Offer Expired</h1>
-            <p style="text-align: center; font-size: 18px; margin: 20px 0;">
-                This promotional offer has reached its limit.
-            </p>
-            <div class="info limit-info">
-                <p><strong>All coupons for this offer have been claimed.</strong></p>
-                <p>Thank you for your interest! Please check back for future promotions.</p>
+    </div>
+    
+    <div class="modal-overlay" id="budgetModal">
+        <div class="modal">
+            <h2 id="budgetModalTitle">💰 Add Budget</h2>
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="budgetAdvertiser" class="budget-input" placeholder="Advertiser Name" style="width: 100%; margin-bottom: 15px;">
+                <input type="text" id="budgetProduct" class="budget-input" placeholder="Product Name" style="width: 100%; margin-bottom: 15px;">
+                <input type="number" id="budgetAmount" class="budget-input" placeholder="Total Coupons" style="width: 100%;" min="1">
+                <div class="error-message" id="budgetError" style="text-align: center; margin-top: 15px;"></div>
             </div>
-            <button onclick="location.reload()">Try Another Offer</button>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="closeBudgetModal()">Cancel</button>
+                <button class="modal-btn modal-btn-primary" onclick="saveBudget()">Save</button>
+            </div>
         </div>
-        
-        <div id="error" class="hidden">
-            <h1 style="color: #FF5722;">❌ Error</h1>
-            <p id="errorMessage"></p>
-            <button onclick="location.reload()">Try Again</button>
+    </div>
+    
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal">
+            <h2>🔑 Change Password</h2>
+            <div style="margin-bottom: 20px;">
+                <input type="password" id="currentPassword" class="password-input" placeholder="Current Password" style="margin-bottom: 15px;">
+                <input type="password" id="newPassword" class="password-input" placeholder="New Password (min 6)" style="margin-bottom: 15px;">
+                <input type="password" id="confirmPassword" class="password-input" placeholder="Confirm Password">
+                <div class="error-message" id="passwordError" style="text-align: center; margin-top: 15px;"></div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="closePasswordModal()">Cancel</button>
+                <button class="modal-btn modal-btn-primary" onclick="changePassword()">Change</button>
+            </div>
         </div>
     </div>
 
     <script>
         function formatCompactDate(date) {
             if (!date) return 'Unknown';
+            const d = new Date(date);
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const dayName = days[date.getDay()];
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const dayName = days[d.getDay()];
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
         
-        function getDeviceId() {
-            let deviceId = localStorage.getItem('device_id');
-            if (!deviceId) {
-                deviceId = sessionStorage.getItem('device_id');
-            }
-            if (!deviceId) {
-                deviceId = 'dev_' + Math.random().toString(36).substring(2, 15);
-                try {
-                    localStorage.setItem('device_id', deviceId);
-                    sessionStorage.setItem('device_id', deviceId);
-                } catch(e) { console.log('Storage not available'); }
-            }
-            return deviceId;
-        }
+        const STORAGE_KEY = 'dashboard_password';
+        const DEFAULT_PASSWORD = 'admin123';
+        if (!localStorage.getItem(STORAGE_KEY)) localStorage.setItem(STORAGE_KEY, DEFAULT_PASSWORD);
         
         const firebaseConfig = {
             apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
@@ -328,247 +430,279 @@
         
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const auth = firebase.auth();
         
-        let currentUser = null;
-        let deviceId = null;
-        let existingCouponCode = null;
-        let currentAd = null, currentProduct = null, currentHost = null;
+        let allClaims = [], filteredClaims = [], currentPage = 1, pageSize = 20;
+        let allBudgets = [], editingBudget = null;
         
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                currentAd = urlParams.get('ad');
-                currentProduct = urlParams.get('product');
-                currentHost = urlParams.get('host');
-                
-                if (!currentAd || !currentProduct || !currentHost) {
-                    showError('Invalid claim link. Please use the QR code provided.');
-                    return;
-                }
-                
-                const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
-                const displayProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
-                const displayHostName = decodeURIComponent(currentHost).replace(/_/g, ' ');
-                
-                document.getElementById('adName').textContent = displayAdName;
-                document.getElementById('productName').textContent = displayProductName;
-                document.getElementById('hostName').textContent = displayHostName;
-                document.getElementById('locationName').textContent = displayHostName;
-                document.getElementById('blockedAdName').textContent = displayAdName;
-                document.getElementById('blockedProduct').textContent = displayProductName;
-                
-                deviceId = getDeviceId();
-                
-                // Sign in anonymously
-                await auth.signInAnonymously();
-                currentUser = auth.currentUser;
-                console.log('Logged in as:', currentUser.uid);
-                
-                await checkClaimEligibility();
-                
-            } catch (error) {
-                console.error('Init error:', error);
-                showError('Initialization error: ' + error.message);
-            }
-        });
-        
-        async function checkClaimEligibility() {
-            try {
-                const twentyFourHoursAgo = new Date();
-                twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-                
-                const budgetId = `${currentAd}_${currentProduct}`;
-                let budgetDoc = await db.collection('advertiserBudgets').doc(budgetId).get();
-                
-                // Auto-create budget if doesn't exist
-                if (!budgetDoc.exists) {
-                    console.log('Creating default budget for:', budgetId);
-                    await db.collection('advertiserBudgets').doc(budgetId).set({
-                        advertiserName: decodeURIComponent(currentAd).replace(/_/g, ' '),
-                        productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
-                        total: 100,
-                        remaining: 100,
-                        createdAt: new Date()
-                    });
-                    budgetDoc = await db.collection('advertiserBudgets').doc(budgetId).get();
-                }
-                
-                const budgetData = budgetDoc.data();
-                const remaining = budgetData ? budgetData.remaining : 0;
-                const total = budgetData ? budgetData.total : 100;
-                
-                // Update UI with budget info
-                const remainingPercent = (remaining / total) * 100;
-                const fillElement = document.getElementById('budgetFill');
-                if (fillElement) {
-                    fillElement.style.width = `${remainingPercent}%`;
-                    if (remainingPercent < 30) fillElement.classList.add('low');
-                    if (remainingPercent < 10) fillElement.classList.add('critical');
-                }
-                document.getElementById('remainingCoupons').textContent = remaining;
-                
-                if (remaining <= 0) {
-                    showBudgetLimit();
-                    return;
-                }
-                
-                // Check if user already claimed in last 24h
-                const claimsSnapshot = await db.collection('claims')
-                    .where('adId', '==', currentAd)
-                    .where('productId', '==', currentProduct)
-                    .where('claimedAt', '>=', twentyFourHoursAgo)
-                    .get();
-                
-                let existingClaim = null;
-                for (const doc of claimsSnapshot.docs) {
-                    const claim = doc.data();
-                    if (claim.deviceId === deviceId || claim.userId === currentUser.uid) {
-                        existingClaim = { ...claim, id: doc.id };
-                        existingCouponCode = claim.couponCode;
-                        break;
-                    }
-                }
-                
-                if (existingClaim) {
-                    showBlockedPage(existingClaim);
-                    return;
-                }
-                
-                await generateNewCoupon(budgetId, remaining);
-                
-            } catch (error) {
-                console.error("Check error:", error);
-                showError('Database error: ' + error.message);
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            if (tab === 'claims') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                document.getElementById('claimsTab').classList.add('active');
+                loadData();
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+                document.getElementById('budgetsTab').classList.add('active');
+                loadBudgets();
             }
         }
         
-        async function generateNewCoupon(budgetId, remaining) {
+        function login() {
+            if (document.getElementById('passwordInput').value === localStorage.getItem(STORAGE_KEY)) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+                sessionStorage.setItem('dashboard_logged_in', 'true');
+                loadData();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+        
+        function handlePasswordEnter(e) { if (e.key === 'Enter') login(); }
+        function logout() { sessionStorage.removeItem('dashboard_logged_in'); location.reload(); }
+        function showChangePasswordModal() { document.getElementById('passwordModal').style.display = 'flex'; }
+        function closePasswordModal() { document.getElementById('passwordModal').style.display = 'none'; }
+        
+        function changePassword() {
+            const current = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const errorDiv = document.getElementById('passwordError');
+            if (current !== localStorage.getItem(STORAGE_KEY)) { errorDiv.textContent = '❌ Current password incorrect'; errorDiv.style.display = 'block'; return; }
+            if (newPass.length < 6) { errorDiv.textContent = '❌ Password must be at least 6 characters'; errorDiv.style.display = 'block'; return; }
+            if (newPass !== confirm) { errorDiv.textContent = '❌ Passwords do not match'; errorDiv.style.display = 'block'; return; }
+            localStorage.setItem(STORAGE_KEY, newPass);
+            alert('✅ Password changed!');
+            closePasswordModal();
+        }
+        
+        async function loadData() {
+            document.getElementById('loadingData').style.display = 'block';
             try {
-                const randomNum = Math.floor(Math.random() * 9000 + 1000);
-                const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
-                const couponCode = 'save' + randomNum + randomLetter;
-                const clientIP = await getClientIP();
-                
-                const budgetRef = db.collection('advertiserBudgets').doc(budgetId);
-                
-                // Use transaction for atomic operation
-                await db.runTransaction(async (transaction) => {
-                    const budgetDoc = await transaction.get(budgetRef);
-                    const currentRemaining = budgetDoc.exists ? budgetDoc.data().remaining : 0;
-                    
-                    if (currentRemaining <= 0) {
-                        throw new Error('No coupons remaining');
-                    }
-                    
-                    transaction.update(budgetRef, {
-                        remaining: currentRemaining - 1,
-                        lastUpdated: new Date()
-                    });
-                    
-                    const claimData = {
-                        userId: currentUser.uid,
-                        deviceId: deviceId,
-                        adId: currentAd,
-                        adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
-                        productId: currentProduct,
-                        productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
-                        hostId: currentHost,
-                        hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
-                        couponCode: couponCode,
-                        claimedAt: new Date(),
-                        expiresAt: new Date(Date.now() + (24 * 60 * 60 * 1000)),
-                        clientIP: clientIP,
-                        userAgent: navigator.userAgent,
-                        redeemed: false
-                    };
-                    
-                    transaction.set(db.collection('claims').doc(), claimData);
+                const snapshot = await db.collection('claims').orderBy('claimedAt', 'desc').get();
+                allClaims = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    data.id = doc.id;
+                    data.claimedAt = data.claimedAt?.toDate ? data.claimedAt.toDate() : new Date(data.claimedAt);
+                    data.expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+                    allClaims.push(data);
                 });
                 
-                showSuccessPage(couponCode);
+                const ads = [...new Set(allClaims.map(c => c.adName).filter(Boolean))].sort();
+                const adFilter = document.getElementById('adFilter');
+                adFilter.innerHTML = '<option value="">All Ads</option>';
+                ads.forEach(a => { const opt = document.createElement('option'); opt.value = a; opt.textContent = a; adFilter.appendChild(opt); });
                 
-            } catch (error) {
-                console.error('Generate error:', error);
-                if (error.message === 'No coupons remaining') {
-                    showBudgetLimit();
-                } else {
-                    showError('Failed to generate coupon: ' + error.message);
-                }
-            }
+                filterByDate();
+                document.getElementById('loadingData').style.display = 'none';
+            } catch (error) { console.error(error); document.getElementById('loadingData').style.display = 'none'; }
         }
         
-        async function getClientIP() {
+        function filterByDate() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            let filtered = allClaims;
+            if (dateFrom) { const from = new Date(dateFrom); from.setHours(0,0,0,0); filtered = filtered.filter(c => c.claimedAt >= from); }
+            if (dateTo) { const to = new Date(dateTo); to.setHours(23,59,59,999); filtered = filtered.filter(c => c.claimedAt <= to); }
+            filteredClaims = applyFilters(filtered);
+            updateStats();
+            renderTable();
+        }
+        
+        function applyFilters(data) {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const ad = document.getElementById('adFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            return data.filter(c => {
+                if (search && !`${c.adName} ${c.productName} ${c.couponCode}`.toLowerCase().includes(search)) return false;
+                if (ad && c.adName !== ad) return false;
+                if (status) {
+                    const expired = c.expiresAt < new Date();
+                    if (status === 'expired' && !expired) return false;
+                    if (status === 'claimed' && (c.redeemed || expired)) return false;
+                    if (status === 'redeemed' && !c.redeemed) return false;
+                }
+                return true;
+            });
+        }
+        
+        function filterTable() { filteredClaims = applyFilters(allClaims); updateStats(); renderTable(); }
+        
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('adFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
+            document.getElementById('dateFrom').value = weekAgo;
+            document.getElementById('dateTo').value = today;
+            filterByDate();
+        }
+        
+        function updateStats() {
+            const total = filteredClaims.length;
+            const redeemed = filteredClaims.filter(c => c.redeemed).length;
+            const uniqueUsers = new Set(filteredClaims.map(c => c.userId)).size;
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card"><div class="stat-label">Total Claims</div><div class="stat-value">${total}</div></div>
+                <div class="stat-card"><div class="stat-label">Redeemed</div><div class="stat-value">${redeemed}</div></div>
+                <div class="stat-card"><div class="stat-label">Unique Users</div><div class="stat-value">${uniqueUsers}</div></div>
+                <div class="stat-card"><div class="stat-label">Redemption Rate</div><div class="stat-value">${total ? Math.round(redeemed/total*100) : 0}%</div></div>
+            `;
+        }
+        
+        function renderTable() {
+            const tbody = document.getElementById('claimsBody');
+            const wrapper = document.getElementById('tableWrapper');
+            const noData = document.getElementById('noData');
+            if (filteredClaims.length === 0) { wrapper.style.display = 'none'; noData.style.display = 'block'; return; }
+            noData.style.display = 'none'; wrapper.style.display = 'block';
+            const totalPages = Math.ceil(filteredClaims.length / pageSize);
+            const start = (currentPage - 1) * pageSize;
+            const pageClaims = filteredClaims.slice(start, start + pageSize);
+            tbody.innerHTML = '';
+            pageClaims.forEach(claim => {
+                const expired = claim.expiresAt < new Date();
+                let status = 'Claimed', statusClass = 'badge-claimed';
+                if (claim.redeemed) { status = 'Redeemed'; statusClass = 'badge-redeemed'; }
+                else if (expired) { status = 'Expired'; statusClass = 'badge-expired'; }
+                tbody.innerHTML += `<tr><td>${formatCompactDate(claim.claimedAt)}</td><td><strong>${claim.adName || 'Unknown'}</strong></td><td>${claim.productName || 'Unknown'}</td><td>${claim.hostName || 'Unknown'}</td><td class="coupon-cell">${claim.couponCode || 'N/A'}</td><td><span class="badge ${statusClass}">${status}</span></td><td>${claim.redeemed ? 'Yes' : 'No'}</td><td>${formatCompactDate(claim.expiresAt)}</td></tr>`;
+            });
+            renderPagination(totalPages);
+        }
+        
+        function renderPagination(totalPages) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            if (totalPages <= 1) return;
+            const prev = document.createElement('button'); prev.textContent = '← Previous'; prev.className = 'page-btn'; prev.disabled = currentPage === 1; prev.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } }; pagination.appendChild(prev);
+            for (let i = 1; i <= Math.min(totalPages, 7); i++) { const btn = document.createElement('button'); btn.textContent = i; btn.className = 'page-btn' + (i === currentPage ? ' active' : ''); btn.onclick = () => { currentPage = i; renderTable(); }; pagination.appendChild(btn); }
+            const next = document.createElement('button'); next.textContent = 'Next →'; next.className = 'page-btn'; next.disabled = currentPage === totalPages; next.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } }; pagination.appendChild(next);
+        }
+        
+        async function loadBudgets() {
+            document.getElementById('loadingBudgets').style.display = 'block';
+            document.getElementById('budgetsTableWrapper').style.display = 'none';
+            document.getElementById('noBudgets').style.display = 'none';
             try {
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                return data.ip;
-            } catch (error) {
-                return 'unknown';
-            }
+                const snapshot = await db.collection('advertiserBudgets').get();
+                allBudgets = [];
+                snapshot.forEach(doc => { allBudgets.push({ id: doc.id, ...doc.data() }); });
+                
+                const totalBudget = allBudgets.reduce((s, b) => s + (b.total || 0), 0);
+                const totalRemaining = allBudgets.reduce((s, b) => s + (b.remaining || 0), 0);
+                document.getElementById('totalCampaigns').textContent = allBudgets.length;
+                document.getElementById('totalBudget').textContent = totalBudget.toLocaleString();
+                document.getElementById('totalRemaining').textContent = totalRemaining.toLocaleString();
+                document.getElementById('usageRate').textContent = totalBudget ? Math.round(((totalBudget - totalRemaining) / totalBudget) * 100) + '%' : '0%';
+                
+                renderBudgets();
+                document.getElementById('loadingBudgets').style.display = 'none';
+            } catch (error) { console.error(error); document.getElementById('loadingBudgets').style.display = 'none'; }
         }
         
-        function showSuccessPage(couponCode) {
-            document.body.className = 'success-bg';
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('success').classList.remove('hidden');
-            document.getElementById('couponCode').textContent = couponCode;
-            document.getElementById('claimTime').textContent = formatCompactDate(new Date());
-            
-            // Clear URL parameters to prevent refresh abuse
-            window.history.replaceState({}, document.title, window.location.pathname);
+        function renderBudgets() {
+            const search = document.getElementById('budgetSearch').value.toLowerCase();
+            let filtered = allBudgets;
+            if (search) filtered = allBudgets.filter(b => (b.advertiserName || '').toLowerCase().includes(search) || (b.productName || '').toLowerCase().includes(search));
+            const tbody = document.getElementById('budgetsBody');
+            const wrapper = document.getElementById('budgetsTableWrapper');
+            const noBudgets = document.getElementById('noBudgets');
+            if (filtered.length === 0) { wrapper.style.display = 'none'; noBudgets.style.display = 'block'; return; }
+            noBudgets.style.display = 'none'; wrapper.style.display = 'block';
+            tbody.innerHTML = '';
+            filtered.forEach(b => {
+                const remaining = b.remaining || 0, total = b.total || 0, claimed = total - remaining;
+                const percent = total ? (remaining / total) * 100 : 0;
+                let status = 'Active', statusClass = 'badge-active';
+                if (remaining <= 0) { status = 'Exhausted'; statusClass = 'badge-exhausted'; }
+                else if (remaining < total * 0.2) { status = 'Low Stock'; statusClass = 'badge-low'; }
+                tbody.innerHTML += `<tr><td><strong>${b.advertiserName || b.id.split('_')[0]}</strong></td><td>${b.productName || b.id.split('_')[1] || '-'}</td><td>${total}</td><td><strong style="color: ${remaining <= 0 ? '#c62828' : remaining < total*0.2 ? '#FF9800' : '#2E7D32'}">${remaining}</strong></td><td>${claimed}</td><td style="width: 100px;"><div class="budget-progress"><div class="budget-progress-fill ${percent < 30 ? (percent < 10 ? 'critical' : 'low') : ''}" style="width: ${percent}%"></div></div><span style="font-size: 12px;">${Math.round(percent)}% left</span></td><td><span class="badge ${statusClass}">${status}</span></td><td><button class="btn-edit" onclick="editBudget('${b.id}')">✏️ Edit</button><button class="btn-delete" onclick="deleteBudget('${b.id}')">🗑️ Delete</button></td></tr>`;
+            });
         }
         
-        function showBlockedPage(existingClaim) {
-            document.body.className = 'blocked-bg';
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('blocked').classList.remove('hidden');
-            document.getElementById('blockedCouponCode').textContent = existingCouponCode;
-            
-            const claimedTime = existingClaim.claimedAt?.toDate ? existingClaim.claimedAt.toDate() : new Date(existingClaim.claimedAt);
-            document.getElementById('blockedTime').textContent = formatCompactDate(claimedTime);
-            
-            const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
-            startCountdown(nextAvailable);
-            window.history.replaceState({}, document.title, window.location.pathname);
+        function filterBudgets() { renderBudgets(); }
+        
+        function showAddBudgetModal() {
+            editingBudget = null;
+            document.getElementById('budgetModalTitle').textContent = '💰 Add Budget';
+            document.getElementById('budgetAdvertiser').value = '';
+            document.getElementById('budgetProduct').value = '';
+            document.getElementById('budgetAmount').value = '';
+            document.getElementById('budgetError').style.display = 'none';
+            document.getElementById('budgetModal').style.display = 'flex';
         }
         
-        function showBudgetLimit() {
-            document.body.className = 'limit-bg';
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('budgetLimit').classList.remove('hidden');
+        function editBudget(budgetId) {
+            const budget = allBudgets.find(b => b.id === budgetId);
+            if (!budget) return;
+            editingBudget = budget;
+            document.getElementById('budgetModalTitle').textContent = '✏️ Edit Budget';
+            document.getElementById('budgetAdvertiser').value = budget.advertiserName || budget.id.split('_')[0];
+            document.getElementById('budgetProduct').value = budget.productName || budget.id.split('_')[1] || '';
+            document.getElementById('budgetAmount').value = budget.total;
+            document.getElementById('budgetError').style.display = 'none';
+            document.getElementById('budgetModal').style.display = 'flex';
         }
         
-        function showError(message) {
-            document.body.className = '';
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('error').classList.remove('hidden');
-            document.getElementById('errorMessage').textContent = message;
-        }
-        
-        function startCountdown(targetTime) {
-            function updateCountdown() {
-                const now = new Date();
-                const diff = targetTime - now;
-                if (diff <= 0) {
-                    document.getElementById('countdown').innerHTML = '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
-                    return;
+        async function saveBudget() {
+            const advertiser = document.getElementById('budgetAdvertiser').value.trim();
+            const product = document.getElementById('budgetProduct').value.trim();
+            const amount = parseInt(document.getElementById('budgetAmount').value);
+            const errorDiv = document.getElementById('budgetError');
+            if (!advertiser) { errorDiv.textContent = '❌ Enter advertiser name'; errorDiv.style.display = 'block'; return; }
+            if (!amount || amount < 1) { errorDiv.textContent = '❌ Enter valid amount'; errorDiv.style.display = 'block'; return; }
+            const docId = `${advertiser.replace(/\s+/g, '_').toLowerCase()}_${product.replace(/\s+/g, '_').toLowerCase() || 'general'}`;
+            try {
+                if (editingBudget) {
+                    await db.collection('advertiserBudgets').doc(editingBudget.id).update({ total: amount, remaining: amount, advertiserName: advertiser, productName: product || null, updatedAt: new Date() });
+                } else {
+                    await db.collection('advertiserBudgets').doc(docId).set({ advertiserName: advertiser, productName: product || null, total: amount, remaining: amount, createdAt: new Date(), updatedAt: new Date() });
                 }
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                document.getElementById('countdown').innerHTML = `<div style="font-size: 28px;">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</div><p>Time until you can claim again</p>`;
-                setTimeout(updateCountdown, 1000);
-            }
-            updateCountdown();
+                closeBudgetModal();
+                loadBudgets();
+                alert(`✅ Budget ${editingBudget ? 'updated' : 'created'}!`);
+            } catch (error) { errorDiv.textContent = '❌ Error: ' + error.message; errorDiv.style.display = 'block'; }
         }
         
-        function copyCouponCode() {
-            const code = document.getElementById('blockedCouponCode').textContent;
-            if (code && code !== 'Not available') {
-                navigator.clipboard.writeText(code).then(() => alert('Coupon code copied!'));
+        async function deleteBudget(budgetId) {
+            if (confirm('Delete this budget?')) {
+                await db.collection('advertiserBudgets').doc(budgetId).delete();
+                loadBudgets();
+                alert('✅ Budget deleted');
             }
         }
+        
+        function closeBudgetModal() { document.getElementById('budgetModal').style.display = 'none'; editingBudget = null; }
+        
+        function exportToExcel() {
+            if (filteredClaims.length === 0) { alert('No data to export!'); return; }
+            const data = filteredClaims.map(c => ({ 'Date': formatCompactDate(c.claimedAt), 'Advertiser': c.adName, 'Product': c.productName, 'Location': c.hostName, 'Coupon Code': c.couponCode, 'Status': c.redeemed ? 'Redeemed' : 'Claimed', 'Expires': formatCompactDate(c.expiresAt) }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Claims');
+            XLSX.writeFile(wb, `claims-${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+        }
+        
+        function exportToPDF() {
+            if (filteredClaims.length === 0) { alert('No data to export!'); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+            const data = filteredClaims.map(c => [formatCompactDate(c.claimedAt), c.adName, c.productName, c.hostName, c.couponCode, c.redeemed ? 'Redeemed' : 'Claimed']);
+            doc.text('Claims Report', 14, 15);
+            doc.autoTable({ head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon', 'Status']], body: data, startY: 25 });
+            doc.save(`claims-${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`);
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (sessionStorage.getItem('dashboard_logged_in')) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+                loadData();
+            }
+        });
     </script>
 </body>
 </html>
