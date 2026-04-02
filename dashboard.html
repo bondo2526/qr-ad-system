@@ -273,7 +273,7 @@
 <body>
     <div class="login-screen" id="loginScreen">
         <div class="login-container">
-            <h1>🔐 Advertiser Dashboard 3.0</h1>
+            <h1>🔐 Advertiser Dashboard</h1>
             <p>Enter your password to access analytics</p>
             <input type="password" id="passwordInput" class="password-input" placeholder="Enter dashboard password" onkeypress="handlePasswordEnter(event)">
             <button class="login-btn" onclick="login()">🔓 Login to Dashboard</button>
@@ -303,7 +303,6 @@
                 <button class="tab-btn" onclick="switchTab('budgets')">💰 Budget Management</button>
             </div>
             
-            <!-- Claims Tab -->
             <div id="claimsTab" class="tab-content active">
                 <div class="controls">
                     <input type="text" id="searchInput" class="filter-input" placeholder="Search..." onkeyup="filterTable()">
@@ -332,7 +331,7 @@
                     <div id="loadingData" class="loading"><div class="spinner"></div><p>Loading data...</p></div>
                     <div id="tableWrapper" style="display: none;">
                         <table>
-                            <thead><tr><th>Date</th><th>Advertiser</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires</th></tr></thead>
+                            <thead><tr><th>Date</th><th>Advertiser</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Expires</th></tr></thead>
                             <tbody id="claimsBody"></tbody>
                         </table>
                         <div class="pagination" id="pagination"></div>
@@ -341,7 +340,6 @@
                 </div>
             </div>
             
-            <!-- Budgets Tab -->
             <div id="budgetsTab" class="tab-content">
                 <div class="controls">
                     <input type="text" id="budgetSearch" class="filter-input" placeholder="Search by advertiser or product..." onkeyup="filterBudgets()">
@@ -360,7 +358,7 @@
                     <h2>Coupon Budgets</h2>
                     <div id="loadingBudgets" class="loading"><div class="spinner"></div><p>Loading budgets...</p></div>
                     <div id="budgetsTableWrapper" style="display: none;">
-                        <table id="budgetsTable">
+                        <table>
                             <thead><tr><th>Advertiser</th><th>Product</th><th>Total</th><th>Remaining</th><th>Claimed</th><th>Usage</th><th>Status</th><th>Actions</th></tr></thead>
                             <tbody id="budgetsBody"></tbody>
                         </table>
@@ -375,9 +373,9 @@
         <div class="modal">
             <h2 id="budgetModalTitle">💰 Add Budget</h2>
             <div style="margin-bottom: 20px;">
-                <input type="text" id="budgetAdvertiser" class="budget-input" placeholder="Advertiser Name (e.g., Special Offer)" style="width: 100%; margin-bottom: 15px;">
-                <input type="text" id="budgetProduct" class="budget-input" placeholder="Product Name (e.g., Vitamin B12)" style="width: 100%; margin-bottom: 15px;">
-                <input type="number" id="budgetAmount" class="budget-input" placeholder="Total Coupons (e.g., 100)" style="width: 100%;" min="1">
+                <input type="text" id="budgetAdvertiser" class="budget-input" placeholder="Advertiser Name" style="width: 100%; margin-bottom: 15px;">
+                <input type="text" id="budgetProduct" class="budget-input" placeholder="Product Name" style="width: 100%; margin-bottom: 15px;">
+                <input type="number" id="budgetAmount" class="budget-input" placeholder="Total Coupons" style="width: 100%;" min="1">
                 <div class="error-message" id="budgetError" style="text-align: center; margin-top: 15px;"></div>
             </div>
             <div class="modal-buttons">
@@ -406,13 +404,14 @@
     <script>
         function formatCompactDate(date) {
             if (!date) return 'Unknown';
+            const d = new Date(date);
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const dayName = days[date.getDay()];
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const dayName = days[d.getDay()];
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
         
@@ -486,9 +485,8 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     data.id = doc.id;
-                    data.claimedAt = data.claimedAt?.toDate() || new Date();
-                    data.expiresAt = data.expiresAt?.toDate() || new Date();
-                    data.redeemedAt = data.redeemedAt?.toDate() || null;
+                    data.claimedAt = data.claimedAt?.toDate ? data.claimedAt.toDate() : new Date(data.claimedAt);
+                    data.expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
                     allClaims.push(data);
                 });
                 
@@ -570,7 +568,7 @@
                 let status = 'Claimed', statusClass = 'badge-claimed';
                 if (claim.redeemed) { status = 'Redeemed'; statusClass = 'badge-redeemed'; }
                 else if (expired) { status = 'Expired'; statusClass = 'badge-expired'; }
-                tbody.innerHTML += `<tr><td>${formatCompactDate(claim.claimedAt)}</td><td><strong>${claim.adName || 'Unknown'}</strong></td><td>${claim.productName || 'Unknown'}</td><td>${claim.hostName || 'Unknown'}</td><td class="coupon-cell">${claim.couponCode || 'N/A'}</td><td><span class="badge ${statusClass}">${status}</span></td><td>${claim.redeemed ? 'Yes' : 'No'}</td><td>${claim.redeemedAt ? formatCompactDate(claim.redeemedAt) : '-'}</td><td>${formatCompactDate(claim.expiresAt)}</td></tr>`;
+                tbody.innerHTML += `<tr><td>${formatCompactDate(claim.claimedAt)}</td><td><strong>${claim.adName || 'Unknown'}</strong></td><td>${claim.productName || 'Unknown'}</td><td>${claim.hostName || 'Unknown'}</td><td class="coupon-cell">${claim.couponCode || 'N/A'}</td><td><span class="badge ${statusClass}">${status}</span></td><td>${claim.redeemed ? 'Yes' : 'No'}</td><td>${formatCompactDate(claim.expiresAt)}</td></tr>`;
             });
             renderPagination(totalPages);
         }
