@@ -302,7 +302,6 @@
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
         
-        // Get persistent device ID
         function getDeviceId() {
             let deviceId = localStorage.getItem('device_id');
             if (!deviceId) {
@@ -310,8 +309,10 @@
             }
             if (!deviceId) {
                 deviceId = 'dev_' + Math.random().toString(36).substring(2, 15);
-                localStorage.setItem('device_id', deviceId);
-                sessionStorage.setItem('device_id', deviceId);
+                try {
+                    localStorage.setItem('device_id', deviceId);
+                    sessionStorage.setItem('device_id', deviceId);
+                } catch(e) { console.log('Storage not available'); }
             }
             return deviceId;
         }
@@ -358,12 +359,16 @@
                 document.getElementById('blockedProduct').textContent = displayProductName;
                 
                 deviceId = getDeviceId();
+                
+                // Sign in anonymously
                 await auth.signInAnonymously();
                 currentUser = auth.currentUser;
+                console.log('Logged in as:', currentUser.uid);
                 
                 await checkClaimEligibility();
                 
             } catch (error) {
+                console.error('Init error:', error);
                 showError('Initialization error: ' + error.message);
             }
         });
@@ -373,12 +378,12 @@
                 const twentyFourHoursAgo = new Date();
                 twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
                 
-                // CHECK BUDGET FIRST
                 const budgetId = `${currentAd}_${currentProduct}`;
-                const budgetDoc = await db.collection('advertiserBudgets').doc(budgetId).get();
+                let budgetDoc = await db.collection('advertiserBudgets').doc(budgetId).get();
                 
+                // Auto-create budget if doesn't exist
                 if (!budgetDoc.exists) {
-                    // Auto-create budget if doesn't exist (for testing)
+                    console.log('Creating default budget for:', budgetId);
                     await db.collection('advertiserBudgets').doc(budgetId).set({
                         advertiserName: decodeURIComponent(currentAd).replace(/_/g, ' '),
                         productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
@@ -386,13 +391,15 @@
                         remaining: 100,
                         createdAt: new Date()
                     });
-                    var remaining = 100;
-                } else {
-                    var remaining = budgetDoc.data().remaining;
+                    budgetDoc = await db.collection('advertiserBudgets').doc(budgetId).get();
                 }
                 
+                const budgetData = budgetDoc.data();
+                const remaining = budgetData ? budgetData.remaining : 0;
+                const total = budgetData ? budgetData.total : 100;
+                
                 // Update UI with budget info
-                const remainingPercent = (remaining / (budgetDoc.exists ? budgetDoc.data().total : 100)) * 100;
+                const remainingPercent = (remaining / total) * 100;
                 const fillElement = document.getElementById('budgetFill');
                 if (fillElement) {
                     fillElement.style.width = `${remainingPercent}%`;
@@ -406,7 +413,7 @@
                     return;
                 }
                 
-                // CHECK IF USER ALREADY CLAIMED
+                // Check if user already claimed in last 24h
                 const claimsSnapshot = await db.collection('claims')
                     .where('adId', '==', currentAd)
                     .where('productId', '==', currentProduct)
@@ -443,12 +450,12 @@
                 const couponCode = 'save' + randomNum + randomLetter;
                 const clientIP = await getClientIP();
                 
-                // Use transaction to decrement budget and add claim
                 const budgetRef = db.collection('advertiserBudgets').doc(budgetId);
                 
+                // Use transaction for atomic operation
                 await db.runTransaction(async (transaction) => {
                     const budgetDoc = await transaction.get(budgetRef);
-                    const currentRemaining = budgetDoc.exists ? budgetDoc.data().remaining : 100;
+                    const currentRemaining = budgetDoc.exists ? budgetDoc.data().remaining : 0;
                     
                     if (currentRemaining <= 0) {
                         throw new Error('No coupons remaining');
@@ -456,7 +463,7 @@
                     
                     transaction.update(budgetRef, {
                         remaining: currentRemaining - 1,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        lastUpdated: new Date()
                     });
                     
                     const claimData = {
@@ -469,7 +476,7 @@
                         hostId: currentHost,
                         hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
                         couponCode: couponCode,
-                        claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        claimedAt: new Date(),
                         expiresAt: new Date(Date.now() + (24 * 60 * 60 * 1000)),
                         clientIP: clientIP,
                         userAgent: navigator.userAgent,
@@ -482,6 +489,7 @@
                 showSuccessPage(couponCode);
                 
             } catch (error) {
+                console.error('Generate error:', error);
                 if (error.message === 'No coupons remaining') {
                     showBudgetLimit();
                 } else {
@@ -506,6 +514,8 @@
             document.getElementById('success').classList.remove('hidden');
             document.getElementById('couponCode').textContent = couponCode;
             document.getElementById('claimTime').textContent = formatCompactDate(new Date());
+            
+            // Clear URL parameters to prevent refresh abuse
             window.history.replaceState({}, document.title, window.location.pathname);
         }
         
@@ -515,7 +525,7 @@
             document.getElementById('blocked').classList.remove('hidden');
             document.getElementById('blockedCouponCode').textContent = existingCouponCode;
             
-            const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
+            const claimedTime = existingClaim.claimedAt?.toDate ? existingClaim.claimedAt.toDate() : new Date(existingClaim.claimedAt);
             document.getElementById('blockedTime').textContent = formatCompactDate(claimedTime);
             
             const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
@@ -555,7 +565,7 @@
         
         function copyCouponCode() {
             const code = document.getElementById('blockedCouponCode').textContent;
-            if (code) {
+            if (code && code !== 'Not available') {
                 navigator.clipboard.writeText(code).then(() => alert('Coupon code copied!'));
             }
         }
