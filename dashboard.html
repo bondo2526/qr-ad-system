@@ -10,13 +10,8 @@
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { 
-            background: #f5f7fa; 
-            color: #333;
-            min-height: 100vh;
-        }
+        body { background: #f5f7fa; color: #333; min-height: 100vh; }
         
-        /* Login Screen */
         .login-screen {
             display: flex;
             justify-content: center;
@@ -36,17 +31,8 @@
             text-align: center;
         }
         
-        .login-container h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 32px;
-        }
-        
-        .login-container p {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 16px;
-        }
+        .login-container h1 { color: #333; margin-bottom: 10px; font-size: 32px; }
+        .login-container p { color: #666; margin-bottom: 30px; }
         
         .password-input {
             width: 100%;
@@ -58,10 +44,7 @@
             text-align: center;
         }
         
-        .password-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
+        .password-input:focus { outline: none; border-color: #667eea; }
         
         .login-btn {
             background: #4CAF50;
@@ -73,45 +56,23 @@
             font-weight: bold;
             cursor: pointer;
             width: 100%;
-            transition: background 0.3s;
         }
         
-        .login-btn:hover {
-            background: #45a049;
-        }
+        .login-btn:hover { background: #45a049; }
+        .error-message { color: #f44336; margin-top: 15px; display: none; }
+        .password-change { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
         
-        .error-message {
-            color: #f44336;
-            margin-top: 15px;
-            font-size: 16px;
-            display: none;
-        }
+        .dashboard-content { display: none; }
         
-        .password-change {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
-        
-        /* Dashboard Content */
-        .dashboard-content {
-            display: none;
-        }
-        
-        .header { 
+        .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 25px 20px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
         
-        .container { 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 20px; 
-        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         
-        /* Tabs */
         .tabs {
             display: flex;
             gap: 10px;
@@ -127,28 +88,13 @@
             font-weight: 600;
             cursor: pointer;
             color: #666;
-            transition: all 0.3s;
             border-radius: 10px 10px 0 0;
         }
         
-        .tab-btn:hover {
-            background: #f5f5f5;
-            color: #667eea;
-        }
-        
-        .tab-btn.active {
-            color: #667eea;
-            border-bottom: 3px solid #667eea;
-            background: #f8f9ff;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
+        .tab-btn:hover { background: #f5f5f5; color: #667eea; }
+        .tab-btn.active { color: #667eea; border-bottom: 3px solid #667eea; background: #f8f9ff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
         
         .controls {
             background: white;
@@ -175,7 +121,6 @@
             align-items: center;
             gap: 8px;
             font-size: 16px;
-            min-height: 50px;
         }
         
         .btn:hover { background: #45a049; transform: translateY(-2px); }
@@ -189,14 +134,7 @@
         .btn-clear:hover { background: #616161; }
         .btn-logout { background: #9C27B0; }
         .btn-logout:hover { background: #7B1FA2; }
-        .btn-change-password { background: #9C27B0; }
-        .btn-change-password:hover { background: #7B1FA2; }
         .btn-add { background: #4CAF50; }
-        .btn-add:hover { background: #45a049; }
-        .btn-edit { background: #FF9800; }
-        .btn-edit:hover { background: #F57C00; }
-        .btn-delete { background: #f44336; }
-        .btn-delete:hover { background: #d32f2f; }
         
         .stats-grid {
             display: grid;
@@ -218,7 +156,6 @@
             font-weight: bold;
             color: #667eea;
             margin: 10px 0;
-            font-size: clamp(36px, 5vw, 42px);
         }
         
         .stat-label {
@@ -237,29 +174,9 @@
             overflow-x: auto;
         }
         
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 15px;
-        }
-        
-        th {
-            background: #f8f9fa;
-            padding: 16px;
-            text-align: left;
-            font-weight: 600;
-            color: #444;
-            border-bottom: 2px solid #e9ecef;
-            position: sticky;
-            top: 0;
-        }
-        
-        td {
-            padding: 16px;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background: #f8f9fa; padding: 16px; text-align: left; font-weight: 600; border-bottom: 2px solid #e9ecef; }
+        td { padding: 16px; border-bottom: 1px solid #e9ecef; }
         tr:hover { background: #f8f9fa; }
         
         .filter-input, .budget-input {
@@ -271,23 +188,8 @@
             min-width: 200px;
         }
         
-        .filter-input:focus, .budget-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .date-range {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .date-input {
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-        }
+        .date-range { display: flex; gap: 10px; align-items: center; }
+        .date-input { padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; }
         
         .badge {
             display: inline-block;
@@ -296,7 +198,6 @@
             font-size: 14px;
             font-weight: 600;
         }
-        
         .badge-claimed { background: #E3F2FD; color: #1976D2; }
         .badge-redeemed { background: #E8F5E9; color: #2E7D32; }
         .badge-expired { background: #FFEBEE; color: #C62828; }
@@ -314,50 +215,14 @@
             text-align: center;
         }
         
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
+        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .page-btn { padding: 10px 18px; border: 1px solid #ddd; background: white; border-radius: 8px; cursor: pointer; }
+        .page-btn.active { background: #667eea; color: white; border-color: #667eea; }
         
-        .page-btn {
-            padding: 10px 18px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 8px;
-            cursor: pointer;
-        }
+        .loading { text-align: center; padding: 40px; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .page-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            font-size: 18px;
-            color: #666;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Modal */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -377,116 +242,62 @@
             border-radius: 20px;
             max-width: 500px;
             width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         
-        .modal h2 {
-            margin-bottom: 20px;
-            color: #333;
-            text-align: center;
-        }
+        .modal h2 { margin-bottom: 20px; text-align: center; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .modal-btn-primary { background: #4CAF50; color: white; }
+        .modal-btn-secondary { background: #f5f5f5; color: #333; }
         
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
+        .budget-progress { background: #e0e0e0; border-radius: 10px; height: 8px; margin-top: 8px; overflow: hidden; }
+        .budget-progress-fill { background: #4CAF50; height: 100%; transition: width 0.3s; }
+        .budget-progress-fill.low { background: #FF9800; }
+        .budget-progress-fill.critical { background: #f44336; }
         
-        .modal-btn {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        .modal-btn-primary {
-            background: #4CAF50;
-            color: white;
-        }
-        
-        .modal-btn-secondary {
-            background: #f5f5f5;
-            color: #333;
-        }
-        
-        .budget-progress {
-            background: #e0e0e0;
-            border-radius: 10px;
-            height: 8px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-        
-        .budget-progress-fill {
-            background: #4CAF50;
-            height: 100%;
-            transition: width 0.3s;
-        }
-        
-        .budget-progress-fill.low {
-            background: #FF9800;
-        }
-        
-        .budget-progress-fill.critical {
-            background: #f44336;
-        }
-        
-        .header-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
+        .header-controls { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
         
         @media (max-width: 768px) {
-            .container { padding: 15px; }
-            .controls { flex-direction: column; align-items: stretch; }
-            .filter-input, .date-range, .date-input, .btn { width: 100%; }
-            .date-range { flex-direction: column; align-items: stretch; }
+            .controls, .date-range { flex-direction: column; align-items: stretch; }
+            .filter-input, .date-input, .btn { width: 100%; }
             .tabs { flex-direction: column; }
             .tab-btn { text-align: center; }
         }
+        
+        .btn-edit { background: #FF9800; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; margin-right: 5px; }
+        .btn-delete { background: #f44336; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; }
+        .btn-edit:hover { background: #F57C00; }
+        .btn-delete:hover { background: #d32f2f; }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
     <div class="login-screen" id="loginScreen">
         <div class="login-container">
-            <h1>🔐 Advertiser Dashboard</h1>
+            <h1>🔐 Advertiser Dashboard 3.0</h1>
             <p>Enter your password to access analytics</p>
-            
             <input type="password" id="passwordInput" class="password-input" placeholder="Enter dashboard password" onkeypress="handlePasswordEnter(event)">
-            
             <button class="login-btn" onclick="login()">🔓 Login to Dashboard</button>
-            
             <div class="error-message" id="loginError">❌ Incorrect password. Please try again.</div>
-            
             <div class="password-change">
-                <p style="color: #666; margin-bottom: 10px; font-size: 14px;">First time? Default password is: <strong>admin123</strong></p>
-                <button class="btn btn-change-password" onclick="showChangePasswordModal()" style="width: 100%;">🔑 Change Password</button>
+                <p style="color: #666; margin-bottom: 10px;">Default password: <strong>admin123</strong></p>
+                <button class="btn btn-add" onclick="showChangePasswordModal()" style="width: 100%;">🔑 Change Password</button>
             </div>
         </div>
     </div>
     
-    <!-- Dashboard Content -->
     <div class="dashboard-content" id="dashboardContent">
         <div class="header">
             <div class="container">
-                <h1 class="header-title">📊 QR Ad Campaign Dashboard</h1>
-                <p class="header-subtitle">Real-time analytics & budget management for your QR campaigns</p>
-                
+                <h1>📊 QR Ad Campaign Dashboard</h1>
+                <p>Real-time analytics & budget management for your QR campaigns</p>
                 <div class="header-controls">
-                    <button class="btn btn-change-password" onclick="showChangePasswordModal()">🔑 Change Password</button>
+                    <button class="btn btn-add" onclick="showChangePasswordModal()">🔑 Change Password</button>
                     <button class="btn btn-logout" onclick="logout()">🚪 Logout</button>
                 </div>
             </div>
         </div>
         
         <div class="container">
-            <!-- Tabs -->
             <div class="tabs">
                 <button class="tab-btn active" onclick="switchTab('claims')">📋 Claims History</button>
                 <button class="tab-btn" onclick="switchTab('budgets')">💰 Budget Management</button>
@@ -496,22 +307,18 @@
             <div id="claimsTab" class="tab-content active">
                 <div class="controls">
                     <input type="text" id="searchInput" class="filter-input" placeholder="Search..." onkeyup="filterTable()">
-                    
                     <div class="date-range">
                         <input type="date" id="dateFrom" class="date-input" onchange="filterByDate()">
                         <span>to</span>
                         <input type="date" id="dateTo" class="date-input" onchange="filterByDate()">
                     </div>
-                    
                     <select id="adFilter" class="filter-input" onchange="filterTable()"><option value="">All Ads</option></select>
-                    <select id="productFilter" class="filter-input" onchange="filterTable()"><option value="">All Products</option></select>
                     <select id="statusFilter" class="filter-input" onchange="filterTable()">
                         <option value="">All Status</option>
                         <option value="claimed">Claimed</option>
                         <option value="redeemed">Redeemed</option>
                         <option value="expired">Expired</option>
                     </select>
-                    
                     <button class="btn btn-refresh" onclick="loadData()">🔄 Refresh</button>
                     <button class="btn btn-export" onclick="exportToExcel()">📊 Export Excel</button>
                     <button class="btn btn-pdf" onclick="exportToPDF()">📄 Export PDF</button>
@@ -524,10 +331,13 @@
                     <h2>Claim History</h2>
                     <div id="loadingData" class="loading"><div class="spinner"></div><p>Loading data...</p></div>
                     <div id="tableWrapper" style="display: none;">
-                        <table id="claimsTable"><thead><tr><th>Date</th><th>Advertiser</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires</th></tr></thead><tbody id="claimsBody"></tbody></table>
+                        <table>
+                            <thead><tr><th>Date</th><th>Advertiser</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires</th></tr></thead>
+                            <tbody id="claimsBody"></tbody>
+                        </table>
                         <div class="pagination" id="pagination"></div>
                     </div>
-                    <div id="noData" style="display: none; text-align: center; padding: 40px; color: #666;">No claims found.</div>
+                    <div id="noData" style="display: none; text-align: center; padding: 40px;">No claims found.</div>
                 </div>
             </div>
             
@@ -540,22 +350,10 @@
                 </div>
                 
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Total Advertisers</div>
-                        <div class="stat-value" id="totalAdvertisers">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Total Budget</div>
-                        <div class="stat-value" id="totalBudget">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Remaining</div>
-                        <div class="stat-value" id="totalRemaining">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Usage Rate</div>
-                        <div class="stat-value" id="usageRate">0%</div>
-                    </div>
+                    <div class="stat-card"><div class="stat-label">Total Campaigns</div><div class="stat-value" id="totalCampaigns">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Total Budget</div><div class="stat-value" id="totalBudget">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" id="totalRemaining">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Usage Rate</div><div class="stat-value" id="usageRate">0%</div></div>
                 </div>
                 
                 <div class="table-container">
@@ -563,28 +361,16 @@
                     <div id="loadingBudgets" class="loading"><div class="spinner"></div><p>Loading budgets...</p></div>
                     <div id="budgetsTableWrapper" style="display: none;">
                         <table id="budgetsTable">
-                            <thead>
-                                <tr>
-                                    <th>Advertiser Name</th>
-                                    <th>Product</th>
-                                    <th>Total Budget</th>
-                                    <th>Remaining</th>
-                                    <th>Claimed</th>
-                                    <th>Usage</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Advertiser</th><th>Product</th><th>Total</th><th>Remaining</th><th>Claimed</th><th>Usage</th><th>Status</th><th>Actions</th></tr></thead>
                             <tbody id="budgetsBody"></tbody>
                         </table>
                     </div>
-                    <div id="noBudgets" style="display: none; text-align: center; padding: 40px; color: #666;">No budgets configured. Click "Add Budget" to start.</div>
+                    <div id="noBudgets" style="display: none; text-align: center; padding: 40px;">No budgets configured. Click "Add Budget" to start.</div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Add/Edit Budget Modal -->
     <div class="modal-overlay" id="budgetModal">
         <div class="modal">
             <h2 id="budgetModalTitle">💰 Add Budget</h2>
@@ -601,25 +387,23 @@
         </div>
     </div>
     
-    <!-- Change Password Modal -->
     <div class="modal-overlay" id="passwordModal">
         <div class="modal">
-            <h2>🔑 Change Dashboard Password</h2>
+            <h2>🔑 Change Password</h2>
             <div style="margin-bottom: 20px;">
                 <input type="password" id="currentPassword" class="password-input" placeholder="Current Password" style="margin-bottom: 15px;">
-                <input type="password" id="newPassword" class="password-input" placeholder="New Password (min 6 characters)" style="margin-bottom: 15px;">
-                <input type="password" id="confirmPassword" class="password-input" placeholder="Confirm New Password">
+                <input type="password" id="newPassword" class="password-input" placeholder="New Password (min 6)" style="margin-bottom: 15px;">
+                <input type="password" id="confirmPassword" class="password-input" placeholder="Confirm Password">
                 <div class="error-message" id="passwordError" style="text-align: center; margin-top: 15px;"></div>
             </div>
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-secondary" onclick="closePasswordModal()">Cancel</button>
-                <button class="modal-btn modal-btn-primary" onclick="changePassword()">Change Password</button>
+                <button class="modal-btn modal-btn-primary" onclick="changePassword()">Change</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Helper functions
         function formatCompactDate(date) {
             if (!date) return 'Unknown';
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -632,12 +416,10 @@
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
         
-        // Password management
         const STORAGE_KEY = 'dashboard_password';
         const DEFAULT_PASSWORD = 'admin123';
         if (!localStorage.getItem(STORAGE_KEY)) localStorage.setItem(STORAGE_KEY, DEFAULT_PASSWORD);
         
-        // Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
             authDomain: "ad-coupon-system.firebaseapp.com",
@@ -650,19 +432,12 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         
-        // Global variables
-        let allClaims = [];
-        let filteredClaims = [];
-        let currentPage = 1;
-        const pageSize = 20;
-        let allBudgets = [];
-        let editingBudget = null;
+        let allClaims = [], filteredClaims = [], currentPage = 1, pageSize = 20;
+        let allBudgets = [], editingBudget = null;
         
-        // Tab switching
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
             if (tab === 'claims') {
                 document.querySelector('.tab-btn:first-child').classList.add('active');
                 document.getElementById('claimsTab').classList.add('active');
@@ -674,28 +449,19 @@
             }
         }
         
-        // Login functions
         function login() {
-            const inputPassword = document.getElementById('passwordInput').value;
-            if (inputPassword === localStorage.getItem(STORAGE_KEY)) {
+            if (document.getElementById('passwordInput').value === localStorage.getItem(STORAGE_KEY)) {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('dashboardContent').style.display = 'block';
                 sessionStorage.setItem('dashboard_logged_in', 'true');
                 loadData();
             } else {
                 document.getElementById('loginError').style.display = 'block';
-                document.getElementById('passwordInput').value = '';
             }
         }
         
-        function handlePasswordEnter(event) { if (event.key === 'Enter') login(); }
-        
-        function logout() {
-            sessionStorage.removeItem('dashboard_logged_in');
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('dashboardContent').style.display = 'none';
-        }
-        
+        function handlePasswordEnter(e) { if (e.key === 'Enter') login(); }
+        function logout() { sessionStorage.removeItem('dashboard_logged_in'); location.reload(); }
         function showChangePasswordModal() { document.getElementById('passwordModal').style.display = 'flex'; }
         function closePasswordModal() { document.getElementById('passwordModal').style.display = 'none'; }
         
@@ -704,31 +470,16 @@
             const newPass = document.getElementById('newPassword').value;
             const confirm = document.getElementById('confirmPassword').value;
             const errorDiv = document.getElementById('passwordError');
-            
-            if (current !== localStorage.getItem(STORAGE_KEY)) {
-                errorDiv.textContent = '❌ Current password is incorrect';
-                errorDiv.style.display = 'block';
-                return;
-            }
-            if (newPass.length < 6) {
-                errorDiv.textContent = '❌ Password must be at least 6 characters';
-                errorDiv.style.display = 'block';
-                return;
-            }
-            if (newPass !== confirm) {
-                errorDiv.textContent = '❌ Passwords do not match';
-                errorDiv.style.display = 'block';
-                return;
-            }
-            
+            if (current !== localStorage.getItem(STORAGE_KEY)) { errorDiv.textContent = '❌ Current password incorrect'; errorDiv.style.display = 'block'; return; }
+            if (newPass.length < 6) { errorDiv.textContent = '❌ Password must be at least 6 characters'; errorDiv.style.display = 'block'; return; }
+            if (newPass !== confirm) { errorDiv.textContent = '❌ Passwords do not match'; errorDiv.style.display = 'block'; return; }
             localStorage.setItem(STORAGE_KEY, newPass);
-            alert('✅ Password changed successfully!');
+            alert('✅ Password changed!');
             closePasswordModal();
         }
         
-        // Load claims data
         async function loadData() {
-            showLoading(true);
+            document.getElementById('loadingData').style.display = 'block';
             try {
                 const snapshot = await db.collection('claims').orderBy('claimedAt', 'desc').get();
                 allClaims = [];
@@ -741,25 +492,14 @@
                     allClaims.push(data);
                 });
                 
-                updateFilters();
+                const ads = [...new Set(allClaims.map(c => c.adName).filter(Boolean))].sort();
+                const adFilter = document.getElementById('adFilter');
+                adFilter.innerHTML = '<option value="">All Ads</option>';
+                ads.forEach(a => { const opt = document.createElement('option'); opt.value = a; opt.textContent = a; adFilter.appendChild(opt); });
+                
                 filterByDate();
-                showLoading(false);
-            } catch (error) {
-                console.error('Error:', error);
-                showLoading(false);
-            }
-        }
-        
-        function updateFilters() {
-            const ads = [...new Set(allClaims.map(c => c.adName).filter(Boolean))].sort();
-            const products = [...new Set(allClaims.map(c => c.productName).filter(Boolean))].sort();
-            
-            const adFilter = document.getElementById('adFilter');
-            const productFilter = document.getElementById('productFilter');
-            
-            adFilter.innerHTML = '<option value="">All Ads</option>';
-            products.forEach(p => { const opt = document.createElement('option'); opt.value = p; opt.textContent = p; productFilter.appendChild(opt); });
-            ads.forEach(a => { const opt = document.createElement('option'); opt.value = a; opt.textContent = a; adFilter.appendChild(opt); });
+                document.getElementById('loadingData').style.display = 'none';
+            } catch (error) { console.error(error); document.getElementById('loadingData').style.display = 'none'; }
         }
         
         function filterByDate() {
@@ -776,13 +516,10 @@
         function applyFilters(data) {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const ad = document.getElementById('adFilter').value;
-            const product = document.getElementById('productFilter').value;
             const status = document.getElementById('statusFilter').value;
-            
             return data.filter(c => {
-                if (search && !`${c.adName} ${c.productName} ${c.hostName} ${c.couponCode}`.toLowerCase().includes(search)) return false;
+                if (search && !`${c.adName} ${c.productName} ${c.couponCode}`.toLowerCase().includes(search)) return false;
                 if (ad && c.adName !== ad) return false;
-                if (product && c.productName !== product) return false;
                 if (status) {
                     const expired = c.expiresAt < new Date();
                     if (status === 'expired' && !expired) return false;
@@ -798,7 +535,6 @@
         function clearFilters() {
             document.getElementById('searchInput').value = '';
             document.getElementById('adFilter').value = '';
-            document.getElementById('productFilter').value = '';
             document.getElementById('statusFilter').value = '';
             const today = new Date().toISOString().split('T')[0];
             const weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
@@ -823,37 +559,19 @@
             const tbody = document.getElementById('claimsBody');
             const wrapper = document.getElementById('tableWrapper');
             const noData = document.getElementById('noData');
-            
             if (filteredClaims.length === 0) { wrapper.style.display = 'none'; noData.style.display = 'block'; return; }
-            
-            noData.style.display = 'none';
-            wrapper.style.display = 'block';
-            
+            noData.style.display = 'none'; wrapper.style.display = 'block';
             const totalPages = Math.ceil(filteredClaims.length / pageSize);
             const start = (currentPage - 1) * pageSize;
             const pageClaims = filteredClaims.slice(start, start + pageSize);
-            
             tbody.innerHTML = '';
             pageClaims.forEach(claim => {
-                const now = new Date();
-                const expired = claim.expiresAt < now;
+                const expired = claim.expiresAt < new Date();
                 let status = 'Claimed', statusClass = 'badge-claimed';
                 if (claim.redeemed) { status = 'Redeemed'; statusClass = 'badge-redeemed'; }
                 else if (expired) { status = 'Expired'; statusClass = 'badge-expired'; }
-                
-                tbody.innerHTML += `<tr>
-                    <td>${formatCompactDate(claim.claimedAt)}</td>
-                    <td><strong>${claim.adName || 'Unknown'}</strong></td>
-                    <td>${claim.productName || 'Unknown'}</td>
-                    <td>${claim.hostName || 'Unknown'}</td>
-                    <td class="coupon-cell">${claim.couponCode || 'N/A'}</td>
-                    <td><span class="badge ${statusClass}">${status}</span></td>
-                    <td>${claim.redeemed ? 'Yes' : 'No'}</td>
-                    <td>${claim.redeemedAt ? formatCompactDate(claim.redeemedAt) : '-'}</td>
-                    <td>${formatCompactDate(claim.expiresAt)}</td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td>${formatCompactDate(claim.claimedAt)}</td><td><strong>${claim.adName || 'Unknown'}</strong></td><td>${claim.productName || 'Unknown'}</td><td>${claim.hostName || 'Unknown'}</td><td class="coupon-cell">${claim.couponCode || 'N/A'}</td><td><span class="badge ${statusClass}">${status}</span></td><td>${claim.redeemed ? 'Yes' : 'No'}</td><td>${claim.redeemedAt ? formatCompactDate(claim.redeemedAt) : '-'}</td><td>${formatCompactDate(claim.expiresAt)}</td></tr>`;
             });
-            
             renderPagination(totalPages);
         }
         
@@ -861,108 +579,49 @@
             const pagination = document.getElementById('pagination');
             pagination.innerHTML = '';
             if (totalPages <= 1) return;
-            
-            const prev = document.createElement('button');
-            prev.textContent = '← Previous';
-            prev.className = 'page-btn';
-            prev.disabled = currentPage === 1;
-            prev.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
-            pagination.appendChild(prev);
-            
-            for (let i = 1; i <= totalPages && i <= 7; i++) {
-                const btn = document.createElement('button');
-                btn.textContent = i;
-                btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
-                btn.onclick = () => { currentPage = i; renderTable(); };
-                pagination.appendChild(btn);
-            }
-            
-            const next = document.createElement('button');
-            next.textContent = 'Next →';
-            next.className = 'page-btn';
-            next.disabled = currentPage === totalPages;
-            next.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } };
-            pagination.appendChild(next);
+            const prev = document.createElement('button'); prev.textContent = '← Previous'; prev.className = 'page-btn'; prev.disabled = currentPage === 1; prev.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } }; pagination.appendChild(prev);
+            for (let i = 1; i <= Math.min(totalPages, 7); i++) { const btn = document.createElement('button'); btn.textContent = i; btn.className = 'page-btn' + (i === currentPage ? ' active' : ''); btn.onclick = () => { currentPage = i; renderTable(); }; pagination.appendChild(btn); }
+            const next = document.createElement('button'); next.textContent = 'Next →'; next.className = 'page-btn'; next.disabled = currentPage === totalPages; next.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } }; pagination.appendChild(next);
         }
         
-        // Budget Management
         async function loadBudgets() {
             document.getElementById('loadingBudgets').style.display = 'block';
             document.getElementById('budgetsTableWrapper').style.display = 'none';
             document.getElementById('noBudgets').style.display = 'none';
-            
             try {
                 const snapshot = await db.collection('advertiserBudgets').get();
                 allBudgets = [];
-                snapshot.forEach(doc => {
-                    allBudgets.push({ id: doc.id, ...doc.data() });
-                });
+                snapshot.forEach(doc => { allBudgets.push({ id: doc.id, ...doc.data() }); });
                 
-                const totalBudget = allBudgets.reduce((sum, b) => sum + (b.total || 0), 0);
-                const totalRemaining = allBudgets.reduce((sum, b) => sum + (b.remaining || 0), 0);
-                const totalAdvertisers = allBudgets.length;
-                const usageRate = totalBudget ? Math.round(((totalBudget - totalRemaining) / totalBudget) * 100) : 0;
-                
-                document.getElementById('totalAdvertisers').textContent = totalAdvertisers;
+                const totalBudget = allBudgets.reduce((s, b) => s + (b.total || 0), 0);
+                const totalRemaining = allBudgets.reduce((s, b) => s + (b.remaining || 0), 0);
+                document.getElementById('totalCampaigns').textContent = allBudgets.length;
                 document.getElementById('totalBudget').textContent = totalBudget.toLocaleString();
                 document.getElementById('totalRemaining').textContent = totalRemaining.toLocaleString();
-                document.getElementById('usageRate').textContent = `${usageRate}%`;
+                document.getElementById('usageRate').textContent = totalBudget ? Math.round(((totalBudget - totalRemaining) / totalBudget) * 100) + '%' : '0%';
                 
                 renderBudgets();
                 document.getElementById('loadingBudgets').style.display = 'none';
-            } catch (error) {
-                console.error('Error loading budgets:', error);
-                document.getElementById('loadingBudgets').style.display = 'none';
-            }
+            } catch (error) { console.error(error); document.getElementById('loadingBudgets').style.display = 'none'; }
         }
         
         function renderBudgets() {
             const search = document.getElementById('budgetSearch').value.toLowerCase();
             let filtered = allBudgets;
-            if (search) {
-                filtered = allBudgets.filter(b => 
-                    (b.advertiserName || '').toLowerCase().includes(search) || 
-                    (b.productName || '').toLowerCase().includes(search)
-                );
-            }
-            
+            if (search) filtered = allBudgets.filter(b => (b.advertiserName || '').toLowerCase().includes(search) || (b.productName || '').toLowerCase().includes(search));
             const tbody = document.getElementById('budgetsBody');
             const wrapper = document.getElementById('budgetsTableWrapper');
             const noBudgets = document.getElementById('noBudgets');
-            
             if (filtered.length === 0) { wrapper.style.display = 'none'; noBudgets.style.display = 'block'; return; }
-            
-            noBudgets.style.display = 'none';
-            wrapper.style.display = 'block';
-            
+            noBudgets.style.display = 'none'; wrapper.style.display = 'block';
             tbody.innerHTML = '';
-            filtered.forEach(budget => {
-                const remaining = budget.remaining || 0;
-                const total = budget.total || 0;
-                const claimed = total - remaining;
+            filtered.forEach(b => {
+                const remaining = b.remaining || 0, total = b.total || 0, claimed = total - remaining;
                 const percent = total ? (remaining / total) * 100 : 0;
                 let status = 'Active', statusClass = 'badge-active';
                 if (remaining <= 0) { status = 'Exhausted'; statusClass = 'badge-exhausted'; }
                 else if (remaining < total * 0.2) { status = 'Low Stock'; statusClass = 'badge-low'; }
-                
-                tbody.innerHTML += `
-                    <tr>
-                        <td><strong>${budget.advertiserName || budget.id.split('_')[0]}</strong></td>
-                        <td>${budget.productName || budget.id.split('_')[1] || '-'}</td>
-                        <td>${total}</td>
-                        <td><strong style="color: ${remaining <= 0 ? '#c62828' : remaining < total*0.2 ? '#FF9800' : '#2E7D32'}">${remaining}</strong></td>
-                        <td>${claimed}</td>
-                        <td style="width: 100px;">
-                            <div class="budget-progress"><div class="budget-progress-fill ${percent < 30 ? (percent < 10 ? 'critical' : 'low') : ''}" style="width: ${percent}%"></div></div>
-                            <span style="font-size: 12px;">${Math.round(percent)}% left</span>
-                        </td>
-                        <td><span class="badge ${statusClass}">${status}</span></td>
-                        <td>
-                            <button class="btn-edit" style="background: #FF9800; padding: 6px 12px; margin-right: 5px;" onclick="editBudget('${budget.id}')">✏️ Edit</button>
-                            <button class="btn-delete" style="background: #f44336; padding: 6px 12px;" onclick="deleteBudget('${budget.id}')">🗑️ Delete</button>
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML += `<tr><td><strong>${b.advertiserName || b.id.split('_')[0]}</strong></td><td>${b.productName || b.id.split('_')[1] || '-'}</td><td>${total}</td><td><strong style="color: ${remaining <= 0 ? '#c62828' : remaining < total*0.2 ? '#FF9800' : '#2E7D32'}">${remaining}</strong></td><td>${claimed}</td><td style="width: 100px;"><div class="budget-progress"><div class="budget-progress-fill ${percent < 30 ? (percent < 10 ? 'critical' : 'low') : ''}" style="width: ${percent}%"></div></div><span style="font-size: 12px;">${Math.round(percent)}% left</span></td><td><span class="badge ${statusClass}">${status}</span></td><td><button class="btn-edit" onclick="editBudget('${b.id}')">✏️ Edit</button><button class="btn-delete" onclick="deleteBudget('${b.id}')">🗑️ Delete</button></td></tr>`;
             });
         }
         
@@ -995,96 +654,49 @@
             const product = document.getElementById('budgetProduct').value.trim();
             const amount = parseInt(document.getElementById('budgetAmount').value);
             const errorDiv = document.getElementById('budgetError');
-            
-            if (!advertiser) { errorDiv.textContent = '❌ Please enter advertiser name'; errorDiv.style.display = 'block'; return; }
-            if (!amount || amount < 1) { errorDiv.textContent = '❌ Please enter a valid amount (minimum 1)'; errorDiv.style.display = 'block'; return; }
-            
-            const docId = `${advertiser.replace(/\s+/g, '_').toLowerCase()}_${product.replace(/\s+/g, '_').toLowerCase()}`;
-            
+            if (!advertiser) { errorDiv.textContent = '❌ Enter advertiser name'; errorDiv.style.display = 'block'; return; }
+            if (!amount || amount < 1) { errorDiv.textContent = '❌ Enter valid amount'; errorDiv.style.display = 'block'; return; }
+            const docId = `${advertiser.replace(/\s+/g, '_').toLowerCase()}_${product.replace(/\s+/g, '_').toLowerCase() || 'general'}`;
             try {
                 if (editingBudget) {
-                    await db.collection('advertiserBudgets').doc(editingBudget.id).update({
-                        total: amount,
-                        remaining: amount,
-                        advertiserName: advertiser,
-                        productName: product || null,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    await db.collection('advertiserBudgets').doc(editingBudget.id).update({ total: amount, remaining: amount, advertiserName: advertiser, productName: product || null, updatedAt: new Date() });
                 } else {
-                    await db.collection('advertiserBudgets').doc(docId).set({
-                        advertiserName: advertiser,
-                        productName: product || null,
-                        total: amount,
-                        remaining: amount,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    await db.collection('advertiserBudgets').doc(docId).set({ advertiserName: advertiser, productName: product || null, total: amount, remaining: amount, createdAt: new Date(), updatedAt: new Date() });
                 }
                 closeBudgetModal();
                 loadBudgets();
-                alert(`✅ Budget ${editingBudget ? 'updated' : 'created'} successfully!`);
-            } catch (error) {
-                errorDiv.textContent = '❌ Error saving budget: ' + error.message;
-                errorDiv.style.display = 'block';
-            }
+                alert(`✅ Budget ${editingBudget ? 'updated' : 'created'}!`);
+            } catch (error) { errorDiv.textContent = '❌ Error: ' + error.message; errorDiv.style.display = 'block'; }
         }
         
         async function deleteBudget(budgetId) {
-            if (confirm('Are you sure you want to delete this budget? This action cannot be undone.')) {
-                try {
-                    await db.collection('advertiserBudgets').doc(budgetId).delete();
-                    loadBudgets();
-                    alert('✅ Budget deleted successfully!');
-                } catch (error) {
-                    alert('❌ Error deleting budget: ' + error.message);
-                }
+            if (confirm('Delete this budget?')) {
+                await db.collection('advertiserBudgets').doc(budgetId).delete();
+                loadBudgets();
+                alert('✅ Budget deleted');
             }
         }
         
-        function closeBudgetModal() {
-            document.getElementById('budgetModal').style.display = 'none';
-            editingBudget = null;
-        }
+        function closeBudgetModal() { document.getElementById('budgetModal').style.display = 'none'; editingBudget = null; }
         
-        // Export functions
         function exportToExcel() {
             if (filteredClaims.length === 0) { alert('No data to export!'); return; }
-            const data = filteredClaims.map(c => ({
-                'Date': formatCompactDate(c.claimedAt),
-                'Advertiser': c.adName || 'Unknown',
-                'Product': c.productName || 'Unknown',
-                'Location': c.hostName || 'Unknown',
-                'Coupon Code': c.couponCode || 'N/A',
-                'Status': c.redeemed ? 'Redeemed' : (c.expiresAt < new Date() ? 'Expired' : 'Claimed'),
-                'Redeemed': c.redeemed ? 'Yes' : 'No',
-                'Redeemed At': c.redeemedAt ? formatCompactDate(c.redeemedAt) : '',
-                'Expires At': formatCompactDate(c.expiresAt)
-            }));
+            const data = filteredClaims.map(c => ({ 'Date': formatCompactDate(c.claimedAt), 'Advertiser': c.adName, 'Product': c.productName, 'Location': c.hostName, 'Coupon Code': c.couponCode, 'Status': c.redeemed ? 'Redeemed' : 'Claimed', 'Expires': formatCompactDate(c.expiresAt) }));
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'QR Claims');
-            XLSX.writeFile(wb, `qr-claims-${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, 'Claims');
+            XLSX.writeFile(wb, `claims-${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
         }
         
         function exportToPDF() {
             if (filteredClaims.length === 0) { alert('No data to export!'); return; }
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-            const tableData = filteredClaims.map(c => [
-                formatCompactDate(c.claimedAt), c.adName || 'Unknown', c.productName || 'Unknown',
-                c.hostName || 'Unknown', c.couponCode || 'N/A',
-                c.redeemed ? 'Redeemed' : (c.expiresAt < new Date() ? 'Expired' : 'Claimed'),
-                c.redeemed ? 'Yes' : 'No', c.redeemedAt ? formatCompactDate(c.redeemedAt) : '-',
-                formatCompactDate(c.expiresAt)
-            ]);
-            
-            doc.setFontSize(18); doc.text('QR Campaign Claims Report', 14, 15);
-            doc.setFontSize(10); doc.text(`Generated: ${new Date().toLocaleString()} | Records: ${filteredClaims.length}`, 14, 22);
-            doc.autoTable({ head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires']], body: tableData, startY: 30, theme: 'grid', headStyles: { fillColor: [102, 126, 234] } });
-            doc.save(`qr-claims-${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`);
+            const doc = new jsPDF({ orientation: 'landscape' });
+            const data = filteredClaims.map(c => [formatCompactDate(c.claimedAt), c.adName, c.productName, c.hostName, c.couponCode, c.redeemed ? 'Redeemed' : 'Claimed']);
+            doc.text('Claims Report', 14, 15);
+            doc.autoTable({ head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon', 'Status']], body: data, startY: 25 });
+            doc.save(`claims-${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`);
         }
-        
-        function showLoading(show) { document.getElementById('loadingData').style.display = show ? 'block' : 'none'; }
         
         document.addEventListener('DOMContentLoaded', () => {
             if (sessionStorage.getItem('dashboard_logged_in')) {
