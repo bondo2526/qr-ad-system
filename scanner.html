@@ -145,6 +145,22 @@
             background: #7B1FA2;
         }
         
+        .btn-sold {
+            background: #FF9800;
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-sold:hover {
+            background: #F57C00;
+        }
+        
+        .sold-out-section {
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+            margin-top: 10px;
+        }
+        
         .hidden { display: none; }
         
         .login-section {
@@ -407,6 +423,16 @@
                 </button>
             </div>
             
+            <!-- SOLD OUT SECTION - NEW -->
+            <div class="sold-out-section">
+                <button class="btn btn-sold" onclick="markAdAsSold()">
+                    🏷️ Mark This Ad as SOLD OUT
+                </button>
+                <p style="font-size: 12px; color: #FF9800; margin-top: 5px;">
+                    ⚠️ Only click when you have NO MORE products to sell. This will request ad removal.
+                </p>
+            </div>
+            
             <!-- Manual Input Section -->
             <div class="manual-input-section">
                 <input type="text" 
@@ -455,19 +481,19 @@
                     </div>
                 </div>
                 
-<!-- USED COUPON RESULT -->
-<div id="usedResult" class="validation-result hidden">
-    <div class="validation-icon">⚠️</div>
-    <h2 style="color: #FF9800;">COUPON ALREADY REDEEMED</h2>
-    <p class="validation-message">
-        This coupon was already redeemed on <strong><span id="redeemedTime"></span></strong>.
-    </p>
-    <div class="action-buttons">
-        <button class="btn btn-reset" onclick="resetScanner()">
-            🔄 Scan Another Coupon
-        </button>
-    </div>
-</div>
+                <!-- USED COUPON RESULT -->
+                <div id="usedResult" class="validation-result hidden">
+                    <div class="validation-icon">⚠️</div>
+                    <h2 style="color: #FF9800;">COUPON ALREADY REDEEMED</h2>
+                    <p class="validation-message">
+                        This coupon was already redeemed on <strong><span id="redeemedTime"></span></strong>.
+                    </p>
+                    <div class="action-buttons">
+                        <button class="btn btn-reset" onclick="resetScanner()">
+                            🔄 Scan Another Coupon
+                        </button>
+                    </div>
+                </div>
                 
                 <!-- SUCCESS VALIDATION MESSAGE -->
                 <div id="successResult" class="validation-result hidden">
@@ -489,7 +515,8 @@
                     <div class="validation-icon">🚫</div>
                     <h2 style="color: #FF5722;">UNAUTHORIZED ACCESS</h2>
                     <p class="validation-message">
-                        <strong>Coupon belongs to another business ! </strong> </p>
+                        <strong>Coupon belongs to another business!</strong>
+                    </p>
                     <p id="unauthorizedMessage" style="color: #666; font-size: 14px; margin-top: 10px;"></p>
                     <div class="action-buttons">
                         <button class="btn btn-reset" onclick="resetScanner()">
@@ -559,13 +586,17 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         
+        // === TELEGRAM CONFIG ===
+        const TELEGRAM_BOT_TOKEN = "8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk";
+        const TELEGRAM_CHAT_ID = "6597376744";
+        
         // === ADVERTISER MANAGEMENT ===
         const ADVERTISERS_COLLECTION = 'advertisers';
         let currentAdvertiser = null;
         let html5QrCode = null;
         let currentCouponData = null;
         
-        // Helper function to format date to compact style: Mon, 15-01-2024 14:30
+        // Helper function to format date to compact style
         function formatCompactDate(date) {
             if (!date) return 'Unknown';
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -586,6 +617,109 @@
                 result += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             return result;
+        }
+        
+        // === TELEGRAM NOTIFICATION FOR SOLD OUT ===
+        async function sendTelegramNotification(advertiserName, adId, productName, hostName) {
+            const timestamp = new Date().toLocaleString();
+            const message = `
+🔴 AD SOLD OUT REQUEST 🔴
+
+Ad ID: ${adId}
+Advertiser: ${advertiserName}
+Product: ${productName}
+Location: ${hostName}
+Requested At: ${timestamp}
+
+Action Required: Remove this ad from display system.
+            `;
+            
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM_CHAT_ID,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.ok) {
+                    alert("✅ Request sent! Admin will remove the ad shortly.");
+                } else {
+                    console.error("Telegram error:", result);
+                    alert("⚠️ Failed to send request. Please contact support directly.");
+                }
+            } catch (error) {
+                console.error("Telegram error:", error);
+                alert("⚠️ Error sending request. Please contact support directly.");
+            }
+        }
+        
+        async function markAdAsSold() {
+            if (!currentAdvertiser) {
+                alert("Please login first");
+                return;
+            }
+            
+            const adId = prompt("Enter Ad ID to mark as sold (e.g., ph1):");
+            if (!adId) return;
+            
+            const productName = prompt("Enter product name:");
+            if (!productName) return;
+            
+            const hostName = prompt("Enter location/host name:");
+            if (!hostName) return;
+            
+            const confirmMsg = `⚠️ CONFIRM SOLD OUT REQUEST ⚠️
+
+Ad ID: ${adId}
+Advertiser: ${currentAdvertiser.name}
+Product: ${productName}
+Location: ${hostName}
+
+This will notify the admin to remove your ad from displays.
+Only click if you have NO MORE products to sell.
+
+Proceed?`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            // Store request in Firestore for history
+            try {
+                await db.collection('sold_out_requests').add({
+                    adId: adId,
+                    advertiserName: currentAdvertiser.name,
+                    advertiserId: currentAdvertiser.id,
+                    productName: productName,
+                    hostName: hostName,
+                    requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'pending'
+                });
+                
+                // Mark ad as inactive in ad_status collection
+                await db.collection('ad_status').doc(adId).set({
+                    active: false,
+                    markedSoldAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    markedBy: currentAdvertiser.name,
+                    reason: 'sold_out'
+                }, { merge: true });
+                
+            } catch (error) {
+                console.error("Firestore error:", error);
+            }
+            
+            // Send Telegram notification
+            await sendTelegramNotification(
+                currentAdvertiser.name,
+                adId,
+                productName,
+                hostName
+            );
         }
         
         // Initialize on page load
@@ -758,7 +892,6 @@
             document.getElementById('resultSection').classList.add('hidden');
             
             document.getElementById('loggedInAdvertiserName').textContent = currentAdvertiser.name;
-            document.getElementById('yourIdDisplay').textContent = currentAdvertiser.id;
             
             initializeScanner();
         }
@@ -920,7 +1053,7 @@
             }
         }
         
-        // ========== MAIN VALIDATE COUPON FUNCTION - FIXED ==========
+        // ========== MAIN VALIDATE COUPON FUNCTION ==========
         async function validateCoupon(couponCode) {
             try {
                 // Hide all result sections
@@ -934,7 +1067,6 @@
                 document.getElementById('scannedCoupon').textContent = couponCode;
                 
                 const loggedInAdvertiserName = currentAdvertiser.name;
-                const loggedInAdvertiserId = currentAdvertiser.id;
                 
                 // Find the coupon
                 const querySnapshot = await db.collection('claims')
@@ -955,25 +1087,13 @@
                     ...couponData
                 };
                 
-                // Get owner from coupon (try multiple fields)
+                // Get owner from coupon
                 let couponOwner = couponData.advertiserName || couponData.adName || couponData.businessName || '';
-                
-                // If no owner name, try to find by advertiserId
-                if (!couponOwner && couponData.advertiserId) {
-                    try {
-                        const advertiserDoc = await db.collection('advertisers').doc(couponData.advertiserId).get();
-                        if (advertiserDoc.exists) {
-                            couponOwner = advertiserDoc.data().displayName;
-                        }
-                    } catch (e) {
-                        console.log("Could not fetch advertiser by ID");
-                    }
-                }
                 
                 const expiresTime = couponData.expiresAt?.toDate();
                 const now = new Date();
                 
-                // ========== STEP 1: OWNERSHIP CHECK ==========
+                // STEP 1: OWNERSHIP CHECK
                 if (couponOwner !== loggedInAdvertiserName) {
                     const ownerDisplay = couponOwner || 'Unknown Business';
                     showUnauthorizedResultWithDetails(
@@ -983,19 +1103,19 @@
                     return;
                 }
                 
-                // ========== STEP 2: EXPIRY CHECK ==========
+                // STEP 2: EXPIRY CHECK
                 if (expiresTime && expiresTime < now) {
                     showInvalidResult("Coupon has expired");
                     return;
                 }
                 
-                // ========== STEP 3: REDEEMED CHECK ==========
+                // STEP 3: REDEEMED CHECK
                 if (couponData.redeemed === true || couponData.status === 'redeemed' || couponData.status === 'used') {
                     showUsedResult();
                     return;
                 }
                 
-                // ========== STEP 4: VALID COUPON ==========
+                // STEP 4: VALID COUPON
                 showValidResult();
                 
             } catch (error) {
@@ -1010,9 +1130,6 @@
             document.getElementById('usedResult').classList.add('hidden');
             document.getElementById('successResult').classList.add('hidden');
             document.getElementById('unauthorizedResult').classList.remove('hidden');
-            
-            const ownerSpan = document.getElementById('unauthorizedOwner');
-            if (ownerSpan) ownerSpan.textContent = ownerName;
             
             const messageDiv = document.getElementById('unauthorizedMessage');
             if (messageDiv) {
@@ -1047,20 +1164,20 @@
             document.getElementById('invalidMessage').textContent = message;
         }
         
-function showUsedResult() {
-    document.getElementById('validResult').classList.add('hidden');
-    document.getElementById('invalidResult').classList.add('hidden');
-    document.getElementById('usedResult').classList.remove('hidden');
-    document.getElementById('successResult').classList.add('hidden');
-    document.getElementById('unauthorizedResult').classList.add('hidden');
-    
-    // Display redeemed time if available
-    const redeemedTime = currentCouponData.redeemedAt?.toDate();
-    const redeemedTimeSpan = document.getElementById('redeemedTime');
-    if (redeemedTimeSpan) {
-        redeemedTimeSpan.textContent = redeemedTime ? formatCompactDate(redeemedTime) : 'an earlier date';
-    }
-}
+        function showUsedResult() {
+            document.getElementById('validResult').classList.add('hidden');
+            document.getElementById('invalidResult').classList.add('hidden');
+            document.getElementById('usedResult').classList.remove('hidden');
+            document.getElementById('successResult').classList.add('hidden');
+            document.getElementById('unauthorizedResult').classList.add('hidden');
+            
+            const redeemedTime = currentCouponData.redeemedAt?.toDate();
+            const redeemedTimeSpan = document.getElementById('redeemedTime');
+            if (redeemedTimeSpan) {
+                redeemedTimeSpan.textContent = redeemedTime ? formatCompactDate(redeemedTime) : 'an earlier date';
+            }
+        }
+        
         async function markCouponUsed() {
             try {
                 const couponCode = currentCouponData.couponCode;
