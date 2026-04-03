@@ -146,6 +146,8 @@
         .btn-change-password:hover { background: #7B1FA2; }
         .btn-create { background: #4CAF50; }
         .btn-create:hover { background: #388E3C; }
+        .btn-add-product { background: #2196F3; font-size: 12px; padding: 6px 12px; }
+        .btn-add-product:hover { background: #1976D2; }
         
         .stats-grid {
             display: grid;
@@ -186,10 +188,45 @@
             overflow-x: auto;
         }
         
+        .campaign-card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+        }
+        
+        .campaign-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .campaign-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .campaign-subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .campaign-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
             font-size: 15px;
         }
         
@@ -200,15 +237,13 @@
             font-weight: 600;
             color: #444;
             border-bottom: 2px solid #e9ecef;
-            position: sticky;
-            top: 0;
-            font-size: 16px;
+            font-size: 14px;
         }
         
         td {
             padding: 16px;
             border-bottom: 1px solid #e9ecef;
-            font-size: 15px;
+            font-size: 14px;
         }
         
         tr:hover { background: #f8f9fa; }
@@ -246,7 +281,7 @@
             display: inline-block;
             padding: 6px 14px;
             border-radius: 20px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
         }
         
@@ -259,10 +294,11 @@
             font-weight: bold;
             color: #D32F2F;
             background: #f9f9f9;
-            padding: 12px;
+            padding: 8px 12px;
             border-radius: 8px;
             text-align: center;
-            font-size: 16px;
+            font-size: 14px;
+            display: inline-block;
         }
         
         .pagination {
@@ -371,7 +407,7 @@
             border-radius: 8px;
         }
         
-        .campaign-status-active {
+        .status-active {
             background: #E8F5E9;
             color: #2E7D32;
             padding: 4px 12px;
@@ -381,7 +417,7 @@
             display: inline-block;
         }
         
-        .campaign-status-soldout {
+        .status-soldout {
             background: #FFEBEE;
             color: #C62828;
             padding: 4px 12px;
@@ -414,6 +450,14 @@
             background: #F57C00;
         }
         
+        .btn-small-red {
+            background: #f44336;
+        }
+        
+        .btn-small-red:hover {
+            background: #d32f2f;
+        }
+        
         .create-form {
             background: #f8f9fa;
             padding: 20px;
@@ -442,12 +486,18 @@
             border: 2px solid #ddd;
             border-radius: 8px;
             font-size: 14px;
-            min-width: 150px;
+            min-width: 180px;
         }
         
         .form-group input:focus {
             outline: none;
             border-color: #667eea;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
         }
         
         @media (max-width: 768px) {
@@ -457,12 +507,12 @@
             .date-range { flex-direction: column; align-items: stretch; }
             .date-input { width: 100%; }
             .btn { width: 100%; justify-content: center; }
-            table { font-size: 14px; }
-            th, td { padding: 12px 8px; }
-            .stat-value { font-size: 32px; }
-            .login-container { padding: 30px 20px; }
+            .campaign-header { flex-direction: column; text-align: center; }
+            .campaign-actions { justify-content: center; }
             .create-form { flex-direction: column; }
             .form-group input { width: 100%; }
+            table { font-size: 12px; }
+            th, td { padding: 10px 6px; }
         }
         
         .header-controls {
@@ -479,12 +529,17 @@
         .header-subtitle {
             font-size: clamp(14px, 3vw, 18px);
         }
+        
+        .product-row-soldout {
+            opacity: 0.7;
+            background: #FFF3E0;
+        }
     </style>
 </head>
 <body>
     <div class="login-screen" id="loginScreen">
         <div class="login-container">
-            <h1>🔐 Advertiser Dashboard Admin V 3.0</h1>
+            <h1>🔐 Advertiser Dashboard Admin V 4.0</h1>
             <p>Enter your password to access analytics</p>
             
             <input type="password" 
@@ -507,7 +562,7 @@
         <div class="header">
             <div class="container">
                 <h1 class="header-title">📊 Advertisers Campaigns Dashboard</h1>
-                <p class="header-subtitle">Real-time analytics & management for advertisers campaigns data</p>
+                <p class="header-subtitle">Manage ads, products, and track redemptions</p>
                 
                 <div class="header-controls">
                     <button class="btn btn-change-password" onclick="showChangePasswordModal()">
@@ -522,7 +577,7 @@
         
         <div class="container">
             <div class="controls">
-                <input type="text" id="searchInput" class="filter-input" placeholder="Search by ad, product, location, coupon or user..." onkeyup="filterTable()">
+                <input type="text" id="searchInput" class="filter-input" placeholder="Search by ad, product, location, coupon..." onkeyup="filterTable()">
                 
                 <div class="date-range">
                     <input type="date" id="dateFrom" class="date-input" onchange="filterByDate()">
@@ -536,10 +591,6 @@
                 
                 <select id="productFilter" class="filter-input" onchange="filterTable()">
                     <option value="">All Products</option>
-                </select>
-                
-                <select id="hostFilter" class="filter-input" onchange="filterTable()">
-                    <option value="">All Locations</option>
                 </select>
                 
                 <select id="statusFilter" class="filter-input" onchange="filterTable()">
@@ -588,41 +639,28 @@
                 </div>
             </div>
             
-            <!-- Campaign Management Table -->
+            <!-- Create Campaign Form -->
             <div class="table-container">
-                <h2 style="margin-bottom: 20px; font-size: 24px;">📦 Ad Campaigns (Set Product Limits)</h2>
-                
-                <!-- CREATE CAMPAIGN FORM -->
+                <h2 style="margin-bottom: 20px; font-size: 24px;">📦 Create New Campaign</h2>
                 <div class="create-form">
                     <div class="form-group">
-                        <label>Ad ID</label>
-                        <input type="text" id="newAdId" placeholder="e.g., ph1">
+                        <label>Ad Name (ID)</label>
+                        <input type="text" id="newAdName" placeholder="e.g., ph1">
                     </div>
                     <div class="form-group">
                         <label>Advertiser Name</label>
                         <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
                     </div>
-                    <div class="form-group">
-                        <label>Total Products</label>
-                        <input type="number" id="newTotalProducts" placeholder="e.g., 5" min="1">
-                    </div>
                     <button class="btn btn-create" onclick="createCampaign()">➕ Create Campaign</button>
                 </div>
-                
-                <div style="overflow-x: auto;">
-                    <table id="campaignsTable">
-                        <thead>
-                            <tr><th>Ad ID</th><th>Advertiser</th><th>Total Products</th><th>Redeemed</th><th>Remaining</th><th>Status</th><th>Action</th></tr>
-                        </thead>
-                        <tbody id="campaignsBody">
-                            <tr><td colspan="7" style="text-align: center;">Loading campaigns...</td</tr>
-                        </tbody>
-                    </table>
+            </div>
+            
+            <!-- Campaigns List -->
+            <div id="campaignsList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading campaigns...</p>
                 </div>
-                <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                    💡 Set "Total Products" to the number of items the advertiser has to sell. 
-                    System will auto-mark as SOLD OUT when redemptions reach this number.
-                </p>
             </div>
             
             <!-- Claim History Table -->
@@ -637,7 +675,7 @@
                 <div id="tableWrapper" style="display: none;">
                     <table id="claimsTable">
                         <thead>
-                            <tr><th>Date</th><th>Advertiser Name</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires At</th></tr>
+                            <tr><th>Date</th><th>Ad Name</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires At</th></tr>
                         </thead>
                         <tbody id="claimsBody"></tbody>
                     </table>
@@ -706,7 +744,6 @@
         const pageSize = 20;
         let adsList = new Set();
         let productsList = new Set();
-        let hostsList = new Set();
         let allCampaigns = [];
         
         function login() {
@@ -805,7 +842,6 @@
                 allClaims = [];
                 adsList.clear();
                 productsList.clear();
-                hostsList.clear();
                 
                 snapshot.forEach(doc => {
                     const data = doc.data();
@@ -818,7 +854,6 @@
                     
                     if (data.adName) adsList.add(data.adName);
                     if (data.productName) productsList.add(data.productName);
-                    if (data.hostName) hostsList.add(data.hostName);
                 });
                 
                 updateFilterDropdowns();
@@ -833,113 +868,107 @@
         
         async function loadCampaigns() {
             try {
-                const snapshot = await db.collection('ad_campaigns').orderBy('createdAt', 'desc').get();
+                const snapshot = await db.collection('ad_campaigns').get();
                 allCampaigns = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     data.id = doc.id;
                     allCampaigns.push(data);
                 });
-                renderCampaignsTable();
+                renderCampaignsList();
                 updateCampaignStats();
             } catch (error) {
                 console.error("Error loading campaigns:", error);
+                document.getElementById('campaignsList').innerHTML = '<div class="table-container"><p class="empty-state">❌ Error loading campaigns. Make sure Firebase rules allow reads.</p></div>';
             }
         }
         
         function updateCampaignStats() {
-            const activeCount = allCampaigns.filter(c => c.isActive !== false && ((c.totalProducts || 0) - (c.redeemedCount || 0)) > 0).length;
+            let activeCount = 0;
+            for (const campaign of allCampaigns) {
+                if (campaign.isActive === false) continue;
+                const products = campaign.products || [];
+                const hasActiveProduct = products.some(p => (p.totalProducts - (p.redeemedCount || 0)) > 0);
+                if (hasActiveProduct) activeCount++;
+            }
             document.getElementById('activeCampaigns').textContent = activeCount;
         }
         
-        function renderCampaignsTable() {
-            const tbody = document.getElementById('campaignsBody');
-            
-            if (allCampaigns.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No campaigns yet. Use the form above to create one.</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = '';
-            
-            for (const campaign of allCampaigns) {
-                const remaining = (campaign.totalProducts || 0) - (campaign.redeemedCount || 0);
-                const isActive = campaign.isActive !== false && remaining > 0;
-                const statusText = isActive ? '🟢 Active' : '🔴 Sold Out';
-                const statusClass = isActive ? 'campaign-status-active' : 'campaign-status-soldout';
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>${campaign.adId || campaign.id}</strong></td>
-                    <td>${campaign.advertiserName || 'Unknown'}</td>
-                    <td><input type="number" id="total_${campaign.id}" class="campaign-input" value="${campaign.totalProducts || 0}" min="0" step="1"></td>
-                    <td>${campaign.redeemedCount || 0}</td>
-                    <td style="font-weight: bold; ${remaining <= 0 ? 'color: #C62828;' : 'color: #2E7D32;'}">${remaining}</td>
-                    <td><span class="${statusClass}">${statusText}</span></td>
-                    <td>
-                        <button class="btn-small" onclick="updateTotalProducts('${campaign.id}')">💾 Save</button>
-                        <button class="btn-small btn-small-danger" onclick="forceSoldOut('${campaign.id}')">🔴 Mark Sold Out</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            }
-        }
-        
         async function createCampaign() {
-            const adId = document.getElementById('newAdId').value.trim();
+            const adName = document.getElementById('newAdName').value.trim();
             const advertiserName = document.getElementById('newAdvertiserName').value.trim();
-            const totalProducts = parseInt(document.getElementById('newTotalProducts').value);
             
-            if (!adId) {
-                alert("❌ Please enter Ad ID");
+            if (!adName) {
+                alert("❌ Please enter Ad Name");
                 return;
             }
             if (!advertiserName) {
                 alert("❌ Please enter Advertiser Name");
                 return;
             }
-            if (isNaN(totalProducts) || totalProducts < 1) {
-                alert("❌ Please enter a valid number of products (minimum 1)");
-                return;
-            }
             
             try {
-                // Check if campaign already exists
-                const existing = await db.collection('ad_campaigns').doc(adId).get();
+                const existing = await db.collection('ad_campaigns').doc(adName).get();
                 if (existing.exists) {
-                    if (confirm(`Campaign for "${adId}" already exists. Update total products to ${totalProducts}?`)) {
-                        await db.collection('ad_campaigns').doc(adId).update({
-                            totalProducts: totalProducts,
-                            advertiserName: advertiserName,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        alert(`✅ Updated ${adId} to ${totalProducts} products`);
-                    }
-                } else {
-                    await db.collection('ad_campaigns').doc(adId).set({
-                        adId: adId,
-                        advertiserName: advertiserName,
-                        totalProducts: totalProducts,
-                        redeemedCount: 0,
-                        isActive: true,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    alert(`✅ Campaign created for ${adId} with ${totalProducts} products`);
+                    alert(`⚠️ Campaign "${adName}" already exists!`);
+                    return;
                 }
                 
-                // Clear form
-                document.getElementById('newAdId').value = '';
-                document.getElementById('newAdvertiserName').value = '';
-                document.getElementById('newTotalProducts').value = '';
+                await db.collection('ad_campaigns').doc(adName).set({
+                    adName: adName,
+                    advertiserName: advertiserName,
+                    products: [],
+                    isActive: true,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
                 
+                alert(`✅ Campaign created for ${adName}`);
+                document.getElementById('newAdName').value = '';
+                document.getElementById('newAdvertiserName').value = '';
                 await loadCampaigns();
             } catch (error) {
                 alert("Error: " + error.message);
             }
         }
         
-        async function updateTotalProducts(adId) {
-            const input = document.getElementById(`total_${adId}`);
+        async function addProduct(adName) {
+            const productName = prompt("Enter product name:");
+            if (!productName) return;
+            
+            const totalProducts = parseInt(prompt("Enter total quantity for this product:"));
+            if (isNaN(totalProducts) || totalProducts < 1) {
+                alert("Please enter a valid quantity (minimum 1)");
+                return;
+            }
+            
+            try {
+                const campaignRef = db.collection('ad_campaigns').doc(adName);
+                const campaign = await campaignRef.get();
+                const products = campaign.data().products || [];
+                
+                const existing = products.find(p => p.productName === productName);
+                if (existing) {
+                    alert(`Product "${productName}" already exists. Use edit to change quantity.`);
+                    return;
+                }
+                
+                products.push({
+                    productName: productName,
+                    totalProducts: totalProducts,
+                    redeemedCount: 0,
+                    remaining: totalProducts
+                });
+                
+                await campaignRef.update({ products: products });
+                alert(`✅ Added ${productName} (${totalProducts} units)`);
+                await loadCampaigns();
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        }
+        
+        async function updateProductQuantity(adName, productName, inputId) {
+            const input = document.getElementById(inputId);
             const newTotal = parseInt(input.value);
             
             if (isNaN(newTotal) || newTotal < 0) {
@@ -948,62 +977,149 @@
             }
             
             try {
-                const campaignRef = db.collection('ad_campaigns').doc(adId);
+                const campaignRef = db.collection('ad_campaigns').doc(adName);
                 const campaign = await campaignRef.get();
+                const products = campaign.data().products || [];
                 
-                if (!campaign.exists) {
-                    alert("Campaign not found");
-                    return;
-                }
+                const productIndex = products.findIndex(p => p.productName === productName);
+                if (productIndex === -1) return;
                 
-                await campaignRef.update({
-                    totalProducts: newTotal,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedBy: 'admin'
-                });
+                const oldRedeemed = products[productIndex].redeemedCount || 0;
+                products[productIndex].totalProducts = newTotal;
+                products[productIndex].remaining = newTotal - oldRedeemed;
                 
-                // If new total is 0 or less than redeemed, auto-mark as sold out
-                const redeemed = campaign.data().redeemedCount || 0;
-                if (newTotal <= redeemed) {
-                    await campaignRef.update({ isActive: false });
-                    alert(`⚠️ ${adId} auto-marked as SOLD OUT because total products (${newTotal}) <= redeemed (${redeemed})`);
-                } else if (newTotal > redeemed && campaign.data().isActive === false) {
-                    await campaignRef.update({ isActive: true });
-                    alert(`✅ ${adId} reactivated because total products increased to ${newTotal}`);
-                }
-                
-                alert(`✅ Updated ${adId} to ${newTotal} products`);
+                await campaignRef.update({ products: products });
+                alert(`✅ Updated ${productName} to ${newTotal} units`);
                 await loadCampaigns();
             } catch (error) {
-                console.error("Error updating:", error);
                 alert("Error: " + error.message);
             }
         }
         
-        async function forceSoldOut(adId) {
-            if (!confirm(`⚠️ Mark ${adId} as SOLD OUT? This will prevent any new claims.`)) return;
+        async function removeProduct(adName, productName) {
+            if (!confirm(`Remove "${productName}" from ${adName}? This will NOT delete existing claims.`)) return;
             
             try {
-                await db.collection('ad_campaigns').doc(adId).update({
-                    isActive: false,
-                    forceSoldOutAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    forceSoldOutBy: 'admin'
-                });
-                alert(`✅ ${adId} marked as sold out`);
+                const campaignRef = db.collection('ad_campaigns').doc(adName);
+                const campaign = await campaignRef.get();
+                let products = campaign.data().products || [];
+                products = products.filter(p => p.productName !== productName);
+                
+                await campaignRef.update({ products: products });
+                alert(`✅ Removed ${productName}`);
                 await loadCampaigns();
             } catch (error) {
                 alert("Error: " + error.message);
+            }
+        }
+        
+        async function toggleCampaignStatus(adName) {
+            const campaign = allCampaigns.find(c => c.adName === adName);
+            const newStatus = !(campaign.isActive !== false);
+            
+            try {
+                await db.collection('ad_campaigns').doc(adName).update({
+                    isActive: newStatus,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert(`✅ Campaign ${newStatus ? 'activated' : 'deactivated'}`);
+                await loadCampaigns();
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        }
+        
+        function renderCampaignsList() {
+            const container = document.getElementById('campaignsList');
+            
+            if (allCampaigns.length === 0) {
+                container.innerHTML = '<div class="table-container"><p class="empty-state">📭 No campaigns yet. Create one using the form above.</p></div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            for (const campaign of allCampaigns) {
+                const products = campaign.products || [];
+                const isActive = campaign.isActive !== false;
+                
+                const campaignDiv = document.createElement('div');
+                campaignDiv.className = 'campaign-card';
+                
+                // Calculate totals
+                let totalProducts = 0;
+                let totalRedeemed = 0;
+                let totalRemaining = 0;
+                for (const p of products) {
+                    totalProducts += p.totalProducts || 0;
+                    totalRedeemed += p.redeemedCount || 0;
+                    totalRemaining += (p.remaining || (p.totalProducts - (p.redeemedCount || 0)));
+                }
+                
+                campaignDiv.innerHTML = `
+                    <div class="campaign-header">
+                        <div>
+                            <div class="campaign-title">📢 ${campaign.adName}</div>
+                            <div class="campaign-subtitle">${campaign.advertiserName}</div>
+                            <div style="font-size: 12px; color: #888; margin-top: 5px;">
+                                📦 Total: ${totalProducts} | ✅ Redeemed: ${totalRedeemed} | 📊 Remaining: ${totalRemaining}
+                            </div>
+                        </div>
+                        <div class="campaign-actions">
+                            <button class="btn-small" onclick="addProduct('${campaign.adName}')">➕ Add Product</button>
+                            <button class="btn-small btn-small-danger" onclick="toggleCampaignStatus('${campaign.adName}')">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr><th>Product</th><th>Total</th><th>Redeemed</th><th>Remaining</th><th>Status</th><th>Action</th></tr>
+                            </thead>
+                            <tbody id="products_${campaign.adName.replace(/[^a-zA-Z0-9]/g, '_')}">
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                container.appendChild(campaignDiv);
+                
+                const tbody = campaignDiv.querySelector(`tbody`);
+                
+                if (products.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">📭 No products added. Click "Add Product" to start.</td></tr>';
+                } else {
+                    for (const product of products) {
+                        const remaining = product.remaining || (product.totalProducts - (product.redeemedCount || 0));
+                        const isProductActive = isActive && remaining > 0;
+                        const statusText = isProductActive ? '🟢 Active' : '🔴 Sold Out';
+                        const rowClass = !isProductActive ? 'product-row-soldout' : '';
+                        const inputId = `qty_${campaign.adName}_${product.productName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                        
+                        const row = document.createElement('tr');
+                        row.className = rowClass;
+                        row.innerHTML = `
+                            <td><strong>${product.productName}</strong></td>
+                            <td><input type="number" id="${inputId}" class="campaign-input" value="${product.totalProducts}" min="0" step="1"></td>
+                            <td>${product.redeemedCount || 0}</td>
+                            <td style="font-weight: bold; ${remaining <= 0 ? 'color: #C62828;' : 'color: #2E7D32;'}">${remaining}</td>
+                            <td><span class="${isProductActive ? 'status-active' : 'status-soldout'}">${statusText}</span></td>
+                            <td>
+                                <button class="btn-small" onclick="updateProductQuantity('${campaign.adName}', '${product.productName}', '${inputId}')">💾 Save</button>
+                                <button class="btn-small btn-small-red" onclick="removeProduct('${campaign.adName}', '${product.productName}')">🗑️ Remove</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    }
+                }
             }
         }
         
         function updateFilterDropdowns() {
             const adFilter = document.getElementById('adFilter');
             const productFilter = document.getElementById('productFilter');
-            const hostFilter = document.getElementById('hostFilter');
             
             adFilter.innerHTML = '<option value="">All Ads</option>';
             productFilter.innerHTML = '<option value="">All Products</option>';
-            hostFilter.innerHTML = '<option value="">All Locations</option>';
             
             Array.from(adsList).sort().forEach(ad => {
                 const option = document.createElement('option');
@@ -1017,13 +1133,6 @@
                 option.value = product;
                 option.textContent = product;
                 productFilter.appendChild(option);
-            });
-            
-            Array.from(hostsList).sort().forEach(host => {
-                const option = document.createElement('option');
-                option.value = host;
-                option.textContent = host;
-                hostFilter.appendChild(option);
             });
         }
         
@@ -1054,17 +1163,15 @@
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const adFilter = document.getElementById('adFilter').value;
             const productFilter = document.getElementById('productFilter').value;
-            const hostFilter = document.getElementById('hostFilter').value;
             const statusFilter = document.getElementById('statusFilter').value;
             
             return data.filter(claim => {
                 if (searchTerm) {
-                    const searchable = [claim.adName || '', claim.productName || '', claim.hostName || '', claim.couponCode || '', claim.userId || '', claim.clientIP || ''].join(' ').toLowerCase();
+                    const searchable = [claim.adName || '', claim.productName || '', claim.hostName || '', claim.couponCode || ''].join(' ').toLowerCase();
                     if (!searchable.includes(searchTerm)) return false;
                 }
                 if (adFilter && claim.adName !== adFilter) return false;
                 if (productFilter && claim.productName !== productFilter) return false;
-                if (hostFilter && claim.hostName !== hostFilter) return false;
                 if (statusFilter) {
                     const now = new Date();
                     const isExpired = claim.expiresAt < now;
@@ -1086,7 +1193,6 @@
             document.getElementById('searchInput').value = '';
             document.getElementById('adFilter').value = '';
             document.getElementById('productFilter').value = '';
-            document.getElementById('hostFilter').value = '';
             document.getElementById('statusFilter').value = '';
             
             const today = new Date().toISOString().split('T')[0];
@@ -1151,7 +1257,7 @@
                     <td><strong>${claim.adName || 'Unknown'}</strong></td>
                     <td>${claim.productName || 'Unknown'}</td>
                     <td>${claim.hostName || 'Unknown'}</td>
-                    <td class="coupon-cell">${claim.couponCode || 'N/A'}</td>
+                    <td><span class="coupon-cell">${claim.couponCode || 'N/A'}</span></td>
                     <td><span class="badge ${statusClass}">${statusText}</span></td>
                     <td>${claim.redeemed ? 'Yes' : 'No'}</td>
                     <td>${claim.redeemedAt ? formatCompactDate(claim.redeemedAt) : '-'}</td>
@@ -1210,7 +1316,7 @@
                 
                 return {
                     'Date': formatCompactDate(claim.claimedAt),
-                    'Advertiser Name': claim.adName || 'Unknown',
+                    'Ad Name': claim.adName || 'Unknown',
                     'Product': claim.productName || 'Unknown',
                     'Location': claim.hostName || 'Unknown',
                     'Coupon Code': claim.couponCode || 'N/A',
@@ -1223,9 +1329,9 @@
             
             const ws = XLSX.utils.json_to_sheet(excelData);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'QR Claims');
+            XLSX.utils.book_append_sheet(wb, ws, 'Claims');
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[:]/g, '-');
-            XLSX.writeFile(wb, `qr-claims-export-${timestamp}.xlsx`);
+            XLSX.writeFile(wb, `claims-export-${timestamp}.xlsx`);
             alert(`Exported ${filteredClaims.length} records`);
         }
         
@@ -1255,11 +1361,11 @@
                 ];
             });
             
-            const headers = [['Date', 'Advertiser Name', 'Product', 'Location', 'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']];
+            const headers = [['Date', 'Ad Name', 'Product', 'Location', 'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']];
             
             doc.setFontSize(18);
             doc.setTextColor(51, 51, 51);
-            doc.text('Coupon Campaigns Claims Report', 14, 15);
+            doc.text('Coupon Claims Report', 14, 15);
             doc.setFontSize(10);
             doc.setTextColor(102, 102, 102);
             doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
@@ -1277,7 +1383,7 @@
             });
             
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[:]/g, '-');
-            doc.save(`qr-claims-report-${timestamp}.pdf`);
+            doc.save(`claims-report-${timestamp}.pdf`);
         }
         
         function showLoading(show) {
