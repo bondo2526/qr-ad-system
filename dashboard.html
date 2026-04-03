@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Coupon system Dashboard</title>
+    <title>Coupon System Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -16,7 +16,6 @@
             min-height: 100vh;
         }
         
-        /* Login Screen */
         .login-screen {
             display: flex;
             justify-content: center;
@@ -87,13 +86,6 @@
             display: none;
         }
         
-        .password-change {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
-        
-        /* Dashboard Content (Hidden initially) */
         .dashboard-content {
             display: none;
         }
@@ -155,7 +147,7 @@
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin: 20px 0;
         }
@@ -315,7 +307,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Password Modal */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -370,54 +361,70 @@
             color: #333;
         }
         
-        /* Mobile Optimizations */
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .filter-input {
-                width: 100%;
-                min-width: unset;
-            }
-            
-            .date-range {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .date-input {
-                width: 100%;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            table {
-                font-size: 14px;
-            }
-            
-            th, td {
-                padding: 12px 8px;
-            }
-            
-            .stat-value {
-                font-size: 32px;
-            }
-            
-            .login-container {
-                padding: 30px 20px;
-            }
+        .campaign-input {
+            width: 80px;
+            padding: 8px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 8px;
         }
         
-        /* Header buttons */
+        .campaign-status-active {
+            background: #E8F5E9;
+            color: #2E7D32;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .campaign-status-soldout {
+            background: #FFEBEE;
+            color: #C62828;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 2px;
+        }
+        
+        .btn-small:hover {
+            background: #1976D2;
+        }
+        
+        .btn-small-danger {
+            background: #FF9800;
+        }
+        
+        .btn-small-danger:hover {
+            background: #F57C00;
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .controls { flex-direction: column; align-items: stretch; }
+            .filter-input { width: 100%; min-width: unset; }
+            .date-range { flex-direction: column; align-items: stretch; }
+            .date-input { width: 100%; }
+            .btn { width: 100%; justify-content: center; }
+            table { font-size: 14px; }
+            th, td { padding: 12px 8px; }
+            .stat-value { font-size: 32px; }
+            .login-container { padding: 30px 20px; }
+        }
+        
         .header-controls {
             display: flex;
             gap: 10px;
@@ -435,10 +442,9 @@
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
     <div class="login-screen" id="loginScreen">
         <div class="login-container">
-            <h1>🔐 Advertiser Dashboard Admin V 2.0</h1>
+            <h1>🔐 Advertiser Dashboard Admin V 3.0</h1>
             <p>Enter your password to access analytics</p>
             
             <input type="password" 
@@ -457,7 +463,6 @@
         </div>
     </div>
     
-    <!-- Dashboard Content -->
     <div class="dashboard-content" id="dashboardContent">
         <div class="header">
             <div class="container">
@@ -476,7 +481,6 @@
         </div>
         
         <div class="container">
-            <!-- Controls -->
             <div class="controls">
                 <input type="text" id="searchInput" class="filter-input" placeholder="Search by ad, product, location, coupon or user..." onkeyup="filterTable()">
                 
@@ -505,7 +509,7 @@
                     <option value="expired">Expired</option>
                 </select>
                 
-                <button class="btn btn-refresh" onclick="loadData()">
+                <button class="btn btn-refresh" onclick="refreshAllData()">
                     🔄 Refresh Data
                 </button>
                 
@@ -522,7 +526,6 @@
                 </button>
             </div>
             
-            <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Total Claims</div>
@@ -535,29 +538,38 @@
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-label">Unique Users</div>
-                    <div class="stat-value" id="uniqueUsers">0</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-label">Redeemed</div>
+                    <div class="stat-label">Total Redeemed</div>
                     <div class="stat-value" id="redeemedCount">0</div>
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-label">Top Product</div>
-                    <div class="stat-value" id="topProduct">-</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-label">Top Station</div>
-                    <div class="stat-value" id="topLocation">-</div>
+                    <div class="stat-label">Active Campaigns</div>
+                    <div class="stat-value" id="activeCampaigns">0</div>
                 </div>
             </div>
             
-            <!-- Data Table -->
+            <!-- Campaign Management Table -->
             <div class="table-container">
-                <h2 style="margin-bottom: 20px; font-size: 24px;">Claim History</h2>
+                <h2 style="margin-bottom: 20px; font-size: 24px;">📦 Ad Campaigns (Set Product Limits)</h2>
+                <div style="overflow-x: auto;">
+                    <table id="campaignsTable">
+                        <thead>
+                            <tr><th>Ad ID</th><th>Advertiser</th><th>Total Products</th><th>Redeemed</th><th>Remaining</th><th>Status</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="campaignsBody">
+                            <tr><td colspan="7" style="text-align: center;">Loading campaigns...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    💡 Set "Total Products" to the number of items the advertiser has to sell. 
+                    System will auto-mark as SOLD OUT when redemptions reach this number.
+                </p>
+            </div>
+            
+            <!-- Claim History Table -->
+            <div class="table-container">
+                <h2 style="margin-bottom: 20px; font-size: 24px;">📋 Claim History</h2>
                 
                 <div id="loadingData" class="loading">
                     <div class="spinner"></div>
@@ -567,27 +579,11 @@
                 <div id="tableWrapper" style="display: none;">
                     <table id="claimsTable">
                         <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Advertiser Name</th>
-                                <th>Product</th>
-                                <th>Location</th>
-                                <th>Coupon Code</th>
-                                <th>Status</th>
-                                <th>Redeemed</th>
-                                <th>Redeemed At</th>
-                                <th>Expires At</th>
-                            </tr>
+                            <tr><th>Date</th><th>Advertiser Name</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires At</th></tr>
                         </thead>
-                        <tbody id="claimsBody">
-                            <!-- Data will be inserted here -->
-                        </tbody>
+                        <tbody id="claimsBody"></tbody>
                     </table>
-                    
-                    <!-- Pagination -->
-                    <div class="pagination" id="pagination">
-                        <!-- Pagination buttons will be inserted here -->
-                    </div>
+                    <div class="pagination" id="pagination"></div>
                 </div>
                 
                 <div id="noData" style="display: none; text-align: center; padding: 40px; color: #666; font-size: 18px;">
@@ -597,45 +593,23 @@
         </div>
     </div>
     
-    <!-- Change Password Modal -->
     <div class="modal-overlay" id="passwordModal">
         <div class="modal">
             <h2>🔑 Change Dashboard Password</h2>
-            
             <div style="margin-bottom: 20px;">
-                <input type="password" 
-                       id="currentPassword" 
-                       class="password-input" 
-                       placeholder="Current Password"
-                       style="margin-bottom: 15px;">
-                
-                <input type="password" 
-                       id="newPassword" 
-                       class="password-input" 
-                       placeholder="New Password (min 6 characters)"
-                       style="margin-bottom: 15px;">
-                
-                <input type="password" 
-                       id="confirmPassword" 
-                       class="password-input" 
-                       placeholder="Confirm New Password">
-                
+                <input type="password" id="currentPassword" class="password-input" placeholder="Current Password" style="margin-bottom: 15px;">
+                <input type="password" id="newPassword" class="password-input" placeholder="New Password (min 6 characters)" style="margin-bottom: 15px;">
+                <input type="password" id="confirmPassword" class="password-input" placeholder="Confirm New Password">
                 <div class="error-message" id="passwordError" style="text-align: center; margin-top: 15px;"></div>
             </div>
-            
             <div class="modal-buttons">
-                <button class="modal-btn modal-btn-secondary" onclick="closePasswordModal()">
-                    Cancel
-                </button>
-                <button class="modal-btn modal-btn-primary" onclick="changePassword()">
-                    Change Password
-                </button>
+                <button class="modal-btn modal-btn-secondary" onclick="closePasswordModal()">Cancel</button>
+                <button class="modal-btn modal-btn-primary" onclick="changePassword()">Change Password</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Helper function to format date to compact style
         function formatCompactDate(date) {
             if (!date) return 'Unknown';
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -648,16 +622,13 @@
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
         
-        // === PASSWORD MANAGEMENT ===
         const STORAGE_KEY = 'dashboard_password';
         const DEFAULT_PASSWORD = 'admin123';
         
-        // Initialize password if not set
         if (!localStorage.getItem(STORAGE_KEY)) {
             localStorage.setItem(STORAGE_KEY, DEFAULT_PASSWORD);
         }
         
-        // === FIREBASE CONFIG ===
         const firebaseConfig = {
             apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
             authDomain: "ad-coupon-system.firebaseapp.com",
@@ -668,11 +639,9 @@
             measurementId: "G-PR9E37ZYE2"
         };
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         
-        // Global variables
         let allClaims = [];
         let filteredClaims = [];
         let currentPage = 1;
@@ -680,8 +649,8 @@
         let adsList = new Set();
         let productsList = new Set();
         let hostsList = new Set();
+        let allCampaigns = [];
         
-        // === PASSWORD FUNCTIONS ===
         function login() {
             const inputPassword = document.getElementById('passwordInput').value;
             const storedPassword = localStorage.getItem(STORAGE_KEY);
@@ -692,7 +661,7 @@
                 document.getElementById('loginError').style.display = 'none';
                 document.getElementById('passwordInput').value = '';
                 sessionStorage.setItem('dashboard_logged_in', 'true');
-                loadData();
+                refreshAllData();
             } else {
                 document.getElementById('loginError').style.display = 'block';
                 document.getElementById('passwordInput').value = '';
@@ -701,9 +670,7 @@
         }
         
         function handlePasswordEnter(event) {
-            if (event.key === 'Enter') {
-                login();
-            }
+            if (event.key === 'Enter') login();
         }
         
         function logout() {
@@ -757,25 +724,25 @@
             closePasswordModal();
         }
         
-        // Initialize dashboard on page load
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('passwordInput').focus();
             const isLoggedIn = sessionStorage.getItem('dashboard_logged_in');
             if (isLoggedIn) {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('dashboardContent').style.display = 'block';
-                loadData();
+                refreshAllData();
             }
         });
         
-        // === LOAD DATA ===
+        async function refreshAllData() {
+            await loadData();
+            await loadCampaigns();
+        }
+        
         async function loadData() {
             showLoading(true);
-            
             try {
-                const snapshot = await db.collection('claims')
-                    .orderBy('claimedAt', 'desc')
-                    .get();
+                const snapshot = await db.collection('claims').orderBy('claimedAt', 'desc').get();
                 
                 allClaims = [];
                 adsList.clear();
@@ -799,11 +766,118 @@
                 updateFilterDropdowns();
                 filterByDate();
                 showLoading(false);
-                
             } catch (error) {
                 console.error('Error loading data:', error);
                 showLoading(false);
                 alert('Error loading data: ' + error.message);
+            }
+        }
+        
+        async function loadCampaigns() {
+            try {
+                const snapshot = await db.collection('ad_campaigns').orderBy('createdAt', 'desc').get();
+                allCampaigns = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    data.id = doc.id;
+                    allCampaigns.push(data);
+                });
+                renderCampaignsTable();
+                updateCampaignStats();
+            } catch (error) {
+                console.error("Error loading campaigns:", error);
+            }
+        }
+        
+        function updateCampaignStats() {
+            const activeCount = allCampaigns.filter(c => c.isActive !== false && ((c.totalProducts || 0) - (c.redeemedCount || 0)) > 0).length;
+            document.getElementById('activeCampaigns').textContent = activeCount;
+        }
+        
+        function renderCampaignsTable() {
+            const tbody = document.getElementById('campaignsBody');
+            
+            if (allCampaigns.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No campaigns found. Create one by setting total products below.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            for (const campaign of allCampaigns) {
+                const remaining = (campaign.totalProducts || 0) - (campaign.redeemedCount || 0);
+                const isActive = campaign.isActive !== false && remaining > 0;
+                const statusText = isActive ? '🟢 Active' : '🔴 Sold Out';
+                const statusClass = isActive ? 'campaign-status-active' : 'campaign-status-soldout';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${campaign.adId || campaign.id}</strong></td>
+                    <td>${campaign.advertiserName || 'Unknown'}</td>
+                    <td><input type="number" id="total_${campaign.id}" class="campaign-input" value="${campaign.totalProducts || 0}" min="0" step="1"></td>
+                    <td>${campaign.redeemedCount || 0}</td>
+                    <td style="font-weight: bold; ${remaining <= 0 ? 'color: #C62828;' : 'color: #2E7D32;'}">${remaining}</td>
+                    <td><span class="${statusClass}">${statusText}</span></td>
+                    <td>
+                        <button class="btn-small" onclick="updateTotalProducts('${campaign.id}')">💾 Save</button>
+                        <button class="btn-small btn-small-danger" onclick="forceSoldOut('${campaign.id}')">🔴 Mark Sold Out</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+        
+        async function updateTotalProducts(adId) {
+            const input = document.getElementById(`total_${adId}`);
+            const newTotal = parseInt(input.value);
+            
+            if (isNaN(newTotal) || newTotal < 0) {
+                alert("Please enter a valid number");
+                return;
+            }
+            
+            try {
+                await db.collection('ad_campaigns').doc(adId).update({
+                    totalProducts: newTotal,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedBy: 'admin'
+                });
+                
+                alert(`✅ Updated ${adId} to ${newTotal} products`);
+                await loadCampaigns();
+            } catch (error) {
+                console.error("Error updating:", error);
+                if (error.message.includes('does not exist')) {
+                    const campaign = allCampaigns.find(c => c.id === adId);
+                    await db.collection('ad_campaigns').doc(adId).set({
+                        adId: adId,
+                        advertiserName: campaign?.advertiserName || 'Unknown',
+                        totalProducts: newTotal,
+                        redeemedCount: campaign?.redeemedCount || 0,
+                        isActive: true,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert(`✅ Created campaign for ${adId} with ${newTotal} products`);
+                    await loadCampaigns();
+                } else {
+                    alert("Error: " + error.message);
+                }
+            }
+        }
+        
+        async function forceSoldOut(adId) {
+            if (!confirm(`⚠️ Mark ${adId} as SOLD OUT? This will prevent any new claims.`)) return;
+            
+            try {
+                await db.collection('ad_campaigns').doc(adId).update({
+                    isActive: false,
+                    forceSoldOutAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    forceSoldOutBy: 'admin'
+                });
+                alert(`✅ ${adId} marked as sold out`);
+                await loadCampaigns();
+            } catch (error) {
+                alert("Error: " + error.message);
             }
         }
         
@@ -870,21 +944,12 @@
             
             return data.filter(claim => {
                 if (searchTerm) {
-                    const searchable = [
-                        claim.adName || '',
-                        claim.productName || '',
-                        claim.hostName || '',
-                        claim.couponCode || '',
-                        claim.userId || '',
-                        claim.clientIP || ''
-                    ].join(' ').toLowerCase();
+                    const searchable = [claim.adName || '', claim.productName || '', claim.hostName || '', claim.couponCode || '', claim.userId || '', claim.clientIP || ''].join(' ').toLowerCase();
                     if (!searchable.includes(searchTerm)) return false;
                 }
-                
                 if (adFilter && claim.adName !== adFilter) return false;
                 if (productFilter && claim.productName !== productFilter) return false;
                 if (hostFilter && claim.hostName !== hostFilter) return false;
-                
                 if (statusFilter) {
                     const now = new Date();
                     const isExpired = claim.expiresAt < now;
@@ -892,7 +957,6 @@
                     if (statusFilter === 'claimed' && (claim.redeemed || isExpired)) return false;
                     if (statusFilter === 'redeemed' && !claim.redeemed) return false;
                 }
-                
                 return true;
             });
         }
@@ -912,7 +976,6 @@
             
             const today = new Date().toISOString().split('T')[0];
             const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            
             document.getElementById('dateFrom').value = weekAgo;
             document.getElementById('dateTo').value = today;
             
@@ -922,30 +985,14 @@
         function updateStats() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const now = new Date();
             
             const total = filteredClaims.length;
             const todayCount = filteredClaims.filter(c => c.claimedAt >= today).length;
-            const uniqueUsers = new Set(filteredClaims.map(c => c.userId)).size;
             const redeemed = filteredClaims.filter(c => c.redeemed).length;
-            
-            const productCounts = {};
-            const hostCounts = {};
-            
-            filteredClaims.forEach(claim => {
-                productCounts[claim.productName] = (productCounts[claim.productName] || 0) + 1;
-                hostCounts[claim.hostName] = (hostCounts[claim.hostName] || 0) + 1;
-            });
-            
-            const topProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0];
-            const topLocation = Object.entries(hostCounts).sort((a, b) => b[1] - a[1])[0];
             
             document.getElementById('totalClaims').textContent = total.toLocaleString();
             document.getElementById('todayClaims').textContent = todayCount.toLocaleString();
-            document.getElementById('uniqueUsers').textContent = uniqueUsers.toLocaleString();
             document.getElementById('redeemedCount').textContent = redeemed.toLocaleString();
-            document.getElementById('topProduct').textContent = topProduct ? topProduct[0] : '-';
-            document.getElementById('topLocation').textContent = topLocation ? topLocation[0] : '-';
         }
         
         function renderTable() {
@@ -973,16 +1020,13 @@
                 const row = document.createElement('tr');
                 const now = new Date();
                 const isExpired = claim.expiresAt < now;
-                let status = 'claimed';
                 let statusClass = 'badge-claimed';
                 let statusText = 'Claimed';
                 
                 if (claim.redeemed) {
-                    status = 'redeemed';
                     statusClass = 'badge-redeemed';
                     statusText = 'Redeemed';
                 } else if (isExpired) {
-                    status = 'expired';
                     statusClass = 'badge-expired';
                     statusText = 'Expired';
                 }
@@ -998,7 +1042,6 @@
                     <td>${claim.redeemedAt ? formatCompactDate(claim.redeemedAt) : '-'}</td>
                     <td>${formatCompactDate(claim.expiresAt)}</td>
                 `;
-                
                 tbody.appendChild(row);
             });
             
@@ -1008,19 +1051,13 @@
         function renderPagination(totalPages) {
             const pagination = document.getElementById('pagination');
             pagination.innerHTML = '';
-            
             if (totalPages <= 1) return;
             
             const prevBtn = document.createElement('button');
             prevBtn.textContent = '← Previous';
             prevBtn.className = 'page-btn';
             prevBtn.disabled = currentPage === 1;
-            prevBtn.onclick = () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    renderTable();
-                }
-            };
+            prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
             pagination.appendChild(prevBtn);
             
             for (let i = 1; i <= totalPages; i++) {
@@ -1028,10 +1065,7 @@
                     const pageBtn = document.createElement('button');
                     pageBtn.textContent = i;
                     pageBtn.className = 'page-btn' + (i === currentPage ? ' active' : '');
-                    pageBtn.onclick = () => {
-                        currentPage = i;
-                        renderTable();
-                    };
+                    pageBtn.onclick = () => { currentPage = i; renderTable(); };
                     pagination.appendChild(pageBtn);
                 } else if (i === currentPage - 3 || i === currentPage + 3) {
                     const ellipsis = document.createElement('span');
@@ -1045,20 +1079,12 @@
             nextBtn.textContent = 'Next →';
             nextBtn.className = 'page-btn';
             nextBtn.disabled = currentPage === totalPages;
-            nextBtn.onclick = () => {
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    renderTable();
-                }
-            };
+            nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } };
             pagination.appendChild(nextBtn);
         }
         
         function exportToExcel() {
-            if (filteredClaims.length === 0) {
-                alert('No data to export!');
-                return;
-            }
+            if (filteredClaims.length === 0) { alert('No data to export!'); return; }
             
             const excelData = filteredClaims.map(claim => {
                 const now = new Date();
@@ -1084,21 +1110,16 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'QR Claims');
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[:]/g, '-');
-            const filename = `qr-claims-export-${timestamp}.xlsx`;
-            XLSX.writeFile(wb, filename);
-            alert(`Exported ${filteredClaims.length} records to ${filename}`);
+            XLSX.writeFile(wb, `qr-claims-export-${timestamp}.xlsx`);
+            alert(`Exported ${filteredClaims.length} records`);
         }
         
         function exportToPDF() {
-            if (filteredClaims.length === 0) {
-                alert('No data to export!');
-                return;
-            }
+            if (filteredClaims.length === 0) { alert('No data to export!'); return; }
             
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             
-            // Prepare table data
             const tableData = filteredClaims.map(claim => {
                 const now = new Date();
                 const isExpired = claim.expiresAt < now;
@@ -1121,72 +1142,24 @@
             
             const headers = [['Date', 'Advertiser Name', 'Product', 'Location', 'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']];
             
-            // Add title and metadata
             doc.setFontSize(18);
             doc.setTextColor(51, 51, 51);
             doc.text('Coupon Campaigns Claims Report', 14, 15);
-            
             doc.setFontSize(10);
             doc.setTextColor(102, 102, 102);
-            const generatedDate = new Date();
-            const generatedFormatted = `${generatedDate.toLocaleDateString()} ${generatedDate.toLocaleTimeString()}`;
-            doc.text(`Generated: ${generatedFormatted}`, 14, 22);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
             doc.text(`Total Records: ${filteredClaims.length}`, 14, 28);
             
-            // Add date range if filters are applied
-            const dateFrom = document.getElementById('dateFrom').value;
-            const dateTo = document.getElementById('dateTo').value;
-            if (dateFrom || dateTo) {
-                let rangeText = 'Date Range: ';
-                if (dateFrom) rangeText += `${dateFrom}`;
-                if (dateFrom && dateTo) rangeText += ` to `;
-                if (dateTo) rangeText += `${dateTo}`;
-                if (!dateFrom && !dateTo) rangeText += 'All dates';
-                doc.text(rangeText, 14, 34);
-            }
-            
-            // Generate table
             doc.autoTable({
                 head: headers,
                 body: tableData,
                 startY: 40,
                 theme: 'grid',
-                headStyles: {
-                    fillColor: [102, 126, 234],
-                    textColor: [255, 255, 255],
-                    fontStyle: 'bold',
-                    halign: 'center'
-                },
-                bodyStyles: {
-                    fontSize: 8,
-                    cellPadding: 3
-                },
-                alternateRowStyles: {
-                    fillColor: [245, 245, 245]
-                },
-                columnStyles: {
-                    0: { cellWidth: 35 },
-                    1: { cellWidth: 35 },
-                    2: { cellWidth: 30 },
-                    3: { cellWidth: 30 },
-                    4: { cellWidth: 35 },
-                    5: { cellWidth: 20 },
-                    6: { cellWidth: 18 },
-                    7: { cellWidth: 35 },
-                    8: { cellWidth: 35 }
-                },
+                headStyles: { fillColor: [102, 126, 234], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+                bodyStyles: { fontSize: 8, cellPadding: 3 },
+                alternateRowStyles: { fillColor: [245, 245, 245] },
                 margin: { left: 14, right: 14 }
             });
-            
-            // Add footer with page numbers
-            const pageCount = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.setTextColor(150, 150, 150);
-                doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 10);
-                doc.text('Coupon-Ad Campaign System', 14, doc.internal.pageSize.getHeight() - 10);
-            }
             
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[:]/g, '-');
             doc.save(`qr-claims-report-${timestamp}.pdf`);
