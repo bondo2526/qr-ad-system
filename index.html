@@ -410,40 +410,15 @@
             }
         }
         
-        async function generateUserFingerprint() {
-            try {
-                let deviceId = localStorage.getItem('permanent_device_id');
-                if (!deviceId) {
-                    deviceId = 'dev_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-                    localStorage.setItem('permanent_device_id', deviceId);
-                }
-                
-                const fingerprintData = {
-                    deviceId: deviceId,
-                    userAgent: navigator.userAgent,
-                    language: navigator.language,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    screen: `${screen.width}x${screen.height}`,
-                    cookiesEnabled: navigator.cookieEnabled
-                };
-                
-                const dataString = JSON.stringify(fingerprintData);
-                let hash = 0;
-                for (let i = 0; i < dataString.length; i++) {
-                    const char = dataString.charCodeAt(i);
-                    hash = ((hash << 5) - hash) + char;
-                    hash = hash & hash;
-                }
-                return `fp_${Math.abs(hash).toString(36)}`;
-            } catch (error) {
-                let fallbackId = localStorage.getItem('persistent_user_id');
-                if (!fallbackId) {
-                    fallbackId = 'user_' + Math.random().toString(36).substring(2, 15);
-                    localStorage.setItem('persistent_user_id', fallbackId);
-                }
-                return fallbackId;
-            }
-        }
+      async function generateUserFingerprint() {
+    // Simple persistent device ID - NO IP, NO changing values
+    let deviceId = localStorage.getItem('device_id');
+    if (!deviceId) {
+        deviceId = 'dev_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now().toString(36);
+        localStorage.setItem('device_id', deviceId);
+    }
+    return deviceId;
+}
         
         async function getClientIP() {
             try {
