@@ -144,6 +144,8 @@
         .btn-logout:hover { background: #7B1FA2; }
         .btn-change-password { background: #9C27B0; }
         .btn-change-password:hover { background: #7B1FA2; }
+        .btn-create { background: #4CAF50; }
+        .btn-create:hover { background: #388E3C; }
         
         .stats-grid {
             display: grid;
@@ -412,6 +414,42 @@
             background: #F57C00;
         }
         
+        .create-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .form-group label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .form-group input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
         @media (max-width: 768px) {
             .container { padding: 15px; }
             .controls { flex-direction: column; align-items: stretch; }
@@ -423,6 +461,8 @@
             th, td { padding: 12px 8px; }
             .stat-value { font-size: 32px; }
             .login-container { padding: 30px 20px; }
+            .create-form { flex-direction: column; }
+            .form-group input { width: 100%; }
         }
         
         .header-controls {
@@ -551,13 +591,31 @@
             <!-- Campaign Management Table -->
             <div class="table-container">
                 <h2 style="margin-bottom: 20px; font-size: 24px;">📦 Ad Campaigns (Set Product Limits)</h2>
+                
+                <!-- CREATE CAMPAIGN FORM -->
+                <div class="create-form">
+                    <div class="form-group">
+                        <label>Ad ID</label>
+                        <input type="text" id="newAdId" placeholder="e.g., ph1">
+                    </div>
+                    <div class="form-group">
+                        <label>Advertiser Name</label>
+                        <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Products</label>
+                        <input type="number" id="newTotalProducts" placeholder="e.g., 5" min="1">
+                    </div>
+                    <button class="btn btn-create" onclick="createCampaign()">➕ Create Campaign</button>
+                </div>
+                
                 <div style="overflow-x: auto;">
                     <table id="campaignsTable">
                         <thead>
                             <tr><th>Ad ID</th><th>Advertiser</th><th>Total Products</th><th>Redeemed</th><th>Remaining</th><th>Status</th><th>Action</th></tr>
                         </thead>
                         <tbody id="campaignsBody">
-                            <tr><td colspan="7" style="text-align: center;">Loading campaigns...</td></tr>
+                            <tr><td colspan="7" style="text-align: center;">Loading campaigns...</td</tr>
                         </tbody>
                     </table>
                 </div>
@@ -798,7 +856,7 @@
             const tbody = document.getElementById('campaignsBody');
             
             if (allCampaigns.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No campaigns found. Create one by setting total products below.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No campaigns yet. Use the form above to create one.</td></tr>';
                 return;
             }
             
@@ -827,6 +885,59 @@
             }
         }
         
+        async function createCampaign() {
+            const adId = document.getElementById('newAdId').value.trim();
+            const advertiserName = document.getElementById('newAdvertiserName').value.trim();
+            const totalProducts = parseInt(document.getElementById('newTotalProducts').value);
+            
+            if (!adId) {
+                alert("❌ Please enter Ad ID");
+                return;
+            }
+            if (!advertiserName) {
+                alert("❌ Please enter Advertiser Name");
+                return;
+            }
+            if (isNaN(totalProducts) || totalProducts < 1) {
+                alert("❌ Please enter a valid number of products (minimum 1)");
+                return;
+            }
+            
+            try {
+                // Check if campaign already exists
+                const existing = await db.collection('ad_campaigns').doc(adId).get();
+                if (existing.exists) {
+                    if (confirm(`Campaign for "${adId}" already exists. Update total products to ${totalProducts}?`)) {
+                        await db.collection('ad_campaigns').doc(adId).update({
+                            totalProducts: totalProducts,
+                            advertiserName: advertiserName,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        alert(`✅ Updated ${adId} to ${totalProducts} products`);
+                    }
+                } else {
+                    await db.collection('ad_campaigns').doc(adId).set({
+                        adId: adId,
+                        advertiserName: advertiserName,
+                        totalProducts: totalProducts,
+                        redeemedCount: 0,
+                        isActive: true,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert(`✅ Campaign created for ${adId} with ${totalProducts} products`);
+                }
+                
+                // Clear form
+                document.getElementById('newAdId').value = '';
+                document.getElementById('newAdvertiserName').value = '';
+                document.getElementById('newTotalProducts').value = '';
+                
+                await loadCampaigns();
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        }
+        
         async function updateTotalProducts(adId) {
             const input = document.getElementById(`total_${adId}`);
             const newTotal = parseInt(input.value);
@@ -837,31 +948,35 @@
             }
             
             try {
-                await db.collection('ad_campaigns').doc(adId).update({
+                const campaignRef = db.collection('ad_campaigns').doc(adId);
+                const campaign = await campaignRef.get();
+                
+                if (!campaign.exists) {
+                    alert("Campaign not found");
+                    return;
+                }
+                
+                await campaignRef.update({
                     totalProducts: newTotal,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedBy: 'admin'
                 });
                 
+                // If new total is 0 or less than redeemed, auto-mark as sold out
+                const redeemed = campaign.data().redeemedCount || 0;
+                if (newTotal <= redeemed) {
+                    await campaignRef.update({ isActive: false });
+                    alert(`⚠️ ${adId} auto-marked as SOLD OUT because total products (${newTotal}) <= redeemed (${redeemed})`);
+                } else if (newTotal > redeemed && campaign.data().isActive === false) {
+                    await campaignRef.update({ isActive: true });
+                    alert(`✅ ${adId} reactivated because total products increased to ${newTotal}`);
+                }
+                
                 alert(`✅ Updated ${adId} to ${newTotal} products`);
                 await loadCampaigns();
             } catch (error) {
                 console.error("Error updating:", error);
-                if (error.message.includes('does not exist')) {
-                    const campaign = allCampaigns.find(c => c.id === adId);
-                    await db.collection('ad_campaigns').doc(adId).set({
-                        adId: adId,
-                        advertiserName: campaign?.advertiserName || 'Unknown',
-                        totalProducts: newTotal,
-                        redeemedCount: campaign?.redeemedCount || 0,
-                        isActive: true,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    alert(`✅ Created campaign for ${adId} with ${newTotal} products`);
-                    await loadCampaigns();
-                } else {
-                    alert("Error: " + error.message);
-                }
+                alert("Error: " + error.message);
             }
         }
         
