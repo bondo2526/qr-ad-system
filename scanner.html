@@ -140,7 +140,7 @@
 <body>
     <div class="container">
         <div id="loginSection" class="login-section">
-            <h1>🔐 Advertiser Scanner v3.0</h1>
+            <h1>🔐 Advertiser Scanner v4.0</h1>
             <p>Login with your advertiser credentials</p>
             
             <div class="advertiser-id-section">
@@ -597,40 +597,82 @@ Action Required: Remove this ad from display system.`;
             document.getElementById('redeemedTime').textContent = redeemedTime ? formatCompactDate(redeemedTime) : 'an earlier date';
         }
         
-        async function markCouponUsed() {
-            try {
-                let couponOwner = currentCouponData.advertiserName || currentCouponData.adName || '';
-                if (couponOwner !== currentAdvertiser.name) { alert("Unauthorized"); resetScanner(); return; }
-                if (currentCouponData.redeemed === true) { alert("Already redeemed"); resetScanner(); return; }
+   async function markCouponUsed() {
+    try {
+        let couponOwner = currentCouponData.advertiserName || currentCouponData.adName || '';
+        if (couponOwner !== currentAdvertiser.name) { 
+            alert("Unauthorized"); 
+            resetScanner(); 
+            return; 
+        }
+        
+        if (currentCouponData.redeemed === true) { 
+            alert("Already redeemed"); 
+            resetScanner(); 
+            return; 
+        }
+        
+        if (currentAdvertiser?.isTest) {
+            document.getElementById('validResult').classList.add('hidden');
+            document.getElementById('successResult').classList.remove('hidden');
+            document.getElementById('successCouponCode').textContent = currentCouponData.couponCode;
+            setTimeout(() => resetScanner(), 2000);
+            return;
+        }
+        
+        // 1. Mark coupon as redeemed in claims collection
+        await db.collection('claims').doc(currentCouponData.id).update({
+            redeemed: true,
+            status: 'redeemed',
+            redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            redeemedBy: currentAdvertiser.id,
+            redeemedByName: currentAdvertiser.name
+        });
+        
+        // 2. Update advertiser stats
+        await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).update({
+            couponValidations: firebase.firestore.FieldValue.increment(1),
+            lastValidation: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // 3. CRITICAL: Update product redeemed count in ad_campaigns
+        const adName = currentCouponData.adName;
+        const productName = currentCouponData.productName;
+        
+        const campaignRef = db.collection('ad_campaigns').doc(adName);
+        const campaign = await campaignRef.get();
+        
+        if (campaign.exists) {
+            const products = campaign.data().products || [];
+            const productIndex = products.findIndex(p => p.productName === productName);
+            
+            if (productIndex !== -1) {
+                const newRedeemedCount = (products[productIndex].redeemedCount || 0) + 1;
+                const newRemaining = products[productIndex].totalProducts - newRedeemedCount;
                 
-                if (currentAdvertiser?.isTest) {
-                    document.getElementById('validResult').classList.add('hidden');
-                    document.getElementById('successResult').classList.remove('hidden');
-                    document.getElementById('successCouponCode').textContent = currentCouponData.couponCode;
-                    setTimeout(() => resetScanner(), 2000);
-                    return;
-                }
+                products[productIndex].redeemedCount = newRedeemedCount;
+                products[productIndex].remaining = newRemaining;
                 
-                await db.collection('claims').doc(currentCouponData.id).update({
-                    redeemed: true, status: 'redeemed',
-                    redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    redeemedBy: currentAdvertiser.id, redeemedByName: currentAdvertiser.name
-                });
+                await campaignRef.update({ products: products });
                 
-                await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).update({
-                    couponValidations: firebase.firestore.FieldValue.increment(1), lastValidation: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                await checkAndUpdateRedeemedCount(currentCouponData.adId);
-                
-                document.getElementById('validResult').classList.add('hidden');
-                document.getElementById('successResult').classList.remove('hidden');
-                document.getElementById('successCouponCode').textContent = currentCouponData.couponCode;
-                setTimeout(() => resetScanner(), 3000);
-            } catch (error) {
-                alert('Error: ' + error.message);
+                console.log(`✅ Updated ${productName}: redeemed=${newRedeemedCount}, remaining=${newRemaining}`);
             }
         }
+        
+        // Show success
+        document.getElementById('validResult').classList.add('hidden');
+        document.getElementById('successResult').classList.remove('hidden');
+        document.getElementById('successCouponCode').textContent = currentCouponData.couponCode;
+        
+        setTimeout(() => {
+            resetScanner();
+        }, 3000);
+        
+    } catch (error) {
+        console.error("Mark used error:", error);
+        alert('❌ Error marking coupon as used: ' + error.message);
+    }
+}
         
         function resetScanner() {
             currentCouponData = null;
