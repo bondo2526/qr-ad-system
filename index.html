@@ -9,7 +9,6 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
         
-        /* Body with dynamic backgrounds */
         body { 
             min-height: 100vh; 
             display: flex; 
@@ -20,14 +19,16 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
-        /* Success background (green) */
         body.success-bg {
             background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%) !important;
         }
         
-        /* Blocked/Already claimed background (red) */
         body.blocked-bg {
             background: linear-gradient(135deg, #f44336 0%, #c62828 100%) !important;
+        }
+        
+        body.soldout-bg {
+            background: linear-gradient(135deg, #FF9800 0%, #E65100 100%) !important;
         }
         
         .container { 
@@ -41,6 +42,7 @@
         
         .success { color: #2E7D32; }
         .blocked { color: #C62828; }
+        .soldout { color: #E65100; }
         
         .coupon { 
             font-size: 42px; 
@@ -48,8 +50,6 @@
             color: #2E7D32; 
             margin: 20px 0; 
             font-family: Consolas, 'Courier New', monospace;
-            font-feature-settings: "tnum";
-            font-variant-numeric: slashed-zero;
             background: #E8F5E9; 
             padding: 15px; 
             border-radius: 10px; 
@@ -66,8 +66,6 @@
             color: #c62828;
             margin: 15px 0;
             font-family: Consolas, 'Courier New', monospace;
-            font-feature-settings: "tnum";
-            font-variant-numeric: slashed-zero;
             background: #FFEBEE;
             padding: 12px;
             border-radius: 8px;
@@ -86,28 +84,12 @@
             font-size: 14px; 
         }
         
-        .info.blocked-info { 
-            background: #FFEBEE; 
-            border-left: 4px solid #c62828;
-        }
+        .info.blocked-info { background: #FFEBEE; border-left: 4px solid #c62828; }
+        .info.warning-info { background: #FFF3E0; border-left: 4px solid #FF9800; }
+        .info.soldout-info { background: #FFF3E0; border-left: 4px solid #E65100; }
         
-        .info.warning-info { 
-            background: #FFF3E0; 
-            border-left: 4px solid #FF9800;
-        }
-        
-        .countdown { 
-            font-size: 24px; 
-            font-weight: bold; 
-            color: #E65100; 
-            margin: 20px 0; 
-            text-align: center;
-        }
-        
-        .loading { 
-            text-align: center; 
-            padding: 40px; 
-        }
+        .countdown { font-size: 24px; font-weight: bold; color: #E65100; margin: 20px 0; text-align: center; }
+        .loading { text-align: center; padding: 40px; }
         
         .spinner { 
             border: 4px solid #f3f3f3; 
@@ -119,10 +101,7 @@
             margin: 0 auto 20px; 
         }
         
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .hidden { display: none; }
         
@@ -140,11 +119,6 @@
             text-align: center;
         }
         
-        .instruction-box h4 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
         .screenshot-instruction {
             background: #FFF8E1;
             border: 2px dashed #FFB300;
@@ -156,15 +130,8 @@
             color: #E65100;
         }
         
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .action-buttons:has(button:only-child) button {
-            width: 100%;
-            flex: none;
-        }
+        .action-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .action-buttons:has(button:only-child) button { width: 100%; flex: none; }
         
         button {
             padding: 12px 24px;
@@ -178,36 +145,20 @@
             flex: 1;
         }
         
-        button:hover {
-            background: #1976D2;
-        }
+        button:hover { background: #1976D2; }
+        button.secondary { background: #757575; }
+        button.secondary:hover { background: #616161; }
         
-        button.secondary {
-            background: #757575;
-        }
-        
-        button.secondary:hover {
-            background: #616161;
-        }
-        
-        .coupon-section {
-            text-align: center;
-            margin: 20px 0;
-            padding: 15px;
-            background: #F9F9F9;
-            border-radius: 10px;
-        }
+        .coupon-section { text-align: center; margin: 20px 0; padding: 15px; background: #F9F9F9; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Loading -->
         <div id="loading" class="loading">
             <div class="spinner"></div>
             <p>Loading your coupon...</p>
         </div>
         
-        <!-- Success -->
         <div id="success" class="hidden">
             <h1 class="success">✅ Coupon Claimed!</h1>
             <h2 align="center" id="adName"></h2>
@@ -244,7 +195,6 @@
             </div>
         </div>
         
-        <!-- Blocked -->
         <div id="blocked" class="hidden">
             <h1 class="blocked">⛔ Already Claimed</h1>
             <h3 id="blockedAdName"></h3>
@@ -283,18 +233,26 @@
             </div>
         </div>
         
-        <!-- Error -->
+        <div id="soldout" class="hidden">
+            <h1 class="soldout">🔴 SOLD OUT</h1>
+            <h2 align="center" id="soldoutAdName"></h2>
+            <p align="center"><strong>Product:</strong> <span id="soldoutProduct"></span></p>
+            
+            <div class="info soldout-info">
+                <p><strong>😔 Sorry, all products for this offer have been sold out!</strong></p>
+                <p>This promotion has ended. No more coupons are available.</p>
+                <p>Thank you for your interest!</p>
+            </div>
+        </div>
+        
         <div id="error" class="hidden">
             <h1 style="color: #FF5722;">❌ Error</h1>
             <p id="errorMessage"></p>
-            <button onclick="location.reload()">
-                Try Again
-            </button>
+            <button onclick="location.reload()">Try Again</button>
         </div>
     </div>
 
     <script>
-        // Helper function to format date to compact style
         function formatCompactDate(date) {
             if (!date) return 'Unknown';
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -307,13 +265,8 @@
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
         
-        // === CONFIGURATION ===
-        const CONFIG = {
-            BLOCK_HOURS: 24,
-            MAX_CLAIMS_PER_AD_PER_DAY: 1
-        };
-
-        // === FIREBASE CONFIG ===
+        const CONFIG = { BLOCK_HOURS: 24, MAX_CLAIMS_PER_AD_PER_DAY: 1 };
+        
         const firebaseConfig = {
             apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
             authDomain: "ad-coupon-system.firebaseapp.com",
@@ -324,12 +277,10 @@
             measurementId: "G-PR9E37ZYE2"
         };
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
         
-        // Global variables
         let currentUser = null;
         let currentAd = null;
         let currentProduct = null;
@@ -337,21 +288,17 @@
         let userFingerprint = null;
         let existingCouponCode = null;
         
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                // Get URL parameters
                 const urlParams = new URLSearchParams(window.location.search);
                 currentAd = urlParams.get('ad') || 'unknown_ad';
                 currentProduct = urlParams.get('product') || 'unknown_product';
                 currentHost = urlParams.get('host') || 'unknown_location';
                 
-                // Decode names for display
                 const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
                 const displayProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
                 const displayHostName = decodeURIComponent(currentHost).replace(/_/g, ' ');
                 
-                // Update display elements
                 document.getElementById('adName').textContent = displayAdName;
                 document.getElementById('productName').textContent = displayProductName;
                 document.getElementById('hostName').textContent = displayHostName;
@@ -359,31 +306,25 @@
                 document.getElementById('blockedAdName').textContent = displayAdName;
                 document.getElementById('blockedProduct').textContent = displayProductName;
                 document.getElementById('blockedLocation').textContent = displayHostName;
+                document.getElementById('soldoutAdName').textContent = displayAdName;
+                document.getElementById('soldoutProduct').textContent = displayProductName;
                 
-                // Initialize Firebase Auth (anonymous)
                 const userCredential = await auth.signInAnonymously();
                 currentUser = userCredential.user;
-                
-                // Generate user fingerprint
                 userFingerprint = await generateUserFingerprint();
                 
-                // Check if user already claimed this ad TODAY
                 await checkIfAlreadyClaimed();
-                
             } catch (error) {
                 showError('Initialization error: ' + error.message);
             }
         });
         
-        // === CORE LOGIC ===
         async function checkIfAlreadyClaimed() {
             try {
                 const twentyFourHoursAgo = new Date();
                 twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
                 
-                // Query by user fingerprint
-                const claimsRef = db.collection('claims');
-                const querySnapshot = await claimsRef
+                const querySnapshot = await db.collection('claims')
                     .where('userFingerprint', '==', userFingerprint)
                     .orderBy('claimedAt', 'desc')
                     .limit(10)
@@ -395,19 +336,12 @@
                 querySnapshot.forEach(doc => {
                     const claim = doc.data();
                     const claimTime = claim.claimedAt?.toDate();
-                    
-                    // Check conditions: same ad AND same product AND within 24h
                     const isSameAd = claim.adId === currentAd;
-                    const isSameProduct = claim.productId === currentProduct;
                     const isWithin24h = claimTime >= twentyFourHoursAgo;
                     
-                    if (isSameAd && isSameProduct && isWithin24h) {
+                    if (isSameAd && isWithin24h) {
                         alreadyClaimed = true;
-                        existingClaim = {
-                            ...claim,
-                            id: doc.id,
-                            claimedAt: claim.claimedAt
-                        };
+                        existingClaim = { ...claim, id: doc.id, claimedAt: claim.claimedAt };
                         existingCouponCode = claim.couponCode;
                     }
                 });
@@ -417,10 +351,19 @@
                     return true;
                 }
                 
-                // No recent claim found - generate new coupon
+                // CHECK IF AD IS SOLD OUT
+                const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
+                if (campaign.exists) {
+                    const data = campaign.data();
+                    const remaining = (data.totalProducts || 0) - (data.redeemedCount || 0);
+                    if (data.isActive === false || remaining <= 0) {
+                        showSoldOutPage();
+                        return false;
+                    }
+                }
+                
                 await generateNewCoupon();
                 return false;
-                
             } catch (error) {
                 console.error("Check error:", error);
                 showError('Database error: ' + error.message);
@@ -430,15 +373,11 @@
         
         async function generateNewCoupon() {
             try {
-                // Generate unique coupon code - LOWERCASE 'save' and lowercase letters
                 const randomNum = Math.floor(Math.random() * 9000 + 1000);
-                const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26)); // lowercase a-z
+                const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
                 const couponCode = 'save' + randomNum + randomLetter;
-                
-                // Get client IP
                 const clientIP = await getClientIP();
                 
-                // Prepare claim data with product
                 const claimData = {
                     userId: currentUser.uid,
                     userFingerprint: userFingerprint,
@@ -460,36 +399,27 @@
                     redeemedBy: null
                 };
                 
-                // Save to Firestore
                 await db.collection('claims').add(claimData);
                 
-                // Store in localStorage to prevent refresh abuse
-                localStorage.setItem(`claimed_${currentAd}_${currentProduct}_${currentUser.uid}`, 
-                    JSON.stringify({
-                        coupon: couponCode,
-                        time: new Date().toISOString(),
-                        expires: claimData.expiresAt
-                    }));
+                localStorage.setItem(`claimed_${currentAd}_${currentUser.uid}`, 
+                    JSON.stringify({ coupon: couponCode, time: new Date().toISOString(), expires: claimData.expiresAt }));
                 
-                // Show success page
                 showSuccessPage(claimData);
-                
             } catch (error) {
                 showError('Failed to generate coupon: ' + error.message);
             }
         }
         
-        // === UTILITY FUNCTIONS ===
         async function generateUserFingerprint() {
             try {
-                // Get client IP
-                const ipResponse = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipResponse.json();
-                const clientIP = ipData.ip;
+                let deviceId = localStorage.getItem('permanent_device_id');
+                if (!deviceId) {
+                    deviceId = 'dev_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+                    localStorage.setItem('permanent_device_id', deviceId);
+                }
                 
-                // Create fingerprint from multiple stable sources
                 const fingerprintData = {
-                    ip: clientIP,
+                    deviceId: deviceId,
                     userAgent: navigator.userAgent,
                     language: navigator.language,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -497,7 +427,6 @@
                     cookiesEnabled: navigator.cookieEnabled
                 };
                 
-                // Generate stable hash
                 const dataString = JSON.stringify(fingerprintData);
                 let hash = 0;
                 for (let i = 0; i < dataString.length; i++) {
@@ -505,12 +434,14 @@
                     hash = ((hash << 5) - hash) + char;
                     hash = hash & hash;
                 }
-                
                 return `fp_${Math.abs(hash).toString(36)}`;
-                
             } catch (error) {
-                // Fallback to simpler fingerprint
-                return `fallback_${navigator.userAgent.substring(0, 50)}_${navigator.language}`;
+                let fallbackId = localStorage.getItem('persistent_user_id');
+                if (!fallbackId) {
+                    fallbackId = 'user_' + Math.random().toString(36).substring(2, 15);
+                    localStorage.setItem('persistent_user_id', fallbackId);
+                }
+                return fallbackId;
             }
         }
         
@@ -524,64 +455,54 @@
             }
         }
         
-        // === UI FUNCTIONS ===
         function showSuccessPage(data) {
-            // Change background to GREEN
             document.body.className = 'success-bg';
-            
-            // Hide loading, show success
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('success').classList.remove('hidden');
             document.getElementById('blocked').classList.add('hidden');
+            document.getElementById('soldout').classList.add('hidden');
             document.getElementById('error').classList.add('hidden');
-            
             document.getElementById('couponCode').textContent = data.couponCode;
-            const claimDate = new Date();
-            document.getElementById('claimTime').textContent = formatCompactDate(claimDate);
-            
-            // Setup refresh protection
+            document.getElementById('claimTime').textContent = formatCompactDate(new Date());
             setupRefreshProtection();
         }
         
         function showBlockedPage(existingClaim) {
-            // Change background to RED
             document.body.className = 'blocked-bg';
-            
-            // Hide loading, show blocked
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('success').classList.add('hidden');
             document.getElementById('blocked').classList.remove('hidden');
+            document.getElementById('soldout').classList.add('hidden');
             document.getElementById('error').classList.add('hidden');
             
             const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
             document.getElementById('blockedTime').textContent = formatCompactDate(claimedTime);
+            document.getElementById('blockedCouponCode').textContent = existingCouponCode || 'Not available';
             
-            // Display the existing coupon code
-            if (existingCouponCode) {
-                document.getElementById('blockedCouponCode').textContent = existingCouponCode;
-            } else {
-                document.getElementById('blockedCouponCode').textContent = 'Not available';
-            }
-            
-            // Check if coupon is redeemed
             if (existingClaim.redeemed) {
                 document.getElementById('blockedStatus').textContent = 'Already redeemed';
                 document.getElementById('blockedStatus').style.color = '#c62828';
-                document.getElementById('blockedStatus').style.fontWeight = 'bold';
             }
             
             const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
             startCountdown(nextAvailable);
         }
         
-        function showError(message) {
-            // Keep default background for errors
-            document.body.className = '';
-            
-            // Hide all, show error
+        function showSoldOutPage() {
+            document.body.className = 'soldout-bg';
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('success').classList.add('hidden');
             document.getElementById('blocked').classList.add('hidden');
+            document.getElementById('soldout').classList.remove('hidden');
+            document.getElementById('error').classList.add('hidden');
+        }
+        
+        function showError(message) {
+            document.body.className = '';
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('success').classList.add('hidden');
+            document.getElementById('blocked').classList.add('hidden');
+            document.getElementById('soldout').classList.add('hidden');
             document.getElementById('error').classList.remove('hidden');
             document.getElementById('errorMessage').textContent = message;
         }
@@ -590,74 +511,39 @@
             function updateCountdown() {
                 const now = new Date();
                 const diff = targetTime - now;
-                
                 if (diff <= 0) {
-                    document.getElementById('countdown').innerHTML = 
-                        '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
+                    document.getElementById('countdown').innerHTML = '<span style="color: #4CAF50;">✅ Ready to claim again!</span>';
                     return;
                 }
-                
                 const hours = Math.floor(diff / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                
-                document.getElementById('countdown').innerHTML = 
-                    `<div style="font-size: 28px;">
-                        ${hours.toString().padStart(2, '0')}:
-                        ${minutes.toString().padStart(2, '0')}:
-                        ${seconds.toString().padStart(2, '0')}
-                    </div>
-                    <p>Time until you can claim this ad again</p>`;
-                
-                // Continue updating every second
+                document.getElementById('countdown').innerHTML = `<div style="font-size: 28px;">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</div><p>Time until you can claim this ad again</p>`;
                 setTimeout(updateCountdown, 1000);
             }
-            
-            // Start the countdown
             updateCountdown();
         }
         
         function copyCouponCode() {
             const couponCode = document.getElementById('blockedCouponCode').textContent;
             if (couponCode && couponCode !== 'Not available') {
-                navigator.clipboard.writeText(couponCode).then(() => {
-                    alert('Coupon code copied to clipboard!');
-                }).catch(err => {
-                    console.error('Failed to copy: ', err);
-                    alert('Failed to copy code. Please take a screenshot instead.');
-                });
+                navigator.clipboard.writeText(couponCode).then(() => alert('Coupon code copied!')).catch(() => alert('Failed to copy'));
             } else {
-                alert('No coupon code available to copy.');
+                alert('No coupon code available');
             }
         }
         
         function setupRefreshProtection() {
-            // Replace URL to prevent re-submission
-            const newUrl = window.location.origin + window.location.pathname + 
-                '?ad=' + encodeURIComponent(currentAd) + 
-                '&product=' + encodeURIComponent(currentProduct) +
-                '&host=' + encodeURIComponent(currentHost) + 
-                '&claimed=true&t=' + Date.now();
+            const newUrl = window.location.origin + window.location.pathname + '?ad=' + encodeURIComponent(currentAd) + '&product=' + encodeURIComponent(currentProduct) + '&host=' + encodeURIComponent(currentHost) + '&claimed=true&t=' + Date.now();
             history.replaceState(null, null, newUrl);
-            
-            // Block refresh attempts
-            window.onbeforeunload = function() {
-                return "Your coupon has been saved. Do not refresh or you'll lose it!";
-            };
-            
-            // Check if page was already loaded
+            window.onbeforeunload = function() { return "Your coupon has been saved. Do not refresh!"; };
             if (performance.navigation.type === 1) {
-                const stored = localStorage.getItem(`claimed_${currentAd}_${currentProduct}_${currentUser.uid}`);
+                const stored = localStorage.getItem(`claimed_${currentAd}_${currentUser.uid}`);
                 if (stored) {
                     const storedData = JSON.parse(stored);
-                    const mockClaim = {
-                        claimedAt: { toDate: () => new Date(storedData.time) },
-                        couponCode: storedData.coupon,
-                        redeemed: false
-                    };
+                    const mockClaim = { claimedAt: { toDate: () => new Date(storedData.time) }, couponCode: storedData.coupon, redeemed: false };
                     existingCouponCode = storedData.coupon;
                     showBlockedPage(mockClaim);
-                    return;
                 }
             }
         }
