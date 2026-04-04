@@ -146,8 +146,6 @@
         .btn-change-password:hover { background: #7B1FA2; }
         .btn-create { background: #4CAF50; }
         .btn-create:hover { background: #388E3C; }
-        .btn-add-product { background: #2196F3; font-size: 12px; padding: 6px 12px; }
-        .btn-add-product:hover { background: #1976D2; }
         
         .stats-grid {
             display: grid;
@@ -211,12 +209,6 @@
             font-size: 20px;
             font-weight: bold;
             color: #333;
-        }
-        
-        .campaign-subtitle {
-            color: #666;
-            font-size: 14px;
-            margin-top: 5px;
         }
         
         .campaign-actions {
@@ -486,7 +478,7 @@
             border: 2px solid #ddd;
             border-radius: 8px;
             font-size: 14px;
-            min-width: 180px;
+            min-width: 250px;
         }
         
         .form-group input:focus {
@@ -498,6 +490,12 @@
             text-align: center;
             padding: 40px;
             color: #999;
+        }
+        
+        .hint-text {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
         }
         
         @media (max-width: 768px) {
@@ -577,7 +575,7 @@
         
         <div class="container">
             <div class="controls">
-                <input type="text" id="searchInput" class="filter-input" placeholder="Search by ad, product, location, coupon..." onkeyup="filterTable()">
+                <input type="text" id="searchInput" class="filter-input" placeholder="Search by advertiser, product, location, coupon..." onkeyup="filterTable()">
                 
                 <div class="date-range">
                     <input type="date" id="dateFrom" class="date-input" onchange="filterByDate()">
@@ -586,7 +584,7 @@
                 </div>
                 
                 <select id="adFilter" class="filter-input" onchange="filterTable()">
-                    <option value="">All Ads</option>
+                    <option value="">All Advertisers</option>
                 </select>
                 
                 <select id="productFilter" class="filter-input" onchange="filterTable()">
@@ -644,8 +642,9 @@
                 <h2 style="margin-bottom: 20px; font-size: 24px;">📦 Create New Campaign</h2>
                 <div class="create-form">
                     <div class="form-group">
-                        <label>Advertiser Name</label>
+                        <label>Advertiser Name (used for QR code)</label>
                         <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
+                        <div class="hint-text">⚠️ This exact name goes in QR code: ?ad=Wellness%20Pharmacy</div>
                     </div>
                     <button class="btn btn-create" onclick="createCampaign()">➕ Create Campaign</button>
                 </div>
@@ -671,7 +670,7 @@
                 <div id="tableWrapper" style="display: none;">
                     <table id="claimsTable">
                         <thead>
-                            <tr><th>Date</th><th>Ad Name</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires At</th></tr>
+                            <tr><th>Date</th><th>Advertiser</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires At</th></tr>
                         </thead>
                         <tbody id="claimsBody"></tbody>
                     </table>
@@ -738,7 +737,7 @@
         let filteredClaims = [];
         let currentPage = 1;
         const pageSize = 20;
-        let adsList = new Set();
+        let advertisersList = new Set();
         let productsList = new Set();
         let allCampaigns = [];
         
@@ -836,7 +835,7 @@
                 const snapshot = await db.collection('claims').orderBy('claimedAt', 'desc').get();
                 
                 allClaims = [];
-                adsList.clear();
+                advertisersList.clear();
                 productsList.clear();
                 
                 snapshot.forEach(doc => {
@@ -848,7 +847,7 @@
                     
                     allClaims.push(data);
                     
-                    if (data.advertiserName) adsList.add(data.advertiserName);
+                    if (data.advertiserName) advertisersList.add(data.advertiserName);
                     if (data.productName) productsList.add(data.productName);
                 });
                 
@@ -869,6 +868,7 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     data.id = doc.id;
+                    data.advertiserName = data.advertiserName || doc.id;
                     allCampaigns.push(data);
                 });
                 renderCampaignsList();
@@ -892,7 +892,7 @@
         
         async function createCampaign() {
             const advertiserName = document.getElementById('newAdvertiserName').value.trim();
-    
+            
             if (!advertiserName) {
                 alert("❌ Please enter Advertiser Name");
                 return;
@@ -1031,6 +1031,7 @@
             for (const campaign of allCampaigns) {
                 const products = campaign.products || [];
                 const isActive = campaign.isActive !== false;
+                const advertiserName = campaign.advertiserName;
                 
                 const campaignDiv = document.createElement('div');
                 campaignDiv.className = 'campaign-card';
@@ -1048,14 +1049,14 @@
                 campaignDiv.innerHTML = `
                     <div class="campaign-header">
                         <div>
-                            <div class="campaign-subtitle">${campaign.advertiserName}</div>
+                            <div class="campaign-title">📢 ${advertiserName}</div>
                             <div style="font-size: 12px; color: #888; margin-top: 5px;">
                                 📦 Total: ${totalProducts} | ✅ Redeemed: ${totalRedeemed} | 📊 Remaining: ${totalRemaining}
                             </div>
                         </div>
                         <div class="campaign-actions">
-                            <button class="btn-small" onclick="addProduct('${campaign.advertiserName}')">➕ Add Product</button>
-                            <button class="btn-small btn-small-danger" onclick="toggleCampaignStatus('${campaign.advertiserName}')">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                            <button class="btn-small" onclick="addProduct('${advertiserName.replace(/'/g, "\\'")}')">➕ Add Product</button>
+                            <button class="btn-small btn-small-danger" onclick="toggleCampaignStatus('${advertiserName.replace(/'/g, "\\'")}')">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
                         </div>
                     </div>
                     <div style="overflow-x: auto;">
@@ -1063,7 +1064,7 @@
                             <thead>
                                 <tr><th>Product</th><th>Total</th><th>Redeemed</th><th>Remaining</th><th>Status</th><th>Action</th></tr>
                             </thead>
-                            <tbody id="products_${campaign.advertiserName.replace(/[^a-zA-Z0-9]/g, '_')}">
+                            <tbody id="products_${advertiserName.replace(/[^a-zA-Z0-9]/g, '_')}">
                             </tbody>
                         </table>
                     </div>
@@ -1081,7 +1082,7 @@
                         const isProductActive = isActive && remaining > 0;
                         const statusText = isProductActive ? '🟢 Active' : '🔴 Sold Out';
                         const rowClass = !isProductActive ? 'product-row-soldout' : '';
-                        const inputId = `qty_${campaign.advertiserName}_${product.productName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                        const inputId = `qty_${advertiserName.replace(/[^a-zA-Z0-9]/g, '_')}_${product.productName.replace(/[^a-zA-Z0-9]/g, '_')}`;
                         
                         const row = document.createElement('tr');
                         row.className = rowClass;
@@ -1092,8 +1093,8 @@
                             <td style="font-weight: bold; ${remaining <= 0 ? 'color: #C62828;' : 'color: #2E7D32;'}">${remaining}</td>
                             <td><span class="${isProductActive ? 'status-active' : 'status-soldout'}">${statusText}</span></td>
                             <td>
-                                <button class="btn-small" onclick="updateProductQuantity('${campaign.advertiserName}', '${product.productName}', '${inputId}')">💾 Update Qty</button>
-                                <button class="btn-small btn-small-red" onclick="removeProduct('${campaign.advertiserName}', '${product.productName}')">🗑️ Remove</button>
+                                <button class="btn-small" onclick="updateProductQuantity('${advertiserName.replace(/'/g, "\\'")}', '${product.productName.replace(/'/g, "\\'")}', '${inputId}')">📦 Update Qty</button>
+                                <button class="btn-small btn-small-red" onclick="removeProduct('${advertiserName.replace(/'/g, "\\'")}', '${product.productName.replace(/'/g, "\\'")}')">🗑️ Remove</button>
                             </td>
                         `;
                         tbody.appendChild(row);
@@ -1106,10 +1107,10 @@
             const adFilter = document.getElementById('adFilter');
             const productFilter = document.getElementById('productFilter');
             
-            adFilter.innerHTML = '<option value="">All Ads</option>';
+            adFilter.innerHTML = '<option value="">All Advertisers</option>';
             productFilter.innerHTML = '<option value="">All Products</option>';
             
-            Array.from(adsList).sort().forEach(ad => {
+            Array.from(advertisersList).sort().forEach(ad => {
                 const option = document.createElement('option');
                 option.value = ad;
                 option.textContent = ad;
@@ -1304,7 +1305,7 @@
                 
                 return {
                     'Date': formatCompactDate(claim.claimedAt),
-                    'Ad Name': claim.advertiserName || 'Unknown',
+                    'Advertiser': claim.advertiserName || 'Unknown',
                     'Product': claim.productName || 'Unknown',
                     'Location': claim.hostName || 'Unknown',
                     'Coupon Code': claim.couponCode || 'N/A',
@@ -1349,7 +1350,7 @@
                 ];
             });
             
-            const headers = [['Date', 'Ad Name', 'Product', 'Location', 'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']];
+            const headers = [['Date', 'Advertiser', 'Product', 'Location', 'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']];
             
             doc.setFontSize(18);
             doc.setTextColor(51, 51, 51);
