@@ -293,16 +293,6 @@
             const minutes = String(date.getMinutes()).padStart(2, '0');
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
-        
-        function generateRandomId() {
-            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
-            for (let i = 0; i < 8; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        }
-        
         async function sendTelegramNotification(advertiserName, adId, productName, hostName, isAuto = false) {
             const timestamp = new Date().toLocaleString();
             const type = isAuto ? '🔴 AUTO-MARKED SOLD OUT' : '🔴 AD SOLD OUT REQUEST';
@@ -411,10 +401,11 @@ Action Required: Remove this ad from display system.`;
             try {
                 const nameQuery = await db.collection(ADVERTISERS_COLLECTION).where('displayName', '==', advertiserName).limit(1).get();
                 
-                if (nameQuery.empty) {
-                    const randomId = generateRandomId();
-                    await createNewAdvertiser(advertiserName, randomId, password);
-                    alert(`✅ Account created! Your ID: ${randomId}`);
+if (nameQuery.empty) {
+    // Remove generateRandomId() call
+    await createNewAdvertiser(advertiserName, password);
+    alert(`✅ Account created for ${advertiserName}!`);
+}
                 } else {
                     const advertiserDoc = nameQuery.docs[0];
                     const advertiserData = advertiserDoc.data();
@@ -445,16 +436,29 @@ Action Required: Remove this ad from display system.`;
             }
         }
         
-        async function createNewAdvertiser(displayName, uniqueId, password) {
-            const newAdvertiser = {
-                id: uniqueId, displayName: displayName, password: password,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-                couponValidations: 0, isActive: true
-            };
-            await db.collection(ADVERTISERS_COLLECTION).doc(uniqueId).set(newAdvertiser);
-            currentAdvertiser = { id: uniqueId, name: displayName, couponValidations: 0 };
-        }
+    async function createNewAdvertiser(displayName, password) {
+    // NO random ID - use displayName as document ID
+    const newAdvertiser = {
+        advertiserName: displayName,
+        displayName: displayName,
+        password: password,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+        couponValidations: 0,
+        isActive: true
+    };
+    
+    await db.collection(ADVERTISERS_COLLECTION)
+        .doc(displayName)  // ← Use advertiser name as document ID
+        .set(newAdvertiser);
+    
+    currentAdvertiser = {
+        id: displayName,
+        name: displayName,
+        advertiserName: displayName,
+        couponValidations: 0
+    };
+}
         
         function handleLoginEnter(event) { if (event.key === 'Enter') login(); }
         
