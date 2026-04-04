@@ -891,27 +891,21 @@
         }
         
         async function createCampaign() {
-            const adName = document.getElementById('newAdName').value.trim();
             const advertiserName = document.getElementById('newAdvertiserName').value.trim();
-            
-            if (!adName) {
-                alert("❌ Please enter Ad Name");
-                return;
-            }
+    
             if (!advertiserName) {
                 alert("❌ Please enter Advertiser Name");
                 return;
             }
             
             try {
-                const existing = await db.collection('ad_campaigns').doc(adName).get();
+                const existing = await db.collection('ad_campaigns').doc(advertiserName).get();
                 if (existing.exists) {
-                    alert(`⚠️ Campaign "${adName}" already exists!`);
+                    alert(`⚠️ Campaign "${advertiserName}" already exists!`);
                     return;
                 }
                 
-                await db.collection('ad_campaigns').doc(adName).set({
-                    adName: adName,
+                await db.collection('ad_campaigns').doc(advertiserName).set({
                     advertiserName: advertiserName,
                     products: [],
                     isActive: true,
@@ -919,7 +913,6 @@
                 });
                 
                 alert(`✅ Campaign created for ${adName}`);
-                document.getElementById('newAdName').value = '';
                 document.getElementById('newAdvertiserName').value = '';
                 await loadCampaigns();
             } catch (error) {
