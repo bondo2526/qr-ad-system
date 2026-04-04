@@ -848,7 +848,7 @@
                     
                     allClaims.push(data);
                     
-                    if (data.adName) adsList.add(data.adName);
+                    if (data.advertiserName) adsList.add(data.advertiserName);
                     if (data.productName) productsList.add(data.productName);
                 });
                 
@@ -912,7 +912,7 @@
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                alert(`✅ Campaign created for ${adName}`);
+                alert(`✅ Campaign created for ${advertiserName}`);
                 document.getElementById('newAdvertiserName').value = '';
                 await loadCampaigns();
             } catch (error) {
@@ -920,7 +920,7 @@
             }
         }
         
-        async function addProduct(adName) {
+        async function addProduct(advertiserName) {
             const productName = prompt("Enter product name:");
             if (!productName) return;
             
@@ -931,7 +931,7 @@
             }
             
             try {
-                const campaignRef = db.collection('ad_campaigns').doc(adName);
+                const campaignRef = db.collection('ad_campaigns').doc(advertiserName);
                 const campaign = await campaignRef.get();
                 const products = campaign.data().products || [];
                 
@@ -956,7 +956,7 @@
             }
         }
         
-        async function updateProductQuantity(adName, productName, inputId) {
+        async function updateProductQuantity(advertiserName, productName, inputId) {
             const input = document.getElementById(inputId);
             const newTotal = parseInt(input.value);
             
@@ -966,7 +966,7 @@
             }
             
             try {
-                const campaignRef = db.collection('ad_campaigns').doc(adName);
+                const campaignRef = db.collection('ad_campaigns').doc(advertiserName);
                 const campaign = await campaignRef.get();
                 const products = campaign.data().products || [];
                 
@@ -985,11 +985,11 @@
             }
         }
         
-        async function removeProduct(adName, productName) {
-            if (!confirm(`Remove "${productName}" from ${adName}? This will NOT delete existing claims.`)) return;
+        async function removeProduct(advertiserName, productName) {
+            if (!confirm(`Remove "${productName}" from ${advertiserName}? This will NOT delete existing claims.`)) return;
             
             try {
-                const campaignRef = db.collection('ad_campaigns').doc(adName);
+                const campaignRef = db.collection('ad_campaigns').doc(advertiserName);
                 const campaign = await campaignRef.get();
                 let products = campaign.data().products || [];
                 products = products.filter(p => p.productName !== productName);
@@ -1002,12 +1002,12 @@
             }
         }
         
-        async function toggleCampaignStatus(adName) {
-            const campaign = allCampaigns.find(c => c.adName === adName);
+        async function toggleCampaignStatus(advertiserName) {
+            const campaign = allCampaigns.find(c => c.advertiserName === advertiserName);
             const newStatus = !(campaign.isActive !== false);
             
             try {
-                await db.collection('ad_campaigns').doc(adName).update({
+                await db.collection('ad_campaigns').doc(advertiserName).update({
                     isActive: newStatus,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -1054,8 +1054,8 @@
                             </div>
                         </div>
                         <div class="campaign-actions">
-                            <button class="btn-small" onclick="addProduct('${campaign.adName}')">➕ Add Product</button>
-                            <button class="btn-small btn-small-danger" onclick="toggleCampaignStatus('${campaign.adName}')">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                            <button class="btn-small" onclick="addProduct('${campaign.advertiserName}')">➕ Add Product</button>
+                            <button class="btn-small btn-small-danger" onclick="toggleCampaignStatus('${campaign.advertiserName}')">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
                         </div>
                     </div>
                     <div style="overflow-x: auto;">
@@ -1063,7 +1063,7 @@
                             <thead>
                                 <tr><th>Product</th><th>Total</th><th>Redeemed</th><th>Remaining</th><th>Status</th><th>Action</th></tr>
                             </thead>
-                            <tbody id="products_${campaign.adName.replace(/[^a-zA-Z0-9]/g, '_')}">
+                            <tbody id="products_${campaign.advertiserName.replace(/[^a-zA-Z0-9]/g, '_')}">
                             </tbody>
                         </table>
                     </div>
@@ -1081,7 +1081,7 @@
                         const isProductActive = isActive && remaining > 0;
                         const statusText = isProductActive ? '🟢 Active' : '🔴 Sold Out';
                         const rowClass = !isProductActive ? 'product-row-soldout' : '';
-                        const inputId = `qty_${campaign.adName}_${product.productName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                        const inputId = `qty_${campaign.advertiserName}_${product.productName.replace(/[^a-zA-Z0-9]/g, '_')}`;
                         
                         const row = document.createElement('tr');
                         row.className = rowClass;
@@ -1092,8 +1092,8 @@
                             <td style="font-weight: bold; ${remaining <= 0 ? 'color: #C62828;' : 'color: #2E7D32;'}">${remaining}</td>
                             <td><span class="${isProductActive ? 'status-active' : 'status-soldout'}">${statusText}</span></td>
                             <td>
-                                <button class="btn-small" onclick="updateProductQuantity('${campaign.adName}', '${product.productName}', '${inputId}')">💾 Update Qty</button>
-                                <button class="btn-small btn-small-red" onclick="removeProduct('${campaign.adName}', '${product.productName}')">🗑️ Remove</button>
+                                <button class="btn-small" onclick="updateProductQuantity('${campaign.advertiserName}', '${product.productName}', '${inputId}')">💾 Update Qty</button>
+                                <button class="btn-small btn-small-red" onclick="removeProduct('${campaign.advertiserName}', '${product.productName}')">🗑️ Remove</button>
                             </td>
                         `;
                         tbody.appendChild(row);
@@ -1155,10 +1155,10 @@
             
             return data.filter(claim => {
                 if (searchTerm) {
-                    const searchable = [claim.adName || '', claim.productName || '', claim.hostName || '', claim.couponCode || ''].join(' ').toLowerCase();
+                    const searchable = [claim.advertiserName || '', claim.productName || '', claim.hostName || '', claim.couponCode || ''].join(' ').toLowerCase();
                     if (!searchable.includes(searchTerm)) return false;
                 }
-                if (adFilter && claim.adName !== adFilter) return false;
+                if (adFilter && claim.advertiserName !== adFilter) return false;
                 if (productFilter && claim.productName !== productFilter) return false;
                 if (statusFilter) {
                     const now = new Date();
@@ -1242,7 +1242,7 @@
                 
                 row.innerHTML = `
                     <td>${formatCompactDate(claim.claimedAt)}</td>
-                    <td><strong>${claim.adName || 'Unknown'}</strong></td>
+                    <td><strong>${claim.advertiserName || 'Unknown'}</strong></td>
                     <td>${claim.productName || 'Unknown'}</td>
                     <td>${claim.hostName || 'Unknown'}</td>
                     <td><span class="coupon-cell">${claim.couponCode || 'N/A'}</span></td>
@@ -1304,7 +1304,7 @@
                 
                 return {
                     'Date': formatCompactDate(claim.claimedAt),
-                    'Ad Name': claim.adName || 'Unknown',
+                    'Ad Name': claim.advertiserName || 'Unknown',
                     'Product': claim.productName || 'Unknown',
                     'Location': claim.hostName || 'Unknown',
                     'Coupon Code': claim.couponCode || 'N/A',
@@ -1338,7 +1338,7 @@
                 
                 return [
                     formatCompactDate(claim.claimedAt),
-                    claim.adName || 'Unknown',
+                    claim.advertiserName || 'Unknown',
                     claim.productName || 'Unknown',
                     claim.hostName || 'Unknown',
                     claim.couponCode || 'N/A',
