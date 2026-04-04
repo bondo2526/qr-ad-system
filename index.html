@@ -329,7 +329,6 @@ async function checkIfAlreadyClaimed() {
         console.log("Current Product:", currentProduct);
         console.log("User Fingerprint:", userFingerprint);
         
-        // Check if user already claimed this ad today
         const claimsRef = db.collection('claims');
         const querySnapshot = await claimsRef
             .where('userFingerprint', '==', userFingerprint)
@@ -342,13 +341,17 @@ async function checkIfAlreadyClaimed() {
             const claim = doc.data();
             const claimTime = claim.claimedAt?.toDate();
             
-            const isSameAd = claim.advertiserName === currentAd || claim.adId === currentAd;
+            // FIX: Check BOTH ad AND product (not just ad)
+            const isSameAd = claim.advertiserName === currentAd;
+            const isSameProduct = claim.productName === currentProduct;
             const isWithin24h = claimTime >= twentyFourHoursAgo;
             
-            if (isSameAd && isWithin24h) {
+            // Block only if SAME AD AND SAME PRODUCT within 24h
+            if (isSameAd && isSameProduct && isWithin24h) {
                 alreadyClaimed = true;
                 existingClaim = { ...claim, id: doc.id, claimedAt: claim.claimedAt };
                 existingCouponCode = claim.couponCode;
+                console.log("BLOCKING - found existing claim for same ad and product");
             }
         });
         
@@ -357,7 +360,7 @@ async function checkIfAlreadyClaimed() {
             return true;
         }
         
-        // ========== NEW VALIDATION: CHECK IF CAMPAIGN EXISTS ==========
+        // CHECK IF CAMPAIGN EXISTS
         console.log("Checking if campaign exists for:", currentAd);
         
         const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
@@ -369,28 +372,22 @@ async function checkIfAlreadyClaimed() {
         }
         
         const campaignData = campaign.data();
-        console.log("Campaign found:", campaignData);
         
-        // Check if campaign is active
         if (campaignData.isActive === false) {
             console.log("❌ Campaign is inactive");
             showError(`❌ Campaign "${currentAd}" is currently inactive.`);
             return false;
         }
         
-        // ========== NEW VALIDATION: CHECK IF PRODUCT EXISTS ==========
         const products = campaignData.products || [];
-        console.log("Available products:", products.map(p => p.productName));
-        
         const product = products.find(p => p.productName === currentProduct);
         
         if (!product) {
-            console.log("❌ Product not found:", currentProduct);
-            showError(`❌ Product "${currentProduct}" not found in campaign "${currentAd}". Available products: ${products.map(p => p.productName).join(', ') || 'none'}`);
+            const availableProducts = products.map(p => p.productName).join(', ') || 'none';
+            showError(`❌ Product "${currentProduct}" not found in campaign "${currentAd}". Available products: ${availableProducts}`);
             return false;
         }
         
-        // ========== CHECK PRODUCT STOCK ==========
         const redeemedCount = product.redeemedCount || 0;
         const totalProducts = product.totalProducts || 0;
         const remaining = totalProducts - redeemedCount;
@@ -403,7 +400,6 @@ async function checkIfAlreadyClaimed() {
             return false;
         }
         
-        // All checks passed - generate coupon
         console.log("✅ All checks passed - generating coupon");
         await generateNewCoupon();
         return false;
@@ -440,9 +436,7 @@ const claimData = {
     userFingerprint: userFingerprint,
     userIP: clientIP,
     advertiserName: advertiserName,
-    productId: currentProduct,
-    productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
-    hostId: currentHost,
+    productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),  // ← Important
     hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
     couponCode: couponCode,
     claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
