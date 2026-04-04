@@ -319,7 +319,7 @@
             }
         });
         
-     async function checkIfAlreadyClaimed() {
+  async function checkIfAlreadyClaimed() {
     try {
         const twentyFourHoursAgo = new Date();
         twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - CONFIG.BLOCK_HOURS);
@@ -329,13 +329,11 @@
         console.log("Current Product:", currentProduct);
         console.log("User Fingerprint:", userFingerprint);
         
-        // Query by user fingerprint
+        // IMPORTANT: Query by BOTH fingerprint AND adName to avoid false positives
         const claimsRef = db.collection('claims');
         const querySnapshot = await claimsRef
             .where('userFingerprint', '==', userFingerprint)
-            .orderBy('claimedAt', 'desc')
-            .limit(50)
-            .get();
+            .get();  // Remove orderBy and limit to get all claims for this user
         
         let alreadyClaimed = false;
         let existingClaim = null;
@@ -344,9 +342,16 @@
             const claim = doc.data();
             const claimTime = claim.claimedAt?.toDate();
             
-            // Check ONLY adId (not product)
+            // Only check THIS SPECIFIC AD
             const isSameAd = claim.adName === currentAd || claim.adId === currentAd;
             const isWithin24h = claimTime >= twentyFourHoursAgo;
+            
+            console.log("Found claim:", { 
+                adName: claim.adName, 
+                claimedAt: claimTime, 
+                isSameAd: isSameAd, 
+                isWithin24h: isWithin24h 
+            });
             
             if (isSameAd && isWithin24h) {
                 alreadyClaimed = true;
