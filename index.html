@@ -329,6 +329,7 @@ async function checkIfAlreadyClaimed() {
         console.log("Current Product:", currentProduct);
         console.log("User Fingerprint:", userFingerprint);
         
+        // Query claims for this session fingerprint
         const claimsRef = db.collection('claims');
         const querySnapshot = await claimsRef
             .where('userFingerprint', '==', userFingerprint)
@@ -341,12 +342,11 @@ async function checkIfAlreadyClaimed() {
             const claim = doc.data();
             const claimTime = claim.claimedAt?.toDate();
             
-            // FIX: Check BOTH ad AND product (not just ad)
+            // Check BOTH ad AND product
             const isSameAd = claim.advertiserName === currentAd;
             const isSameProduct = claim.productName === currentProduct;
             const isWithin24h = claimTime >= twentyFourHoursAgo;
             
-            // Block only if SAME AD AND SAME PRODUCT within 24h
             if (isSameAd && isSameProduct && isWithin24h) {
                 alreadyClaimed = true;
                 existingClaim = { ...claim, id: doc.id, claimedAt: claim.claimedAt };
@@ -360,49 +360,8 @@ async function checkIfAlreadyClaimed() {
             return true;
         }
         
-        // CHECK IF CAMPAIGN EXISTS
-        console.log("Checking if campaign exists for:", currentAd);
-        
-        const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
-        
-        if (!campaign.exists) {
-            console.log("❌ Campaign not found:", currentAd);
-            showError(`❌ Campaign "${currentAd}" not found in system. Please check the ad ID.`);
-            return false;
-        }
-        
-        const campaignData = campaign.data();
-        
-        if (campaignData.isActive === false) {
-            console.log("❌ Campaign is inactive");
-            showError(`❌ Campaign "${currentAd}" is currently inactive.`);
-            return false;
-        }
-        
-        const products = campaignData.products || [];
-        const product = products.find(p => p.productName === currentProduct);
-        
-        if (!product) {
-            const availableProducts = products.map(p => p.productName).join(', ') || 'none';
-            showError(`❌ Product "${currentProduct}" not found in campaign "${currentAd}". Available products: ${availableProducts}`);
-            return false;
-        }
-        
-        const redeemedCount = product.redeemedCount || 0;
-        const totalProducts = product.totalProducts || 0;
-        const remaining = totalProducts - redeemedCount;
-        
-        console.log(`Product ${currentProduct}: Total=${totalProducts}, Redeemed=${redeemedCount}, Remaining=${remaining}`);
-        
-        if (remaining <= 0) {
-            console.log("❌ Product sold out");
-            showError(`❌ Product "${currentProduct}" is SOLD OUT! No more coupons available.`);
-            return false;
-        }
-        
-        console.log("✅ All checks passed - generating coupon");
-        await generateNewCoupon();
-        return false;
+        // Rest of your campaign check code...
+        // (keep the same as before)
         
     } catch (error) {
         console.error("Check error:", error);
@@ -460,13 +419,30 @@ const claimData = {
     }
 }
         
-      async function generateUserFingerprint() {
-    // Simple persistent device ID - NO IP, NO changing values
-    let deviceId = localStorage.getItem('device_id');
-    if (!deviceId) {
+async function generateUserFingerprint() {
+    // Use sessionStorage (clears when tab closes) + timestamp to prevent stale claims
+    let deviceId = sessionStorage.getItem('device_id');
+    let sessionStart = sessionStorage.getItem('session_start');
+    
+    if (!deviceId || !sessionStart) {
+        // New session - create fresh ID
         deviceId = 'dev_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now().toString(36);
-        localStorage.setItem('device_id', deviceId);
+        sessionStart = Date.now().toString();
+        sessionStorage.setItem('device_id', deviceId);
+        sessionStorage.setItem('session_start', sessionStart);
+        console.log("🆕 New session created:", deviceId);
+    } else {
+        console.log("♻️ Existing session:", deviceId);
     }
+    
+    // Also store a backup in localStorage for returning users (but don't use for blocking)
+    let persistentId = localStorage.getItem('persistent_user_id');
+    if (!persistentId) {
+        persistentId = 'user_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('persistent_user_id', persistentId);
+    }
+    
+    // Return session-based ID (this is what gets checked in claims)
     return deviceId;
 }
         
