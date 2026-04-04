@@ -539,7 +539,7 @@
 <body>
     <div class="login-screen" id="loginScreen">
         <div class="login-container">
-            <h1>🔐 Advertiser Dashboard Admin V 4.0</h1>
+            <h1>🔐 Advertiser Dashboard Admin V 3.0</h1>
             <p>Enter your password to access analytics</p>
             
             <input type="password" 
@@ -1059,7 +1059,6 @@
                 campaignDiv.innerHTML = `
                     <div class="campaign-header">
                         <div>
-                            <div class="campaign-title">📢 ${campaign.adName}</div>
                             <div class="campaign-subtitle">${campaign.advertiserName}</div>
                             <div style="font-size: 12px; color: #888; margin-top: 5px;">
                                 📦 Total: ${totalProducts} | ✅ Redeemed: ${totalRedeemed} | 📊 Remaining: ${totalRemaining}
@@ -1104,7 +1103,7 @@
                             <td style="font-weight: bold; ${remaining <= 0 ? 'color: #C62828;' : 'color: #2E7D32;'}">${remaining}</td>
                             <td><span class="${isProductActive ? 'status-active' : 'status-soldout'}">${statusText}</span></td>
                             <td>
-                                <button class="btn-small" onclick="updateProductQuantity('${campaign.adName}', '${product.productName}', '${inputId}')">💾 Save</button>
+                                <button class="btn-small" onclick="updateProductQuantity('${campaign.adName}', '${product.productName}', '${inputId}')">💾 Update Qty</button>
                                 <button class="btn-small btn-small-red" onclick="removeProduct('${campaign.adName}', '${product.productName}')">🗑️ Remove</button>
                             </td>
                         `;
