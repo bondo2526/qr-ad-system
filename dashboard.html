@@ -636,7 +636,21 @@
                     <div class="stat-value" id="activeCampaigns">0</div>
                 </div>
             </div>
-            
+               <div class="stat-card">
+        <div class="stat-label">🏆 Top Product</div>
+        <div class="stat-value" id="topProduct" style="font-size: 20px;">-</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-label">📍 Top Location</div>
+        <div class="stat-value" id="topLocation" style="font-size: 20px;">-</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-label">📢 Top Advertiser</div>
+        <div class="stat-value" id="topAdvertiser" style="font-size: 20px;">-</div>
+    </div>
+</div>
             <!-- Create Campaign Form -->
             <div class="table-container">
                 <h2 style="margin-bottom: 20px; font-size: 24px;">📦 Create New Campaign</h2>
@@ -1203,8 +1217,56 @@
             document.getElementById('totalClaims').textContent = total.toLocaleString();
             document.getElementById('todayClaims').textContent = todayCount.toLocaleString();
             document.getElementById('redeemedCount').textContent = redeemed.toLocaleString();
+                updateTopStats();
+
+        }
+        function updateTopStats() {
+    // Count products claimed
+    const productCounts = {};
+    const locationCounts = {};
+    const advertiserCounts = {};
+    
+    filteredClaims.forEach(claim => {
+        // Top products (by claim count)
+        const product = claim.productName;
+        if (product) {
+            productCounts[product] = (productCounts[product] || 0) + 1;
         }
         
+        // Top locations
+        const location = claim.hostName;
+        if (location) {
+            locationCounts[location] = (locationCounts[location] || 0) + 1;
+        }
+        
+        // Top advertisers
+        const advertiser = claim.advertiserName || claim.adName;
+        if (advertiser) {
+            advertiserCounts[advertiser] = (advertiserCounts[advertiser] || 0) + 1;
+        }
+    });
+    
+    // Get top product
+    const topProductEntry = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0];
+    const topProductElement = document.getElementById('topProduct');
+    if (topProductElement) {
+        topProductElement.textContent = topProductEntry ? `${topProductEntry[0]} (${topProductEntry[1]})` : '-';
+    }
+    
+    // Get top location
+    const topLocationEntry = Object.entries(locationCounts).sort((a, b) => b[1] - a[1])[0];
+    const topLocationElement = document.getElementById('topLocation');
+    if (topLocationElement) {
+        topLocationElement.textContent = topLocationEntry ? `${topLocationEntry[0]} (${topLocationEntry[1]})` : '-';
+    }
+    
+    // Get top advertiser
+    const topAdvertiserEntry = Object.entries(advertiserCounts).sort((a, b) => b[1] - a[1])[0];
+    const topAdvertiserElement = document.getElementById('topAdvertiser');
+    if (topAdvertiserElement) {
+        topAdvertiserElement.textContent = topAdvertiserEntry ? `${topAdvertiserEntry[0]} (${topAdvertiserEntry[1]})` : '-';
+    }
+}
         function renderTable() {
             const tbody = document.getElementById('claimsBody');
             const noData = document.getElementById('noData');
