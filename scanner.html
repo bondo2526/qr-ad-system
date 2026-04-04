@@ -644,9 +644,10 @@ Action Required: Remove this ad from display system.`;
             document.getElementById('redeemedTime').textContent = redeemedTime ? formatCompactDate(redeemedTime) : 'an earlier date';
         }
         
-   async function markCouponUsed() {
+async function markCouponUsed() {
     try {
-        let couponOwner = currentCouponData.advertiserName;
+        const couponOwner = currentCouponData.advertiserName;
+        
         if (couponOwner !== currentAdvertiser.name) { 
             alert("Unauthorized"); 
             resetScanner(); 
@@ -667,7 +668,7 @@ Action Required: Remove this ad from display system.`;
             return;
         }
         
-        // 1. Mark coupon as redeemed in claims collection
+        // 1. Mark coupon as redeemed
         await db.collection('claims').doc(currentCouponData.id).update({
             redeemed: true,
             status: 'redeemed',
@@ -682,11 +683,11 @@ Action Required: Remove this ad from display system.`;
             lastValidation: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // 3. CRITICAL: Update product redeemed count in ad_campaigns
-        const adName = currentCouponData.adName;
+        // 3. UPDATE PRODUCT REMAINING COUNT IN AD_CAMPAIGNS
+        const advertiserName = currentCouponData.advertiserName;
         const productName = currentCouponData.productName;
         
-        const campaignRef = db.collection('ad_campaigns').doc(adName);
+        const campaignRef = db.collection('ad_campaigns').doc(advertiserName);
         const campaign = await campaignRef.get();
         
         if (campaign.exists) {
@@ -694,16 +695,22 @@ Action Required: Remove this ad from display system.`;
             const productIndex = products.findIndex(p => p.productName === productName);
             
             if (productIndex !== -1) {
+                // Increment redeemedCount
                 const newRedeemedCount = (products[productIndex].redeemedCount || 0) + 1;
                 const newRemaining = products[productIndex].totalProducts - newRedeemedCount;
                 
                 products[productIndex].redeemedCount = newRedeemedCount;
                 products[productIndex].remaining = newRemaining;
                 
+                // Save back to Firestore
                 await campaignRef.update({ products: products });
                 
                 console.log(`✅ Updated ${productName}: redeemed=${newRedeemedCount}, remaining=${newRemaining}`);
+            } else {
+                console.log(`❌ Product ${productName} not found in campaign`);
             }
+        } else {
+            console.log(`❌ Campaign ${advertiserName} not found`);
         }
         
         // Show success
@@ -720,7 +727,6 @@ Action Required: Remove this ad from display system.`;
         alert('❌ Error marking coupon as used: ' + error.message);
     }
 }
-        
         function resetScanner() {
             currentCouponData = null;
             document.getElementById('resultSection').classList.add('hidden');
