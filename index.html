@@ -319,7 +319,7 @@
             }
         });
         
-  async function checkIfAlreadyClaimed() {
+async function checkIfAlreadyClaimed() {
     try {
         const twentyFourHoursAgo = new Date();
         twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - CONFIG.BLOCK_HOURS);
@@ -329,11 +329,11 @@
         console.log("Current Product:", currentProduct);
         console.log("User Fingerprint:", userFingerprint);
         
-        // IMPORTANT: Query by BOTH fingerprint AND adName to avoid false positives
+        // Check if user already claimed this ad today
         const claimsRef = db.collection('claims');
         const querySnapshot = await claimsRef
             .where('userFingerprint', '==', userFingerprint)
-            .get();  // Remove orderBy and limit to get all claims for this user
+            .get();
         
         let alreadyClaimed = false;
         let existingClaim = null;
@@ -342,26 +342,13 @@
             const claim = doc.data();
             const claimTime = claim.claimedAt?.toDate();
             
-            // Only check THIS SPECIFIC AD
             const isSameAd = claim.adName === currentAd || claim.adId === currentAd;
             const isWithin24h = claimTime >= twentyFourHoursAgo;
             
-            console.log("Found claim:", { 
-                adName: claim.adName, 
-                claimedAt: claimTime, 
-                isSameAd: isSameAd, 
-                isWithin24h: isWithin24h 
-            });
-            
             if (isSameAd && isWithin24h) {
                 alreadyClaimed = true;
-                existingClaim = {
-                    ...claim,
-                    id: doc.id,
-                    claimedAt: claim.claimedAt
-                };
+                existingClaim = { ...claim, id: doc.id, claimedAt: claim.claimedAt };
                 existingCouponCode = claim.couponCode;
-                console.log("BLOCKING - found existing claim for this ad");
             }
         });
         
@@ -370,30 +357,40 @@
             return true;
         }
         
-        // CHECK IF PRODUCT HAS REMAINING STOCK
-        console.log("Checking stock for product:", currentProduct);
+        // ========== NEW VALIDATION: CHECK IF CAMPAIGN EXISTS ==========
+        console.log("Checking if campaign exists for:", currentAd);
         
         const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
         
         if (!campaign.exists) {
-            console.log("No campaign found for", currentAd, "- allowing claim");
-            await generateNewCoupon();
+            console.log("❌ Campaign not found:", currentAd);
+            showError(`❌ Campaign "${currentAd}" not found in system. Please check the ad ID.`);
             return false;
         }
         
         const campaignData = campaign.data();
-        console.log("Campaign data:", campaignData);
+        console.log("Campaign found:", campaignData);
         
-        const products = campaignData.products || [];
-        const product = products.find(p => p.productName === currentProduct);
-        
-        if (!product) {
-            console.log("Product not found in campaign:", currentProduct);
-            console.log("Available products:", products.map(p => p.productName));
-            showError(`Product "${currentProduct}" not found for this ad`);
+        // Check if campaign is active
+        if (campaignData.isActive === false) {
+            console.log("❌ Campaign is inactive");
+            showError(`❌ Campaign "${currentAd}" is currently inactive.`);
             return false;
         }
         
+        // ========== NEW VALIDATION: CHECK IF PRODUCT EXISTS ==========
+        const products = campaignData.products || [];
+        console.log("Available products:", products.map(p => p.productName));
+        
+        const product = products.find(p => p.productName === currentProduct);
+        
+        if (!product) {
+            console.log("❌ Product not found:", currentProduct);
+            showError(`❌ Product "${currentProduct}" not found in campaign "${currentAd}". Available products: ${products.map(p => p.productName).join(', ') || 'none'}`);
+            return false;
+        }
+        
+        // ========== CHECK PRODUCT STOCK ==========
         const redeemedCount = product.redeemedCount || 0;
         const totalProducts = product.totalProducts || 0;
         const remaining = totalProducts - redeemedCount;
@@ -401,19 +398,13 @@
         console.log(`Product ${currentProduct}: Total=${totalProducts}, Redeemed=${redeemedCount}, Remaining=${remaining}`);
         
         if (remaining <= 0) {
-            console.log("SOLD OUT - no remaining stock");
-            showSoldOutPage();
-            return false;
-        }
-        
-        if (campaignData.isActive === false) {
-            console.log("Campaign is inactive");
-            showError("This campaign is no longer active");
+            console.log("❌ Product sold out");
+            showError(`❌ Product "${currentProduct}" is SOLD OUT! No more coupons available.`);
             return false;
         }
         
         // All checks passed - generate coupon
-        console.log("All checks passed - generating coupon");
+        console.log("✅ All checks passed - generating coupon");
         await generateNewCoupon();
         return false;
         
@@ -496,7 +487,18 @@
                 return 'unknown';
             }
         }
-        
+        async function showAvailableProducts(adName) {
+    try {
+        const campaign = await db.collection('ad_campaigns').doc(adName).get();
+        if (campaign.exists) {
+            const products = campaign.data().products || [];
+            return products.map(p => p.productName).join(', ');
+        }
+        return 'none';
+    } catch(e) {
+        return 'unable to fetch';
+    }
+}
         function showSuccessPage(data) {
             document.body.className = 'success-bg';
             document.getElementById('loading').classList.add('hidden');
