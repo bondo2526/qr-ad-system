@@ -527,7 +527,7 @@ Action Required: Remove this ad from display system.`;
         function handleManualCodeEnter(event) { if (event.key === 'Enter') validateManualCode(); }
         function validateManualCode() { const code = document.getElementById('manualCode').value.trim(); if (code) validateCoupon(code); else alert("Please enter a coupon code"); }
         
-     async function validateCoupon(couponCode) {
+    async function validateCoupon(couponCode) {
     try {
         document.getElementById('resultSection').classList.remove('hidden');
         document.getElementById('validResult').classList.add('hidden');
@@ -556,7 +556,7 @@ Action Required: Remove this ad from display system.`;
             return;
         }
         
-        // NEW: Check if campaign exists for this product
+        // Check if campaign exists for this product
         const campaign = await db.collection('ad_campaigns').doc(couponOwner).get();
         if (!campaign.exists) {
             showInvalidResult("No campaign found for this advertiser. Please contact support.");
@@ -586,8 +586,8 @@ Action Required: Remove this ad from display system.`;
             return; 
         }
         
-        // Auto-redeem the coupon
-        await autoRedeemCoupon();
+        // Call the existing markCouponUsed function
+        await markCouponUsed();
         
     } catch (error) {
         console.error("Validation error:", error);
