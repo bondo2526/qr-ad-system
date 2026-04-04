@@ -388,56 +388,70 @@ Action Required: Remove this ad from display system.`;
             }
         });
         
-        async function login() {
-            const advertiserName = document.getElementById('advertiserName').value.trim();
-            const password = document.getElementById('advertiserPassword').value.trim();
-            const errorDiv = document.getElementById('loginError');
+    async function login() {
+    const advertiserName = document.getElementById('advertiserName').value.trim();
+    const password = document.getElementById('advertiserPassword').value.trim();
+    const errorDiv = document.getElementById('loginError');
+    
+    errorDiv.textContent = '';
+    if (!advertiserName) { errorDiv.textContent = '❌ Please enter your business name'; return; }
+    if (!password) { errorDiv.textContent = '❌ Please enter your password'; return; }
+    if (password.length < 6) { errorDiv.textContent = '❌ Password must be at least 6 characters'; return; }
+    
+    try {
+        // Query by displayName field
+        const nameQuery = await db.collection(ADVERTISERS_COLLECTION)
+            .where('displayName', '==', advertiserName)
+            .limit(1)
+            .get();
+        
+        if (nameQuery.empty) {
+            // NEW ADVERTISER - Create with advertiser name as document ID
+            await createNewAdvertiser(advertiserName, password);
+            alert(`✅ Account created for ${advertiserName}!`);
+        } else {
+            // EXISTING ADVERTISER - Login
+            const advertiserDoc = nameQuery.docs[0];
+            const advertiserData = advertiserDoc.data();
             
-            errorDiv.textContent = '';
-            if (!advertiserName) { errorDiv.textContent = '❌ Please enter your business name'; return; }
-            if (!password) { errorDiv.textContent = '❌ Please enter your password'; return; }
-            if (password.length < 6) { errorDiv.textContent = '❌ Password must be at least 6 characters'; return; }
-            
-            try {
-                const nameQuery = await db.collection(ADVERTISERS_COLLECTION).where('displayName', '==', advertiserName).limit(1).get();
-                
-if (nameQuery.empty) {
-    // Remove generateRandomId() call
-    await createNewAdvertiser(advertiserName, password);
-    alert(`✅ Account created for ${advertiserName}!`);
-}
-                } else {
-                    const advertiserDoc = nameQuery.docs[0];
-                    const advertiserData = advertiserDoc.data();
-                    if (advertiserData.password !== password) {
-                        errorDiv.textContent = '❌ Incorrect password';
-                        document.getElementById('advertiserPassword').value = '';
-                        return;
-                    }
-                    currentAdvertiser = { id: advertiserData.id, name: advertiserData.displayName, couponValidations: advertiserData.couponValidations || 0 };
-                }
-                
-                sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
-                document.getElementById('advertiserName').value = '';
+            if (advertiserData.password !== password) {
+                errorDiv.textContent = '❌ Incorrect password';
                 document.getElementById('advertiserPassword').value = '';
-                showScannerSection();
-            } catch (error) {
-                if (error.code === 'permission-denied') {
-                    if (advertiserName === 'Test Shop' && password === 'test123') {
-                        currentAdvertiser = { id: 'test_shop_demo', name: 'Test Shop', isTest: true };
-                        sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
-                        showScannerSection();
-                    } else {
-                        errorDiv.innerHTML = `❌ Demo mode - try Test Shop / test123`;
-                    }
-                } else {
-                    errorDiv.textContent = '❌ Login error: ' + error.message;
-                }
+                return;
             }
+            
+            currentAdvertiser = {
+                id: advertiserDoc.id,
+                name: advertiserData.displayName,
+                advertiserName: advertiserData.displayName,
+                couponValidations: advertiserData.couponValidations || 0
+            };
+            
+            alert(`✅ Welcome back, ${advertiserName}!`);
         }
         
-    async function createNewAdvertiser(displayName, password) {
-    // NO random ID - use displayName as document ID
+        sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
+        document.getElementById('advertiserName').value = '';
+        document.getElementById('advertiserPassword').value = '';
+        showScannerSection();
+        
+    } catch (error) {
+        console.error("Login error:", error);
+        if (error.code === 'permission-denied') {
+            if (advertiserName === 'Test Shop' && password === 'test123') {
+                currentAdvertiser = { id: 'test_shop_demo', name: 'Test Shop', isTest: true };
+                sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
+                showScannerSection();
+            } else {
+                errorDiv.innerHTML = `❌ Demo mode - try Test Shop / test123`;
+            }
+        } else {
+            errorDiv.textContent = '❌ Login error: ' + error.message;
+        }
+    }
+}
+        
+ async function createNewAdvertiser(displayName, password) {
     const newAdvertiser = {
         advertiserName: displayName,
         displayName: displayName,
@@ -448,8 +462,9 @@ if (nameQuery.empty) {
         isActive: true
     };
     
+    // Use displayName as document ID (NO random ID)
     await db.collection(ADVERTISERS_COLLECTION)
-        .doc(displayName)  // ← Use advertiser name as document ID
+        .doc(displayName)
         .set(newAdvertiser);
     
     currentAdvertiser = {
