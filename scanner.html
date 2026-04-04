@@ -551,6 +551,7 @@ Action Required: Remove this ad from display system.`;
         const expiresTime = couponData.expiresAt?.toDate();
         const now = new Date();
         
+        // Check ownership
         if (couponOwner !== currentAdvertiser.name) {
             showUnauthorizedResult(`This coupon belongs to "${couponOwner}". You are logged in as "${currentAdvertiser.name}".`);
             return;
@@ -576,18 +577,20 @@ Action Required: Remove this ad from display system.`;
             return;
         }
         
+        // Check expiry
         if (expiresTime && expiresTime < now) { 
             showInvalidResult("Coupon has expired"); 
             return; 
         }
         
+        // Check if already redeemed
         if (couponData.redeemed === true) { 
             showUsedResult(); 
             return; 
         }
         
-        // Call the existing markCouponUsed function
-        await markCouponUsed();
+        // ALL CHECKS PASSED - Show valid result with Mark as Used button
+        showValidResult();
         
     } catch (error) {
         console.error("Validation error:", error);
