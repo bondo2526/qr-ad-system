@@ -732,9 +732,8 @@
                 <h2 style="margin-bottom: 20px; font-size: 24px;">📦 Create New Campaign</h2>
                 <div class="create-form">
                     <div class="form-group">
-                        <label>Advertiser Name (used for QR code)</label>
+                        <label>Advertiser Name</label>
                         <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
-                        <div class="hint-text">⚠️ This exact name goes in QR code: ?ad=Wellness%20Pharmacy</div>
                     </div>
                     <button class="btn btn-create" onclick="createCampaign()">➕ Create Campaign</button>
                 </div>
@@ -1107,7 +1106,33 @@
                 alert("Error: " + error.message);
             }
         }
+        async function deleteCampaign(adName) {
+    // Confirm deletion
+    const confirmed = confirm(`⚠️ WARNING: Are you sure you want to delete campaign "${adName}"?\n\nThis will delete ALL products and settings for this campaign.\n\nClaims history will NOT be deleted.\n\nThis action cannot be undone!`);
+    
+    if (!confirmed) return;
+    
+    // Second confirmation for safety
+    const doubleConfirm = prompt(`Type "${adName}" to confirm deletion:`);
+    if (doubleConfirm !== adName) {
+        alert("Deletion cancelled - name did not match.");
+        return;
+    }
+    
+    try {
+        // Delete the campaign document
+        await db.collection('ad_campaigns').doc(adName).delete();
         
+        alert(`✅ Campaign "${adName}" has been deleted successfully.`);
+        
+        // Refresh the campaigns list
+        await loadCampaigns();
+        
+    } catch (error) {
+        console.error("Error deleting campaign:", error);
+        alert("❌ Error deleting campaign: " + error.message);
+    }
+}
 function renderCampaignsList() {
     const container = document.getElementById('campaignsList');
     
@@ -1142,8 +1167,6 @@ function renderCampaignsList() {
         campaignDiv.style.overflow = 'hidden';
         campaignDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         
-        // Left side: Advertiser name vertically centered
-        // Right side: All controls and table
         campaignDiv.innerHTML = `
             <div style="display: flex; flex-wrap: wrap;">
                 <!-- LEFT SIDE: Advertiser Name - Vertical -->
@@ -1164,7 +1187,8 @@ function renderCampaignsList() {
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <button class="btn-small" onclick="addProduct('${adName.replace(/'/g, "\\'")}')" style="background: #4CAF50;">➕ Add Product</button>
-                            <button class="btn-small btn-small-danger" onclick="toggleCampaignStatus('${adName.replace(/'/g, "\\'")}')" style="background: ${isActive ? '#FF9800' : '#4CAF50'};">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                            <button class="btn-small" onclick="toggleCampaignStatus('${adName.replace(/'/g, "\\'")}')" style="background: ${isActive ? '#FF9800' : '#4CAF50'};">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                            <button class="btn-small" onclick="deleteCampaign('${adName.replace(/'/g, "\\'")}')" style="background: #f44336;">🗑️ Delete Campaign</button>
                         </div>
                     </div>
                     
@@ -1179,11 +1203,11 @@ function renderCampaignsList() {
                                     <th style="padding: 12px; text-align: center;">Remaining</th>
                                     <th style="padding: 12px; text-align: center;">Status</th>
                                     <th style="padding: 12px; text-align: center;">Action</th>
-                                 </tr>
+                                  </tr>
                             </thead>
                             <tbody id="products_${adName.replace(/[^a-zA-Z0-9]/g, '_')}">
                             </tbody>
-                         </table>
+                        </table>
                     </div>
                 </div>
             </div>
