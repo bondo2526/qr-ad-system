@@ -342,7 +342,7 @@ async function checkIfAlreadyClaimed() {
             const claim = doc.data();
             const claimTime = claim.claimedAt?.toDate();
             
-            const isSameAd = claim.adName === currentAd || claim.adId === currentAd;
+            const isSameAd = claim.advertiserName === currentAd || claim.adId === currentAd;
             const isWithin24h = claimTime >= twentyFourHoursAgo;
             
             if (isSameAd && isWithin24h) {
@@ -435,31 +435,29 @@ async function checkIfAlreadyClaimed() {
             console.log("Using URL advertiser name");
         }
         
-        const claimData = {
-            userId: currentUser.uid,
-            userFingerprint: userFingerprint,
-            userIP: clientIP,
-            adId: currentAd,
-            adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
-            advertiserName: advertiserName,  // ← ADD THIS
-            productId: currentProduct,
-            productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
-            hostId: currentHost,
-            hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
-            couponCode: couponCode,
-            claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
-            clientIP: clientIP,
-            userAgent: navigator.userAgent,
-            status: 'claimed',
-            redeemed: false,
-            redeemedAt: null,
-            redeemedBy: null
-        };
+const claimData = {
+    userId: currentUser.uid,
+    userFingerprint: userFingerprint,
+    userIP: clientIP,
+    advertiserName: advertiserName,
+    productId: currentProduct,
+    productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
+    hostId: currentHost,
+    hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
+    couponCode: couponCode,
+    claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
+    clientIP: clientIP,
+    userAgent: navigator.userAgent,
+    status: 'claimed',
+    redeemed: false,
+    redeemedAt: null,
+    redeemedBy: null
+};
         
         await db.collection('claims').add(claimData);
         
-        localStorage.setItem(`claimed_${currentAd}_${currentUser.uid}`, 
+        localStorage.setItem(`claimed_${advertiserName}_${currentUser.uid}`, 
             JSON.stringify({ coupon: couponCode, time: new Date().toISOString(), expires: claimData.expiresAt }));
         
         showSuccessPage(claimData);
