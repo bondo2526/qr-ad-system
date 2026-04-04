@@ -527,39 +527,73 @@ Action Required: Remove this ad from display system.`;
         function handleManualCodeEnter(event) { if (event.key === 'Enter') validateManualCode(); }
         function validateManualCode() { const code = document.getElementById('manualCode').value.trim(); if (code) validateCoupon(code); else alert("Please enter a coupon code"); }
         
-        async function validateCoupon(couponCode) {
-            try {
-                document.getElementById('resultSection').classList.remove('hidden');
-                document.getElementById('validResult').classList.add('hidden');
-                document.getElementById('invalidResult').classList.add('hidden');
-                document.getElementById('usedResult').classList.add('hidden');
-                document.getElementById('successResult').classList.add('hidden');
-                document.getElementById('unauthorizedResult').classList.add('hidden');
-                document.getElementById('scannedCoupon').textContent = couponCode;
-                
-                const querySnapshot = await db.collection('claims').where('couponCode', '==', couponCode).limit(1).get();
-                if (querySnapshot.empty) { showInvalidResult("Coupon not found in database"); return; }
-                
-                const doc = querySnapshot.docs[0];
-                const couponData = doc.data();
-                currentCouponData = { id: doc.id, ...couponData };
-                
-                let couponOwner = couponData.advertiserName || couponData.adName || '';
-                const expiresTime = couponData.expiresAt?.toDate();
-                const now = new Date();
-                
-                if (couponOwner !== currentAdvertiser.name) {
-                    showUnauthorizedResult(`This coupon belongs to "${couponOwner}". You are logged in as "${currentAdvertiser.name}".`);
-                    return;
-                }
-                if (expiresTime && expiresTime < now) { showInvalidResult("Coupon has expired"); return; }
-                if (couponData.redeemed === true) { showUsedResult(); return; }
-                
-                showValidResult();
-            } catch (error) {
-                showInvalidResult("Error: " + error.message);
-            }
+     async function validateCoupon(couponCode) {
+    try {
+        document.getElementById('resultSection').classList.remove('hidden');
+        document.getElementById('validResult').classList.add('hidden');
+        document.getElementById('invalidResult').classList.add('hidden');
+        document.getElementById('usedResult').classList.add('hidden');
+        document.getElementById('successResult').classList.add('hidden');
+        document.getElementById('unauthorizedResult').classList.add('hidden');
+        document.getElementById('scannedCoupon').textContent = couponCode;
+        
+        const querySnapshot = await db.collection('claims').where('couponCode', '==', couponCode).limit(1).get();
+        if (querySnapshot.empty) { 
+            showInvalidResult("Coupon not found in database"); 
+            return; 
         }
+        
+        const doc = querySnapshot.docs[0];
+        const couponData = doc.data();
+        currentCouponData = { id: doc.id, ...couponData };
+        
+        let couponOwner = couponData.advertiserName || couponData.adName || '';
+        const expiresTime = couponData.expiresAt?.toDate();
+        const now = new Date();
+        
+        if (couponOwner !== currentAdvertiser.name) {
+            showUnauthorizedResult(`This coupon belongs to "${couponOwner}". You are logged in as "${currentAdvertiser.name}".`);
+            return;
+        }
+        
+        // NEW: Check if campaign exists for this product
+        const campaign = await db.collection('ad_campaigns').doc(couponOwner).get();
+        if (!campaign.exists) {
+            showInvalidResult("No campaign found for this advertiser. Please contact support.");
+            return;
+        }
+        
+        const products = campaign.data().products || [];
+        const product = products.find(p => p.productName === couponData.productName);
+        
+        if (!product) {
+            showInvalidResult(`Product "${couponData.productName}" not found in campaign. Please contact advertiser.`);
+            return;
+        }
+        
+        if (product.totalProducts <= 0) {
+            showInvalidResult("This product has no available stock.");
+            return;
+        }
+        
+        if (expiresTime && expiresTime < now) { 
+            showInvalidResult("Coupon has expired"); 
+            return; 
+        }
+        
+        if (couponData.redeemed === true) { 
+            showUsedResult(); 
+            return; 
+        }
+        
+        // Auto-redeem the coupon
+        await autoRedeemCoupon();
+        
+    } catch (error) {
+        console.error("Validation error:", error);
+        showInvalidResult("Error: " + error.message);
+    }
+}
         
         function showUnauthorizedResult(details) {
             document.getElementById('unauthorizedResult').classList.remove('hidden');
