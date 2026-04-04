@@ -194,6 +194,26 @@
             overflow: hidden;
             transition: transform 0.2s, box-shadow 0.2s;
         }
+        @media (max-width: 768px) {
+    .campaign-card > div {
+        flex-direction: column !important;
+    }
+    
+    .campaign-card > div > div:first-child {
+        width: 100% !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        padding: 15px !important;
+    }
+    
+    .campaign-card > div > div:first-child > div:first-child {
+        font-size: 20px !important;
+    }
+    
+    .campaign-card > div > div:first-child > div:last-child {
+        margin-top: 0 !important;
+    }
+}
         
 .campaign-card:hover {
     transform: translateY(-2px);
@@ -1117,40 +1137,55 @@ function renderCampaignsList() {
         const campaignDiv = document.createElement('div');
         campaignDiv.className = 'campaign-card';
         campaignDiv.style.marginBottom = '20px';
+        campaignDiv.style.background = 'white';
         campaignDiv.style.borderRadius = '12px';
         campaignDiv.style.overflow = 'hidden';
         campaignDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         
+        // Left side: Advertiser name vertically centered
+        // Right side: All controls and table
         campaignDiv.innerHTML = `
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; color: white;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <div>
-                        <div style="font-size: 22px; font-weight: bold;">📢 ${advertiserName}</div>
-                        <div style="font-size: 13px; opacity: 0.9; margin-top: 5px;">
-                            📦 Total: ${totalProducts} | ✅ Redeemed: ${totalRedeemed} | 📊 Remaining: ${totalRemaining}
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn-small" onclick="addProduct('${adName.replace(/'/g, "\\'")}')" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">➕ Add Product</button>
-                        <button class="btn-small btn-small-danger" onclick="toggleCampaignStatus('${adName.replace(/'/g, "\\'")}')" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+            <div style="display: flex; flex-wrap: wrap;">
+                <!-- LEFT SIDE: Advertiser Name - Vertical -->
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px;">
+                    <div style="font-size: 28px; font-weight: bold; color: white; word-break: break-word;">${advertiserName}</div>
+                    <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 8px;">
+                        📦 ${totalProducts} | ✅ ${totalRedeemed} | 📊 ${totalRemaining}
                     </div>
                 </div>
-            </div>
-            <div style="overflow-x: auto; background: white;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
-                            <th style="padding: 14px; text-align: left;">Product</th>
-                            <th style="padding: 14px; text-align: center;">Total</th>
-                            <th style="padding: 14px; text-align: center;">Redeemed</th>
-                            <th style="padding: 14px; text-align: center;">Remaining</th>
-                            <th style="padding: 14px; text-align: center;">Status</th>
-                            <th style="padding: 14px; text-align: center;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="products_${adName.replace(/[^a-zA-Z0-9]/g, '_')}">
-                    </tbody>
-                </table>
+                
+                <!-- RIGHT SIDE: Controls and Products -->
+                <div style="flex: 1; min-width: 250px;">
+                    <!-- Horizontal Controls Row -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; gap: 10px;">
+                            <span style="font-size: 13px; color: #666;">Status:</span>
+                            <span style="background: ${isActive ? '#E8F5E9' : '#FFEBEE'}; color: ${isActive ? '#2E7D32' : '#C62828'}; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">${isActive ? '🟢 Active' : '🔴 Inactive'}</span>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-small" onclick="addProduct('${adName.replace(/'/g, "\\'")}')" style="background: #4CAF50;">➕ Add Product</button>
+                            <button class="btn-small btn-small-danger" onclick="toggleCampaignStatus('${adName.replace(/'/g, "\\'")}')" style="background: ${isActive ? '#FF9800' : '#4CAF50'};">${isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Products Table -->
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                                    <th style="padding: 12px; text-align: left;">Product</th>
+                                    <th style="padding: 12px; text-align: center;">Total</th>
+                                    <th style="padding: 12px; text-align: center;">Redeemed</th>
+                                    <th style="padding: 12px; text-align: center;">Remaining</th>
+                                    <th style="padding: 12px; text-align: center;">Status</th>
+                                    <th style="padding: 12px; text-align: center;">Action</th>
+                                 </tr>
+                            </thead>
+                            <tbody id="products_${adName.replace(/[^a-zA-Z0-9]/g, '_')}">
+                            </tbody>
+                         </table>
+                    </div>
+                </div>
             </div>
         `;
         
@@ -1159,7 +1194,7 @@ function renderCampaignsList() {
         const tbody = campaignDiv.querySelector(`tbody`);
         
         if (products.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">📭 No products added. Click "Add Product" to start.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #999;">📭 No products added. Click "Add Product" to start.</td></tr>';
         } else {
             for (const product of products) {
                 const remaining = product.remaining || (product.totalProducts - (product.redeemedCount || 0));
@@ -1173,13 +1208,13 @@ function renderCampaignsList() {
                 row.style.background = rowBg;
                 row.style.borderBottom = '1px solid #e9ecef';
                 row.innerHTML = `
-                    <td style="padding: 14px; font-weight: 500;">${product.productName}</td>
-                    <td style="padding: 14px; text-align: center;"><input type="number" id="${inputId}" class="campaign-input" value="${product.totalProducts}" min="0" step="1" style="width: 70px; padding: 6px; text-align: center;"></td>
-                    <td style="padding: 14px; text-align: center; font-weight: 500;">${product.redeemedCount || 0}</td>
-                    <td style="padding: 14px; text-align: center; font-weight: bold; color: ${statusColor};">${remaining}</td>
-                    <td style="padding: 14px; text-align: center;"><span style="background: ${isProductActive ? '#E8F5E9' : '#FFEBEE'}; color: ${statusColor}; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">${statusText}</span></td>
-                    <td style="padding: 14px; text-align: center;">
-                        <button class="btn-small" onclick="updateProductQuantity('${adName.replace(/'/g, "\\'")}', '${product.productName.replace(/'/g, "\\'")}', '${inputId}')" style="background: #2196F3;">📦 Update Qty</button>
+                    <td style="padding: 12px; font-weight: 500;">${product.productName}</td>
+                    <td style="padding: 12px; text-align: center;"><input type="number" id="${inputId}" class="campaign-input" value="${product.totalProducts}" min="0" step="1" style="width: 70px; padding: 6px; text-align: center;"></td>
+                    <td style="padding: 12px; text-align: center; font-weight: 500;">${product.redeemedCount || 0}</td>
+                    <td style="padding: 12px; text-align: center; font-weight: bold; color: ${statusColor};">${remaining}</td>
+                    <td style="padding: 12px; text-align: center;"><span style="background: ${isProductActive ? '#E8F5E9' : '#FFEBEE'}; color: ${statusColor}; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">${statusText}</span></td>
+                    <td style="padding: 12px; text-align: center;">
+                        <button class="btn-small" onclick="updateProductQuantity('${adName.replace(/'/g, "\\'")}', '${product.productName.replace(/'/g, "\\'")}', '${inputId}')" style="background: #2196F3;">📦 Update</button>
                         <button class="btn-small btn-small-red" onclick="removeProduct('${adName.replace(/'/g, "\\'")}', '${product.productName.replace(/'/g, "\\'")}')" style="background: #f44336;">🗑️ Remove</button>
                     </td>
                 `;
