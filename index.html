@@ -424,44 +424,58 @@
     }
 }
         
-        async function generateNewCoupon() {
-            try {
-                const randomNum = Math.floor(Math.random() * 9000 + 1000);
-                const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
-                const couponCode = 'save' + randomNum + randomLetter;
-                const clientIP = await getClientIP();
-                
-                const claimData = {
-                    userId: currentUser.uid,
-                    userFingerprint: userFingerprint,
-                    userIP: clientIP,
-                    adId: currentAd,
-                    adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
-                    productId: currentProduct,
-                    productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
-                    hostId: currentHost,
-                    hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
-                    couponCode: couponCode,
-                    claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
-                    clientIP: clientIP,
-                    userAgent: navigator.userAgent,
-                    status: 'claimed',
-                    redeemed: false,
-                    redeemedAt: null,
-                    redeemedBy: null
-                };
-                
-                await db.collection('claims').add(claimData);
-                
-                localStorage.setItem(`claimed_${currentAd}_${currentUser.uid}`, 
-                    JSON.stringify({ coupon: couponCode, time: new Date().toISOString(), expires: claimData.expiresAt }));
-                
-                showSuccessPage(claimData);
-            } catch (error) {
-                showError('Failed to generate coupon: ' + error.message);
+  async function generateNewCoupon() {
+    try {
+        const randomNum = Math.floor(Math.random() * 9000 + 1000);
+        const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+        const couponCode = 'save' + randomNum + randomLetter;
+        const clientIP = await getClientIP();
+        
+        // Get the advertiser name from the campaign
+        let advertiserName = decodeURIComponent(currentAd).replace(/_/g, ' ');
+        
+        // Try to get the official advertiser name from campaign
+        try {
+            const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
+            if (campaign.exists && campaign.data().advertiserName) {
+                advertiserName = campaign.data().advertiserName;
             }
+        } catch(e) {
+            console.log("Using URL advertiser name");
         }
+        
+        const claimData = {
+            userId: currentUser.uid,
+            userFingerprint: userFingerprint,
+            userIP: clientIP,
+            adId: currentAd,
+            adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
+            advertiserName: advertiserName,  // ← ADD THIS
+            productId: currentProduct,
+            productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
+            hostId: currentHost,
+            hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
+            couponCode: couponCode,
+            claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
+            clientIP: clientIP,
+            userAgent: navigator.userAgent,
+            status: 'claimed',
+            redeemed: false,
+            redeemedAt: null,
+            redeemedBy: null
+        };
+        
+        await db.collection('claims').add(claimData);
+        
+        localStorage.setItem(`claimed_${currentAd}_${currentUser.uid}`, 
+            JSON.stringify({ coupon: couponCode, time: new Date().toISOString(), expires: claimData.expiresAt }));
+        
+        showSuccessPage(claimData);
+    } catch (error) {
+        showError('Failed to generate coupon: ' + error.message);
+    }
+}
         
       async function generateUserFingerprint() {
     // Simple persistent device ID - NO IP, NO changing values
