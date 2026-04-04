@@ -329,11 +329,12 @@ async function checkIfAlreadyClaimed() {
         console.log("Current Product:", currentProduct);
         console.log("User Fingerprint:", userFingerprint);
         
-        // Query claims for this session fingerprint
         const claimsRef = db.collection('claims');
         const querySnapshot = await claimsRef
             .where('userFingerprint', '==', userFingerprint)
             .get();
+        
+        console.log("Claims found:", querySnapshot.size);
         
         let alreadyClaimed = false;
         let existingClaim = null;
@@ -342,26 +343,74 @@ async function checkIfAlreadyClaimed() {
             const claim = doc.data();
             const claimTime = claim.claimedAt?.toDate();
             
-            // Check BOTH ad AND product
             const isSameAd = claim.advertiserName === currentAd;
             const isSameProduct = claim.productName === currentProduct;
             const isWithin24h = claimTime >= twentyFourHoursAgo;
+            
+            console.log("Claim check:", { isSameAd, isSameProduct, isWithin24h, claimTime });
             
             if (isSameAd && isSameProduct && isWithin24h) {
                 alreadyClaimed = true;
                 existingClaim = { ...claim, id: doc.id, claimedAt: claim.claimedAt };
                 existingCouponCode = claim.couponCode;
-                console.log("BLOCKING - found existing claim for same ad and product");
+                console.log("BLOCKING - found existing claim");
             }
         });
         
         if (alreadyClaimed) {
+            console.log("Showing blocked page");
             showBlockedPage(existingClaim);
             return true;
         }
         
-        // Rest of your campaign check code...
-        // (keep the same as before)
+        console.log("No existing claim. Checking campaign...");
+        
+        // CHECK IF CAMPAIGN EXISTS
+        const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
+        console.log("Campaign exists:", campaign.exists);
+        
+        if (!campaign.exists) {
+            console.log("❌ Campaign not found:", currentAd);
+            showError(`❌ Campaign "${currentAd}" not found in system. Please check the ad ID.`);
+            return false;
+        }
+        
+        const campaignData = campaign.data();
+        console.log("Campaign data:", campaignData);
+        
+        if (campaignData.isActive === false) {
+            console.log("❌ Campaign is inactive");
+            showError(`❌ Campaign "${currentAd}" is currently inactive.`);
+            return false;
+        }
+        
+        const products = campaignData.products || [];
+        console.log("Available products:", products.map(p => p.productName));
+        
+        const product = products.find(p => p.productName === currentProduct);
+        
+        if (!product) {
+            const availableProducts = products.map(p => p.productName).join(', ') || 'none';
+            console.log("❌ Product not found");
+            showError(`❌ Product "${currentProduct}" not found in campaign "${currentAd}". Available products: ${availableProducts}`);
+            return false;
+        }
+        
+        const redeemedCount = product.redeemedCount || 0;
+        const totalProducts = product.totalProducts || 0;
+        const remaining = totalProducts - redeemedCount;
+        
+        console.log(`Product ${currentProduct}: Total=${totalProducts}, Redeemed=${redeemedCount}, Remaining=${remaining}`);
+        
+        if (remaining <= 0) {
+            console.log("❌ Product sold out");
+            showError(`❌ Product "${currentProduct}" is SOLD OUT! No more coupons available.`);
+            return false;
+        }
+        
+        console.log("✅ All checks passed - generating coupon");
+        await generateNewCoupon();
+        return false;
         
     } catch (error) {
         console.error("Check error:", error);
@@ -370,25 +419,47 @@ async function checkIfAlreadyClaimed() {
     }
 }
         
-  async function generateNewCoupon() {
+async function generateNewCoupon() {
+    console.log("Starting generateNewCoupon...");
     try {
         const randomNum = Math.floor(Math.random() * 9000 + 1000);
         const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
         const couponCode = 'save' + randomNum + randomLetter;
         const clientIP = await getClientIP();
         
-        // Get the advertiser name from the campaign
-        let advertiserName = decodeURIComponent(currentAd).replace(/_/g, ' ');
+        const advertiserName = decodeURIComponent(currentAd).replace(/_/g, ' ');
         
-        // Try to get the official advertiser name from campaign
-        try {
-            const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
-            if (campaign.exists && campaign.data().advertiserName) {
-                advertiserName = campaign.data().advertiserName;
-            }
-        } catch(e) {
-            console.log("Using URL advertiser name");
-        }
+        console.log("Creating claim data for:", advertiserName);
+        
+        const claimData = {
+            userId: currentUser.uid,
+            userFingerprint: userFingerprint,
+            userIP: clientIP,
+            advertiserName: advertiserName,
+            productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
+            hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
+            couponCode: couponCode,
+            claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
+            clientIP: clientIP,
+            userAgent: navigator.userAgent,
+            status: 'claimed',
+            redeemed: false,
+            redeemedAt: null,
+            redeemedBy: null
+        };
+        
+        console.log("Saving to Firestore...");
+        await db.collection('claims').add(claimData);
+        console.log("Saved successfully!");
+        
+        showSuccessPage(claimData);
+        
+    } catch (error) {
+        console.error("Failed to generate coupon:", error);
+        showError('Failed to generate coupon: ' + error.message);
+    }
+}
         
 const claimData = {
     userId: currentUser.uid,
