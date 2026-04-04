@@ -730,14 +730,16 @@
             <!-- Create Campaign Form -->
             <div class="table-container">
                 <h2 style="margin-bottom: 20px; font-size: 24px;">📦 Create New Campaign</h2>
-                <div class="create-form">
-                    <div class="form-group">
-                        <label>Advertiser Name</label>
-                        <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
-                    </div>
-                    <button class="btn btn-create" onclick="createCampaign()">➕ Create Campaign</button>
-                </div>
-            </div>
+             <div class="create-form">
+    <div class="form-group">
+        <label>Advertiser Name</label>
+        <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
+        <div class="hint-text" style="color: #f44336; font-size: 11px;">
+            ⚠️ Advertiser must login to Scanner App FIRST before creating campaign
+        </div>
+    </div>
+    <button class="btn btn-create" onclick="createCampaign()">➕ Create Campaign</button>
+</div>
             
             <!-- Campaigns List -->
             <div id="campaignsList">
@@ -979,35 +981,49 @@
             document.getElementById('activeCampaigns').textContent = activeCount;
         }
         
-        async function createCampaign() {
-            const advertiserName = document.getElementById('newAdvertiserName').value.trim();
-            
-            if (!advertiserName) {
-                alert("❌ Please enter Advertiser Name");
-                return;
-            }
-            
-            try {
-                const existing = await db.collection('ad_campaigns').doc(advertiserName).get();
-                if (existing.exists) {
-                    alert(`⚠️ Campaign "${advertiserName}" already exists!`);
-                    return;
-                }
-                
-                await db.collection('ad_campaigns').doc(advertiserName).set({
-                    advertiserName: advertiserName,
-                    products: [],
-                    isActive: true,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                alert(`✅ Campaign created for ${advertiserName}`);
-                document.getElementById('newAdvertiserName').value = '';
-                await loadCampaigns();
-            } catch (error) {
-                alert("Error: " + error.message);
-            }
+    async function createCampaign() {
+    const advertiserName = document.getElementById('newAdvertiserName').value.trim();
+    
+    if (!advertiserName) {
+        alert("❌ Please enter Advertiser Name");
+        return;
+    }
+    
+    try {
+        // FIRST: Check if advertiser exists in advertisers collection
+        const advertiserRef = db.collection('advertisers').doc(advertiserName);
+        const advertiserDoc = await advertiserRef.get();
+        
+        if (!advertiserDoc.exists) {
+            // Advertiser not found - show error with instructions
+            alert(`❌ Advertiser "${advertiserName}" not found in system!\n\nPlease ask the advertiser to:\n1. Go to the Scanner App\n2. Login with "${advertiserName}" and create a password\n3. Then come back to create campaign\n\nCannot create campaign until advertiser exists.`);
+            return;
         }
+        
+        // Check if campaign already exists
+        const existing = await db.collection('ad_campaigns').doc(advertiserName).get();
+        if (existing.exists) {
+            alert(`⚠️ Campaign "${advertiserName}" already exists!`);
+            return;
+        }
+        
+        // Create campaign
+        await db.collection('ad_campaigns').doc(advertiserName).set({
+            advertiserName: advertiserName,
+            products: [],
+            isActive: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert(`✅ Campaign created for ${advertiserName}`);
+        document.getElementById('newAdvertiserName').value = '';
+        await loadCampaigns();
+        
+    } catch (error) {
+        console.error("Error creating campaign:", error);
+        alert("Error: " + error.message);
+    }
+}
         
         async function addProduct(advertiserName) {
             const productName = prompt("Enter product name:");
