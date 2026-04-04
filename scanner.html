@@ -547,7 +547,7 @@ Action Required: Remove this ad from display system.`;
         const couponData = doc.data();
         currentCouponData = { id: doc.id, ...couponData };
         
-        let couponOwner = couponData.advertiserName || couponData.adName || '';
+        let couponOwner = couponData.advertiserName;
         const expiresTime = couponData.expiresAt?.toDate();
         const now = new Date();
         
@@ -627,7 +627,7 @@ Action Required: Remove this ad from display system.`;
         
    async function markCouponUsed() {
     try {
-        let couponOwner = currentCouponData.advertiserName || currentCouponData.adName || '';
+        let couponOwner = currentCouponData.advertiserName;
         if (couponOwner !== currentAdvertiser.name) { 
             alert("Unauthorized"); 
             resetScanner(); 
