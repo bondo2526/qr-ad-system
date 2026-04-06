@@ -1240,34 +1240,101 @@ function escapeHtml(str) {
     
     window.removeFile = function(i) { selectedFiles.splice(i,1); renderImagePreviews(); };
 
-async function compressImage(file, maxSizeKB=200) {
-    return new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onload = e => {
-            const img = new Image();
-            img.onload = () => {
-                let q = 0.8, w = img.width, h = img.height;
-                if (w > 800) { h = Math.round(h * 800/w); w = 800; }
-                const canvas = document.createElement('canvas');
-                canvas.width = w; canvas.height = h;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
-                const tryCompress = (quality) => {
-                    const data = canvas.toDataURL('image/jpeg', quality);
-                    const sizeKB = data.length * 0.75 / 1024;
-                    if (sizeKB > maxSizeKB && quality > 0.1) tryCompress(quality - 0.1);
-                    else resolve({
-                        data: data,
-                        name: file.name,
-                        originalSize: file.size,
-                        compressedSize: Math.round(sizeKB * 1024)
-                    });
-                };
-                tryCompress(q);
+// Image compression function - Smart compression
+async function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        // If file is already under 1MB, keep it as is
+        if (file.size <= 1024 * 1024) { // 1MB
+            console.log(`📸 ${file.name} is under 1MB (${(file.size/1024).toFixed(2)}KB) - keeping original`);
+            
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                resolve({
+                    name: file.name,
+                    data: reader.result,
+                    originalSize: file.size,
+                    compressedSize: file.size,
+                    wasCompressed: false
+                });
             };
-            img.src = e.target.result;
-        };
+            reader.onerror = reject;
+            return;
+        }
+        
+        // File is over 1MB - compress just enough to get under 1MB
+        const reader = new FileReader();
         reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                // Calculate target size (aim for 900KB to be safe)
+                const targetSize = 900 * 1024; // 900KB
+                const originalSize = file.size;
+                
+                // Calculate how much we need to reduce
+                const reductionNeeded = originalSize / targetSize;
+                
+                // Determine quality based on needed reduction
+                let quality = 1.0;
+                let width = img.width;
+                let height = img.height;
+                
+                if (reductionNeeded > 2.0) {
+                    // Very large image (>2MB) - need to resize
+                    const scale = Math.sqrt(1 / (reductionNeeded / 1.5));
+                    width = Math.round(img.width * scale);
+                    height = Math.round(img.height * scale);
+                    quality = 0.8;
+                } else if (reductionNeeded > 1.5) {
+                    // Medium large (1.5-2MB) - moderate resize
+                    const scale = 0.85;
+                    width = Math.round(img.width * scale);
+                    height = Math.round(img.height * scale);
+                    quality = 0.9;
+                } else {
+                    // Slightly over (1-1.5MB) - just reduce quality
+                    quality = 0.85;
+                }
+                
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Try with calculated quality
+                let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                let compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
+                
+                // If still over 1MB, reduce quality further
+                let attempts = 0;
+                while (compressedSize > 1024 * 1024 && quality > 0.5 && attempts < 3) {
+                    quality -= 0.1;
+                    compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
+                    attempts++;
+                }
+                
+                const reductionPercent = ((1 - (compressedSize / originalSize)) * 100).toFixed(1);
+                
+                console.log(`📸 ${file.name}: ${(originalSize/1024).toFixed(2)}KB → ${(compressedSize/1024).toFixed(2)}KB (${reductionPercent}% reduction)`);
+                
+                resolve({
+                    name: file.name,
+                    data: compressedDataUrl,
+                    originalSize: originalSize,
+                    compressedSize: compressedSize,
+                    wasCompressed: true,
+                    quality: quality,
+                    dimensions: `${width}x${height}`
+                });
+            };
+            img.onerror = reject;
+        };
+        reader.onerror = reject;
     });
 }
 
@@ -1295,13 +1362,14 @@ for (let i = 0; i < selectedFiles.length; i++) {
     document.getElementById('progressPercent').textContent = `${Math.round((i / selectedFiles.length) * 100)}%`;
     document.getElementById('progressFill').style.width = `${Math.round((i / selectedFiles.length) * 100)}%`;
     document.getElementById('progressCurrent').textContent = `Processing ${selectedFiles[i].name}`;
-    const compressedImage = await compressImage(selectedFiles[i]);
-    imagesData.push({
-        name: compressedImage.name,
-        data: compressedImage.data,
-        originalSize: compressedImage.originalSize,
-        compressedSize: compressedImage.compressedSize
-    });
+const compressedImage = await compressImage(selectedFiles[i]);
+imagesData.push({
+    name: compressedImage.name,
+    data: compressedImage.data,
+    originalSize: compressedImage.originalSize,
+    compressedSize: compressedImage.compressedSize,
+    wasCompressed: compressedImage.wasCompressed || false
+});
 }
             document.getElementById('progressPercent').textContent = '100%';
             document.getElementById('progressFill').style.width    = '100%';
