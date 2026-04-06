@@ -1252,53 +1252,435 @@
 
     // PDF
     let pdfCampaignId = null;
-    window.showPDFPreview = function(id) {
-        const c = allAdCampaigns.find(x=>x.id===id); if(!c) return;
-        pdfCampaignId = id;
-        document.getElementById('pdfTitle').textContent = `Campaign Proof – ${c.name}`;
-        const start = c.start_date?.toDate?.() || new Date();
-        const end   = c.end_date?.toDate?.()   || new Date();
-        document.getElementById('pdfContent').innerHTML = `
-            <p><strong style="color:#4a9eff">Customer:</strong> ${c.name}</p>
-            <p><strong style="color:#4a9eff">Station:</strong> ${c.station||'N/A'}</p>
-            <p><strong style="color:#4a9eff">Start:</strong> ${start.toLocaleString()}</p>
-            <p><strong style="color:#4a9eff">End:</strong> ${end.toLocaleString()}</p>
-            <p style="margin-top:12px;"><strong style="color:#28a745">START HASH</strong></p>
-            <p style="word-break:break-all;color:#00ff00;font-size:12px;">${c.hashes?.start?.hash||'PENDING'}</p>
-            <p style="margin-top:8px;"><strong style="color:#dc3545">END HASH</strong></p>
-            <p style="word-break:break-all;color:#00ff00;font-size:12px;">${c.hashes?.end?.hash||'PENDING'}</p>`;
-        document.getElementById('pdfPreview').classList.add('active');
-    };
+  // showPDFPreview function
+window.showPDFPreview = function(id) {
+    const c = allAdCampaigns.find(x=>x.id===id); 
+    if(!c) return;
+    pdfCampaignId = id;
+    document.getElementById('pdfTitle').textContent = `Campaign Proof Report - ${c.name}`;
+    
+    const start = c.start_date?.toDate?.() || new Date();
+    const end   = c.end_date?.toDate?.()   || new Date();
+    const images = c.images || [];
+    const updates = c.updates || [];
+    const now = new Date();
+    
+    // Calculate status
+    let status = 'UPCOMING';
+    let statusColor = '#ffc107';
+    if (now >= start && now <= end) {
+        status = 'ACTIVE';
+        statusColor = '#28a745';
+    } else if (now > end) {
+        status = 'EXPIRED';
+        statusColor = '#dc3545';
+    }
+    
+    // Calculate duration
+    const durationHours = Math.round((end - start) / 3600000);
+    const durationDays = Math.floor(durationHours / 24);
+    const remainingHours = durationHours % 24;
+    const durationText = durationDays > 0 
+        ? `${durationDays} days ${remainingHours} hours` 
+        : `${durationHours} hours`;
+    
+    // Generate images HTML
+    let imagesHTML = '';
+    if (images.length > 0) {
+        imagesHTML = `
+            <div style="margin: 30px 0; page-break-inside: avoid;">
+                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px;">
+                    📸 Campaign Images (${images.length})
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;">
+        `;
+        images.forEach((img, idx) => {
+            imagesHTML += `
+                <div style="text-align: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 150px;">
+                    <img src="${img.data}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 5px; border: 2px solid #3498db;">
+                    <div style="font-size: 11px; color: #7f8c8d; margin-top: 8px;">${img.name || `Image ${idx+1}`}</div>
+                </div>
+            `;
+        });
+        imagesHTML += '</div></div>';
+    }
+    
+    // Generate update history HTML
+    let updatesHTML = '';
+    if (updates && updates.length > 0) {
+        updatesHTML = `
+            <div style="background: #fff3e0; border-left: 5px solid #f39c12; padding: 20px; border-radius: 8px; margin: 30px 0;">
+                <h3 style="color: #e67e22; margin-bottom: 15px;">📝 Update History (${updates.length} updates)</h3>
+                ${updates.slice().reverse().map(update => `
+                    <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #f39c12;">
+                        <div style="color: #e67e22; font-size: 12px;">${update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date'}</div>
+                        <div style="font-size: 11px; margin: 5px 0;">${update.changes || 'Campaign updated'}</div>
+                        <div style="font-size: 10px; color: #7f8c8d;">Updated by: ${update.updated_by || 'Unknown'}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    // Generate complete report HTML
+    const reportHTML = `
+        <div style="font-family: 'Helvetica', Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white; padding: 40px; box-shadow: 0 0 20px rgba(0,0,0,0.1);">
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 3px solid #3498db;">
+                <h1 style="color: #2c3e50; font-size: 28px; margin-bottom: 10px;">🔐 Cryptographic Proof Report</h1>
+                <p style="color: #7f8c8d; font-size: 14px;">Generated on: ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <!-- Campaign ID Badge -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 30px; text-align: center; border: 1px solid #e9ecef;">
+                <span style="color: #6c757d; font-size: 14px;">Campaign ID: </span>
+                <span style="font-family: monospace; color: #3498db; font-size: 16px; font-weight: bold;">${c.id}</span>
+            </div>
+            
+            <!-- Campaign Details Card -->
+            <div style="background: #f8f9fa; border-radius: 10px; padding: 25px; margin-bottom: 30px; border-left: 5px solid #3498db;">
+                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 20px; font-size: 20px;">📋 Campaign Details</h2>
+                
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 12px 0; color: #7f8c8d; width: 150px;">Station:</td>
+                        <td style="padding: 12px 0; font-weight: bold; color: #2c3e50;">${c.station || 'N/A'}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 12px 0; color: #7f8c8d;">Customer Name:</td>
+                        <td style="padding: 12px 0; font-weight: bold; color: #2c3e50;">${c.name}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 12px 0; color: #7f8c8d;">Campaign Status:</td>
+                        <td style="padding: 12px 0;">
+                            <span style="background: ${statusColor}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold;">${status}</span>
+                        </td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 12px 0; color: #7f8c8d;">Start Date & Time:</td>
+                        <td style="padding: 12px 0; font-family: monospace;">${start.toLocaleString()}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 12px 0; color: #7f8c8d;">End Date & Time:</td>
+                        <td style="padding: 12px 0; font-family: monospace;">${end.toLocaleString()}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 12px 0; color: #7f8c8d;">Total Duration:</td>
+                        <td style="padding: 12px 0; font-weight: bold;">${durationText}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 12px 0; color: #7f8c8d;">Number of Images:</td>
+                        <td style="padding: 12px 0; font-weight: bold;">${images.length} images</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 12px 0; color: #7f8c8d;">Created By:</td>
+                        <td style="padding: 12px 0; font-size: 11px;">${c.created_by || 'Unknown'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px 0; color: #7f8c8d;">Created At:</td>
+                        <td style="padding: 12px 0; font-size: 11px;">${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Images Section -->
+            ${imagesHTML}
+            
+            <!-- Update History Section -->
+            ${updatesHTML}
+            
+            <!-- Cryptographic Hashes Section -->
+            <div style="background: #f8f9fa; border-radius: 10px; padding: 25px; margin: 30px 0; page-break-inside: avoid;">
+                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 20px; font-size: 20px;">🔑 Cryptographic Hashes (SHA-256)</h2>
+                
+                <div style="margin-bottom: 25px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <span style="background: #27ae60; color: white; padding: 3px 10px; border-radius: 15px; font-size: 12px; margin-right: 10px;">START HASH</span>
+                        <span style="color: #7f8c8d; font-size: 12px;">Generated at campaign start</span>
+                    </div>
+                    <div style="background: #2c3e50; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all; border: 1px solid #34495e;">
+                        ${c.hashes?.start?.hash || 'PENDING - Campaign has not started yet'}
+                    </div>
+                    ${c.hashes?.start?.timestamp ? 
+                        `<div style="color: #7f8c8d; font-size: 11px; margin-top: 5px;">Generated: ${new Date(c.hashes.start.timestamp).toLocaleString()}</div>` 
+                        : ''}
+                </div>
+                
+                <div>
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <span style="background: #e74c3c; color: white; padding: 3px 10px; border-radius: 15px; font-size: 12px; margin-right: 10px;">END HASH</span>
+                        <span style="color: #7f8c8d; font-size: 12px;">Generated at campaign end</span>
+                    </div>
+                    <div style="background: #2c3e50; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all; border: 1px solid #34495e;">
+                        ${c.hashes?.end?.hash || 'PENDING - Campaign has not ended yet'}
+                    </div>
+                    ${c.hashes?.end?.timestamp ? 
+                        `<div style="color: #7f8c8d; font-size: 11px; margin-top: 5px;">Generated: ${new Date(c.hashes.end.timestamp).toLocaleString()}</div>` 
+                        : ''}
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e9ecef; font-size: 11px; color: #95a5a6;">
+                <table style="width: 100%;">
+                    <tr>
+                        <td>Report Generated: ${new Date().toLocaleString()}</td>
+                        <td style="text-align: right;">Generated by: ${currentUser?.uid?.substring(0, 8) || 'Anonymous'}</td>
+                    </tr>
+                    <tr>
+                        <td>Verification ID: ${Math.random().toString(36).substring(2, 15).toUpperCase()}</td>
+                        <td style="text-align: right;">Page 1 of 1</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('pdfContent').innerHTML = reportHTML;
+    document.getElementById('pdfPreview').classList.add('active');
+};
     window.closePDFPreview = function() { document.getElementById('pdfPreview').classList.remove('active'); pdfCampaignId = null; };
-    window.downloadPDF = function() {
-        const c = allAdCampaigns.find(x=>x.id===pdfCampaignId); if(!c) return;
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF();
-        const start = c.start_date?.toDate?.() || new Date();
-        const end   = c.end_date?.toDate?.()   || new Date();
-        pdf.setFontSize(20); pdf.setTextColor(44,62,80);
-        pdf.text('Campaign Proof Report', 20, 20);
-        pdf.setFontSize(12); pdf.setTextColor(100);
-        pdf.text(`Customer: ${c.name}`,    20, 35);
-        pdf.text(`Station: ${c.station||'N/A'}`, 20, 42);
-        pdf.text(`Start: ${start.toLocaleString()}`, 20, 49);
-        pdf.text(`End: ${end.toLocaleString()}`,     20, 56);
-        pdf.setFontSize(11); pdf.setTextColor(39,174,96);
-        pdf.text('START HASH', 20, 70);
-        pdf.setFontSize(7); pdf.setTextColor(0);
-        pdf.setFont('courier','normal');
-        const sl = pdf.splitTextToSize(c.hashes?.start?.hash||'PENDING', 160);
-        pdf.text(sl, 20, 76);
-        pdf.setFontSize(11); pdf.setFont('helvetica','normal'); pdf.setTextColor(231,76,60);
-        pdf.text('END HASH', 20, 90);
-        pdf.setFontSize(7); pdf.setTextColor(0); pdf.setFont('courier','normal');
-        const el = pdf.splitTextToSize(c.hashes?.end?.hash||'PENDING', 160);
-        pdf.text(el, 20, 96);
-        pdf.setFontSize(8); pdf.setTextColor(149,165,166); pdf.setFont('helvetica','normal');
-        pdf.text(`Generated: ${new Date().toLocaleString()}`, 20, 115);
-        pdf.save(`${c.name.replace(/[^a-z0-9]/gi,'_')}_proof.pdf`);
-        closePDFPreview();
-    };
+ // downloadPDF report proof function
+window.downloadPDF = function() {
+    const c = allAdCampaigns.find(x=>x.id===pdfCampaignId); 
+    if(!c) return;
+    
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+    });
+    
+    const start = c.start_date?.toDate?.() || new Date();
+    const end   = c.end_date?.toDate?.()   || new Date();
+    const images = c.images || [];
+    const updates = c.updates || [];
+    const now = new Date();
+    
+    let yPos = 20;
+    
+    // Title
+    pdf.setFontSize(24);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Cryptographic Proof Report', 105, yPos, { align: 'center' });
+    yPos += 10;
+    
+    // Date line
+    pdf.setFontSize(10);
+    pdf.setTextColor(127, 140, 141);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Generated: ${new Date().toLocaleString()}`, 105, yPos, { align: 'center' });
+    yPos += 15;
+    
+    // Campaign ID box
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 10, 'F');
+    pdf.setFontSize(10);
+    pdf.setTextColor(52, 152, 219);
+    pdf.setFont('courier', 'bold');
+    pdf.text(`Campaign ID: ${c.id}`, 105, yPos + 6, { align: 'center' });
+    yPos += 15;
+    
+    // Campaign Details Section
+    pdf.setFontSize(16);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Campaign Details', 20, yPos);
+    yPos += 8;
+    
+    // Calculate duration
+    const durationHours = Math.round((end - start) / 3600000);
+    const durationDays = Math.floor(durationHours / 24);
+    const remainingHours = durationHours % 24;
+    const durationText = durationDays > 0 
+        ? `${durationDays} days ${remainingHours} hours` 
+        : `${durationHours} hours`;
+    
+    // Calculate status
+    let status = 'UPCOMING';
+    let statusColor = [255, 193, 7];
+    if (now >= start && now <= end) {
+        status = 'ACTIVE';
+        statusColor = [40, 167, 69];
+    } else if (now > end) {
+        status = 'EXPIRED';
+        statusColor = [220, 53, 69];
+    }
+    
+    // Details box
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 60, 'F');
+    
+    pdf.setFontSize(11);
+    pdf.setTextColor(52, 73, 94);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Station:', 25, yPos + 7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.station || 'N/A', 70, yPos + 7);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Customer:', 25, yPos + 14);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.name, 70, yPos + 14);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Status:', 25, yPos + 21);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+    pdf.text(status, 70, yPos + 21);
+    pdf.setTextColor(52, 73, 94);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Start:', 25, yPos + 28);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(start.toLocaleString(), 70, yPos + 28);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('End:', 25, yPos + 35);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(end.toLocaleString(), 70, yPos + 35);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Duration:', 25, yPos + 42);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(durationText, 70, yPos + 42);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Images:', 25, yPos + 49);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${images.length} images`, 70, yPos + 49);
+    
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Created:', 25, yPos + 56);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${c.created_by || 'Unknown'} at ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}`, 70, yPos + 56);
+    
+    yPos += 65;
+    
+    // Add images (first 4 images)
+    if (images.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setTextColor(44, 62, 80);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Campaign Images', 20, yPos);
+        yPos += 8;
+        
+        const imgSize = 40;
+        const startX = 20;
+        let imgYPos = yPos;
+        
+        for (let i = 0; i < Math.min(images.length, 4); i++) {
+            try {
+                const img = images[i];
+                const imgData = img.data.split(',')[1];
+                
+                const col = i % 2;
+                const row = Math.floor(i / 2);
+                const x = startX + (col * 45);
+                const y = imgYPos + (row * 45);
+                
+                pdf.addImage(imgData, 'JPEG', x, y, imgSize, imgSize);
+                
+                pdf.setFontSize(7);
+                pdf.setTextColor(127, 140, 141);
+                const shortName = (img.name || `Image ${i+1}`).substring(0, 12);
+                pdf.text(shortName, x, y + imgSize + 3);
+            } catch(e) {
+                console.log('Could not add image:', e);
+            }
+        }
+        
+        yPos += 45 * (Math.ceil(Math.min(images.length, 4) / 2)) + 15;
+    }
+    
+    // Update History Section
+    if (updates && updates.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setTextColor(243, 156, 18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Update History', 20, yPos);
+        yPos += 8;
+        
+        pdf.setFontSize(8);
+        pdf.setTextColor(0, 0, 0);
+        
+        updates.slice(-3).forEach(update => {
+            const updateText = `${update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date'}: ${update.changes || 'Campaign updated'}`;
+            const lines = pdf.splitTextToSize(updateText, 160);
+            pdf.text(lines, 20, yPos);
+            yPos += (lines.length * 4) + 2;
+            
+            pdf.setFontSize(6);
+            pdf.setTextColor(127, 140, 141);
+            pdf.text(`by ${update.updated_by || 'Unknown'}`, 20, yPos);
+            yPos += 6;
+            pdf.setFontSize(8);
+            pdf.setTextColor(0, 0, 0);
+        });
+        
+        yPos += 5;
+    }
+    
+    // Hashes Section
+    pdf.setFontSize(16);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
+    yPos += 8;
+    
+    // START HASH
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 25, 'F');
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(39, 174, 96);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('START HASH', 25, yPos + 6);
+    
+    pdf.setFontSize(7);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('courier', 'normal');
+    const startHash = c.hashes?.start?.hash || 'PENDING';
+    const startLines = pdf.splitTextToSize(startHash, 160);
+    pdf.text(startLines, 25, yPos + 12);
+    yPos += 30;
+    
+    // END HASH
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 25, 'F');
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(231, 76, 60);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('END HASH', 25, yPos + 6);
+    
+    pdf.setFontSize(7);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('courier', 'normal');
+    const endHash = c.hashes?.end?.hash || 'PENDING';
+    const endLines = pdf.splitTextToSize(endHash, 160);
+    pdf.text(endLines, 25, yPos + 12);
+    yPos += 30;
+    
+    // Footer
+    pdf.setFontSize(8);
+    pdf.setTextColor(149, 165, 166);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Generated by: ${currentUser?.uid?.substring(0, 8) || 'Anonymous'}`, 20, 280);
+    pdf.text(`Verification ID: ${Math.random().toString(36).substring(2, 10).toUpperCase()}`, 105, 280, { align: 'center' });
+    pdf.text(new Date().toLocaleDateString(), 190, 280, { align: 'right' });
+    
+    // Save PDF
+    const safeName = c.name.replace(/[^a-z0-9]/gi, '_').substring(0, 20);
+    const shortId = c.id.substring(0, 6);
+    const dateStr = new Date().toISOString().split('T')[0];
+    
+    pdf.save(`${safeName}_${shortId}_Proof_${dateStr}.pdf`);
+    closePDFPreview();
+};
 
     // EXCEL EXPORT (Ad)
     window.exportAdToExcel = function() {
