@@ -589,7 +589,7 @@ Status: SOLD OUT
         
         // Check ownership
         if (couponOwner !== currentAdvertiser.name) {
-            showUnauthorizedResult(`This coupon belongs to "${couponOwner}". You are logged in as "${currentAdvertiser.name}".`);
+            showUnauthorizedResult(`This coupon belongs to another business. You are logged in as "${currentAdvertiser.name}".`);
             return;
         }
         
