@@ -893,7 +893,7 @@
         await loadProofs();
         updateAdStatistics();
     }
- async function loadAdCampaigns() {
+async function loadAdCampaigns() {
     try {
         const snap = await db.collection('customers').orderBy('created_at','desc').get();
         allAdCampaigns = [];
@@ -915,10 +915,21 @@
                 campaign.updates = campaign.update_history;
             }
             
+            // Ensure images array is valid
+            if (!campaign.images) {
+                campaign.images = [];
+            }
+            
             allAdCampaigns.push(campaign);
         });
         displayAdCampaigns();
-    } catch(e) { console.error('loadAdCampaigns:', e); }
+    } catch(e) { 
+        console.error('loadAdCampaigns:', e);
+        const list = document.getElementById('campaignsAdList');
+        if (list) {
+            list.innerHTML = '<div class="loading-block" style="color:#dc3545;">❌ Error loading campaigns: ' + e.message + '</div>';
+        }
+    }
 }
     async function loadProofs() {
         try {
@@ -952,128 +963,159 @@
     }
 
 function buildAdCampaignHTML(c) {
-    const status = getAdStatus(c);
-    const start  = c.start_date?.toDate ? c.start_date.toDate() : new Date(c.start_datetime);
-    const end    = c.end_date?.toDate   ? c.end_date.toDate()   : new Date(c.end_datetime);
-    const images = c.images || [];
-    const updates = c.update_history || c.updates || [];  // Changed to match your field name
-    const hashes = c.hashes || {};
-// Images Section - FIXED
-// Images Section - FIXED with better error handling
-const imgsHTML = images.slice(0,5).map(img => {
-    // Handle both old and new image format
-    let imageData = '';
-    let imageName = img.name || 'image';
-    
-    if (typeof img === 'string') {
-        imageData = img;
-    } else if (img.data) {
-        imageData = img.data;
-    } else if (img.imgData) {
-        imageData = img.imgData;
-    } else {
-        console.warn('Invalid image format:', img);
-        return '<div style="color:red;font-size:10px;">Invalid image</div>';
-    }
-    
-    // Make sure the data URL is complete
-    if (!imageData.startsWith('data:image')) {
-        console.warn('Image data missing proper prefix:', imageData.substring(0, 50));
-    }
-    
-    return `<img class="campaign-thumb" src="${imageData}" onclick="showImage('${imageData}')" title="${imageName}">`;
-}).join('');
-    
-    // Calculate compression stats
-    let totalOriginalSize = 0;
-    let totalCompressedSize = 0;
-    images.forEach(img => {
-        totalOriginalSize += img.originalSize || 0;
-        totalCompressedSize += img.compressedSize || 0;
-    });
-    const savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
-    
-    return `<div class="campaign-item ${status}">
-        <div class="campaign-header-row">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <span class="campaign-name">${c.name}</span>
-                <span class="campaign-id">${c.id}</span>
-                <span class="campaign-station">${c.station||'Unknown'}</span>
-                ${updates.length ? `<span class="update-badge">↑${updates.length} updates</span>` : ''}
-            </div>
-            <span class="status-badge ${status}">${status.toUpperCase()}</span>
-        </div>
+    try {
+        const status = getAdStatus(c);
+        const start = c.start_date?.toDate ? c.start_date.toDate() : (c.start_datetime ? new Date(c.start_datetime) : new Date());
+        const end = c.end_date?.toDate ? c.end_date.toDate() : (c.end_datetime ? new Date(c.end_datetime) : new Date());
+        const images = c.images || [];
+        const updates = c.update_history || c.updates || [];
+        const hashes = c.hashes || {};
         
-        <!-- Dates Section -->
-        <div class="campaign-dates">
-            <div class="date-row">
-                <span class="date-label">▶ Start</span>
-                <span class="date-value">${start.toLocaleString()}</span>
-            </div>
-            <div class="date-row">
-                <span class="date-label">■ End</span>
-                <span class="date-value">${end.toLocaleString()}</span>
-            </div>
-            <div class="date-row">
-                <span class="date-label">⏱️ Duration</span>
-                <span class="date-value">${Math.round((end - start) / 3600000)} hours</span>
-            </div>
-        </div>
+        // Images Section with safe handling
+        let imgsHTML = '';
+        if (images.length > 0) {
+            imgsHTML = images.slice(0, 5).map((img, idx) => {
+                try {
+                    // Handle different image formats
+                    let imageData = '';
+                    if (typeof img === 'string') {
+                        imageData = img;
+                    } else if (img && img.data) {
+                        imageData = img.data;
+                    } else if (img && img.imgData) {
+                        imageData = img.imgData;
+                    } else {
+                        console.warn('Invalid image format for campaign', c.id, img);
+                        return '';
+                    }
+                    
+                    // Only create image if we have valid data
+                    if (imageData && imageData.startsWith('data:image')) {
+                        const imageName = img.name || `Image ${idx + 1}`;
+                        return `<img class="campaign-thumb" src="${imageData}" onclick="showImage('${imageData}')" title="${imageName}">`;
+                    } else {
+                        return '';
+                    }
+                } catch (imgErr) {
+                    console.error('Error rendering image:', imgErr);
+                    return '';
+                }
+            }).join('');
+        }
         
-        <!-- Images Section -->
-        ${images.length ? `<div class="campaign-images">${imgsHTML}</div>` : ''}
+        // Calculate compression stats safely
+        let totalOriginalSize = 0;
+        let totalCompressedSize = 0;
+        images.forEach(img => {
+            if (img) {
+                totalOriginalSize += img.originalSize || 0;
+                totalCompressedSize += img.compressedSize || 0;
+            }
+        });
+        const savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
         
-        <!-- Compression Stats -->
-        ${images.length > 0 ? `
-        <div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">
-            <div class="proof-label">📊 COMPRESSION STATS</div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">
-                <span>Original: ${(totalOriginalSize/1024).toFixed(1)} KB</span>
-                <span>Compressed: ${(totalCompressedSize/1024).toFixed(1)} KB</span>
-                <span>Saved: ${savingsPercent}%</span>
-            </div>
-        </div>
-        ` : ''}
-        
-        <!-- Hashes Section -->
-        <div>
-            <div class="proof-label">🔐 START HASH</div>
-            <div class="proof-box">${hashes.start?.hash || 'PENDING'}</div>
-            ${hashes.start?.timestamp ? `<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ${new Date(hashes.start.timestamp).toLocaleString()}</div>` : ''}
-            
-            <div class="proof-label">🔐 END HASH</div>
-            <div class="proof-box">${hashes.end?.hash || 'PENDING'}</div>
-            ${hashes.end?.timestamp ? `<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ${new Date(hashes.end.timestamp).toLocaleString()}</div>` : ''}
-        </div>
-        
-        <!-- Update History -->
-        ${updates.length > 0 ? `
-        <div style="margin-top:12px;">
-            <div class="proof-label">📝 UPDATE HISTORY (${updates.length})</div>
-            ${updates.slice(-3).reverse().map(update => `
-                <div class="update-history" style="margin-top:5px;">
-                    <div style="font-size:11px;color:#f39c12;">📅 ${new Date(update.timestamp).toLocaleString()}</div>
-                    <div style="font-size:11px;margin:5px 0;">${Array.isArray(update.changes) ? update.changes.join(' | ') : update.changes || 'No details'}</div>
-                    <div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ${(update.updated_by || 'Unknown').substring(0,15)}...</div>
+        return `<div class="campaign-item ${status}">
+            <div class="campaign-header-row">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <span class="campaign-name">${escapeHtml(c.name || 'Unknown')}</span>
+                    <span class="campaign-id">${c.id}</span>
+                    <span class="campaign-station">${escapeHtml(c.station || 'Unknown')}</span>
+                    ${updates.length ? `<span class="update-badge">↑${updates.length} updates</span>` : ''}
                 </div>
-            `).join('')}
-            ${updates.length > 3 ? `<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+${updates.length - 3} more updates</span></div>` : ''}
-        </div>
-        ` : ''}
-        
-        <!-- Image Info -->
-        <div style="margin-top:12px;font-size:11px;color:#a0a0a0;">
-            📸 ${c.image_count || images.length} image(s) | 
-            👤 Created by: ${(c.created_by || 'Unknown').substring(0,15)}... | 
-            📅 Created: ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}
-        </div>
-        
-        <div class="action-buttons">
-            <button class="btn-edit"    onclick="openEditModal('${c.id}')">✏️ Edit</button>
-            <button class="btn-pdf"     onclick="showPDFPreview('${c.id}')">📄 PDF Proof</button>
-            <button class="btn-danger"  onclick="deleteCampaign('${c.id}')">🗑️ Delete</button>
-        </div>
-    </div>`;
+                <span class="status-badge ${status}">${status.toUpperCase()}</span>
+            </div>
+            
+            <!-- Dates Section -->
+            <div class="campaign-dates">
+                <div class="date-row">
+                    <span class="date-label">▶ Start</span>
+                    <span class="date-value">${start.toLocaleString()}</span>
+                </div>
+                <div class="date-row">
+                    <span class="date-label">■ End</span>
+                    <span class="date-value">${end.toLocaleString()}</span>
+                </div>
+                <div class="date-row">
+                    <span class="date-label">⏱️ Duration</span>
+                    <span class="date-value">${Math.round((end - start) / 3600000)} hours</span>
+                </div>
+            </div>
+            
+            <!-- Images Section -->
+            ${images.length && imgsHTML ? `<div class="campaign-images">${imgsHTML}</div>` : '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;text-align:center;">📷 No images available</div>'}
+            
+            <!-- Compression Stats -->
+            ${images.length > 0 && totalOriginalSize > 0 ? `
+            <div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">
+                <div class="proof-label">📊 COMPRESSION STATS</div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">
+                    <span>Original: ${(totalOriginalSize/1024).toFixed(1)} KB</span>
+                    <span>Compressed: ${(totalCompressedSize/1024).toFixed(1)} KB</span>
+                    <span>Saved: ${savingsPercent}%</span>
+                </div>
+            </div>
+            ` : ''}
+            
+            <!-- Hashes Section -->
+            <div>
+                <div class="proof-label">🔐 START HASH</div>
+                <div class="proof-box">${hashes.start?.hash || 'PENDING'}</div>
+                ${hashes.start?.timestamp ? `<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ${new Date(hashes.start.timestamp).toLocaleString()}</div>` : ''}
+                
+                <div class="proof-label">🔐 END HASH</div>
+                <div class="proof-box">${hashes.end?.hash || 'PENDING'}</div>
+                ${hashes.end?.timestamp ? `<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ${new Date(hashes.end.timestamp).toLocaleString()}</div>` : ''}
+            </div>
+            
+            <!-- Update History -->
+            ${updates.length > 0 ? `
+            <div style="margin-top:12px;">
+                <div class="proof-label">📝 UPDATE HISTORY (${updates.length})</div>
+                ${updates.slice(-3).reverse().map(update => `
+                    <div class="update-history" style="margin-top:5px;">
+                        <div style="font-size:11px;color:#f39c12;">📅 ${update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date'}</div>
+                        <div style="font-size:11px;margin:5px 0;">${Array.isArray(update.changes) ? update.changes.join(' | ') : (update.changes || 'No details')}</div>
+                        <div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ${(update.updated_by || 'Unknown').substring(0,15)}...</div>
+                    </div>
+                `).join('')}
+                ${updates.length > 3 ? `<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+${updates.length - 3} more updates</span></div>` : ''}
+            </div>
+            ` : ''}
+            
+            <!-- Image Info -->
+            <div style="margin-top:12px;font-size:11px;color:#a0a0a0;">
+                📸 ${c.image_count || images.length} image(s) | 
+                👤 Created by: ${(c.created_by || 'Unknown').substring(0,15)}... | 
+                📅 Created: ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn-edit"    onclick="openEditModal('${c.id}')">✏️ Edit</button>
+                <button class="btn-pdf"     onclick="showPDFPreview('${c.id}')">📄 PDF Proof</button>
+                <button class="btn-danger"  onclick="deleteCampaign('${c.id}')">🗑️ Delete</button>
+            </div>
+        </div>`;
+    } catch (err) {
+        console.error('Error building campaign HTML:', err, c);
+        return `<div class="campaign-item expired">
+            <div class="campaign-header-row">
+                <span class="campaign-name">Error loading campaign</span>
+                <span class="campaign-id">${c.id}</span>
+            </div>
+            <div style="color:#dc3545;padding:10px;">Failed to display: ${err.message}</div>
+        </div>`;
+    }
+}
+
+// Helper function to escape HTML
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
 }
 
     function displayProofs() {
@@ -1249,13 +1291,13 @@ async function compressImage(file, maxSizeKB=200) {
             if (endDT <= startDT) throw new Error('End date must be after start date');
             document.getElementById('uploadProgress').style.display = 'block';
 const imagesData = [];
-for (let i=0;i<selectedFiles.length;i++) {
-    document.getElementById('progressPercent').textContent = `${Math.round((i/selectedFiles.length)*100)}%`;
-    document.getElementById('progressFill').style.width    = `${Math.round((i/selectedFiles.length)*100)}%`;
+for (let i = 0; i < selectedFiles.length; i++) {
+    document.getElementById('progressPercent').textContent = `${Math.round((i / selectedFiles.length) * 100)}%`;
+    document.getElementById('progressFill').style.width = `${Math.round((i / selectedFiles.length) * 100)}%`;
     document.getElementById('progressCurrent').textContent = `Processing ${selectedFiles[i].name}`;
     const compressedImage = await compressImage(selectedFiles[i]);
-    imagesData.push({ 
-        name: compressedImage.name, 
+    imagesData.push({
+        name: compressedImage.name,
         data: compressedImage.data,
         originalSize: compressedImage.originalSize,
         compressedSize: compressedImage.compressedSize
