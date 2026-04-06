@@ -293,32 +293,49 @@
             const minutes = String(date.getMinutes()).padStart(2, '0');
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
-        async function sendTelegramNotification(advertiserName, adId, productName, hostName, isAuto = false) {
-            const timestamp = new Date().toLocaleString();
-            const type = isAuto ? '🔴 AUTO-MARKED SOLD OUT' : '🔴 AD SOLD OUT REQUEST';
-            const message = `${type}
+// Add this after formatCompactDate() function
+async function sendSoldOutTelegram(advertiserName, productName, totalProducts, redeemedCount, remaining) {
+    const BOT_TOKEN = "8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk";
+    const CHAT_ID = "6597376744";
+    
+    const timestamp = new Date().toLocaleString();
+    const message = `
+🔴 PRODUCT SOLD OUT ALERT 🔴
 
-Ad ID: ${adId}
 Advertiser: ${advertiserName}
 Product: ${productName}
-Location: ${hostName}
-Requested At: ${timestamp}
+Total Quantity: ${totalProducts}
+Redeemed: ${redeemedCount}
+Remaining: ${remaining}
+Status: SOLD OUT
 
-Action Required: Remove this ad from display system.`;
-            
-            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'HTML' })
-                });
-                return await response.json();
-            } catch (error) {
-                console.error("Telegram error:", error);
-            }
+⏰ Time: ${timestamp}
+
+⚠️ Action Required: Remove this ad from display system.
+    `;
+    
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        });
+        const result = await response.json();
+        if (result.ok) {
+            console.log("✅ Telegram notification sent for sold out product:", productName);
+        } else {
+            console.error("Telegram error:", result);
         }
+    } catch (error) {
+        console.error("Failed to send Telegram notification:", error);
+    }
+}
         
         async function manualMarkSoldOut() {
             if (!currentAdvertiser) { alert("Please login first"); return; }
@@ -706,6 +723,18 @@ async function markCouponUsed() {
                 await campaignRef.update({ products: products });
                 
                 console.log(`✅ Updated ${productName}: redeemed=${newRedeemedCount}, remaining=${newRemaining}`);
+                
+                // ===== ADD THIS: Send Telegram notification if sold out =====
+                if (newRemaining <= 0) {
+                    await sendSoldOutTelegram(
+                        advertiserName,
+                        productName,
+                        products[productIndex].totalProducts,
+                        newRedeemedCount,
+                        newRemaining
+                    );
+                }
+                // ========================================================
             } else {
                 console.log(`❌ Product ${productName} not found in campaign`);
             }
