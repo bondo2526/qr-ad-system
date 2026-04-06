@@ -893,14 +893,33 @@
         await loadProofs();
         updateAdStatistics();
     }
-    async function loadAdCampaigns() {
-        try {
-            const snap = await db.collection('customers').orderBy('created_at','desc').get();
-            allAdCampaigns = [];
-            snap.forEach(doc => { allAdCampaigns.push({ id: doc.id, ...doc.data() }); });
-            displayAdCampaigns();
-        } catch(e) { console.error('loadAdCampaigns:', e); }
-    }
+ async function loadAdCampaigns() {
+    try {
+        const snap = await db.collection('customers').orderBy('created_at','desc').get();
+        allAdCampaigns = [];
+        snap.forEach(doc => {
+            const data = doc.data();
+            // Handle both old and new field names
+            const campaign = { id: doc.id, ...data };
+            
+            // Convert string dates to Date objects if needed
+            if (campaign.start_datetime && !campaign.start_date) {
+                campaign.start_date = firebase.firestore.Timestamp.fromDate(new Date(campaign.start_datetime));
+            }
+            if (campaign.end_datetime && !campaign.end_date) {
+                campaign.end_date = firebase.firestore.Timestamp.fromDate(new Date(campaign.end_datetime));
+            }
+            
+            // Handle update_history vs updates field
+            if (campaign.update_history && !campaign.updates) {
+                campaign.updates = campaign.update_history;
+            }
+            
+            allAdCampaigns.push(campaign);
+        });
+        displayAdCampaigns();
+    } catch(e) { console.error('loadAdCampaigns:', e); }
+}
     async function loadProofs() {
         try {
             const snap = await db.collection('blockchain').orderBy('created_at','desc').get();
@@ -932,44 +951,108 @@
         list.innerHTML = campaigns.map(c => buildAdCampaignHTML(c)).join('');
     }
 
-    function buildAdCampaignHTML(c) {
-        const status = getAdStatus(c);
-        const start  = c.start_date?.toDate ? c.start_date.toDate() : new Date();
-        const end    = c.end_date?.toDate   ? c.end_date.toDate()   : new Date();
-        const images = c.images || [];
-        const updates = c.updates || [];
-        const hashes = c.hashes || {};
-        const imgsHTML = images.slice(0,5).map(img =>
-            `<img class="campaign-thumb" src="${img.data}" onclick="showImage('${img.data}')" title="${img.name||''}">`
-        ).join('');
-        return `<div class="campaign-item ${status}">
-            <div class="campaign-header-row">
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                    <span class="campaign-name">${c.name}</span>
-                    <span class="campaign-id">${c.id}</span>
-                    <span class="campaign-station">${c.station||'Unknown'}</span>
-                    ${updates.length ? `<span class="update-badge">↑${updates.length} updates</span>` : ''}
+function buildAdCampaignHTML(c) {
+    const status = getAdStatus(c);
+    const start  = c.start_date?.toDate ? c.start_date.toDate() : new Date(c.start_datetime);
+    const end    = c.end_date?.toDate   ? c.end_date.toDate()   : new Date(c.end_datetime);
+    const images = c.images || [];
+    const updates = c.update_history || c.updates || [];  // Changed to match your field name
+    const hashes = c.hashes || {};
+    const imgsHTML = images.slice(0,5).map(img =>
+        `<img class="campaign-thumb" src="${img.data}" onclick="showImage('${img.data}')" title="${img.name||''}">`
+    ).join('');
+    
+    // Calculate compression stats
+    let totalOriginalSize = 0;
+    let totalCompressedSize = 0;
+    images.forEach(img => {
+        totalOriginalSize += img.originalSize || 0;
+        totalCompressedSize += img.compressedSize || 0;
+    });
+    const savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
+    
+    return `<div class="campaign-item ${status}">
+        <div class="campaign-header-row">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="campaign-name">${c.name}</span>
+                <span class="campaign-id">${c.id}</span>
+                <span class="campaign-station">${c.station||'Unknown'}</span>
+                ${updates.length ? `<span class="update-badge">↑${updates.length} updates</span>` : ''}
+            </div>
+            <span class="status-badge ${status}">${status.toUpperCase()}</span>
+        </div>
+        
+        <!-- Dates Section -->
+        <div class="campaign-dates">
+            <div class="date-row">
+                <span class="date-label">▶ Start</span>
+                <span class="date-value">${start.toLocaleString()}</span>
+            </div>
+            <div class="date-row">
+                <span class="date-label">■ End</span>
+                <span class="date-value">${end.toLocaleString()}</span>
+            </div>
+            <div class="date-row">
+                <span class="date-label">⏱️ Duration</span>
+                <span class="date-value">${Math.round((end - start) / 3600000)} hours</span>
+            </div>
+        </div>
+        
+        <!-- Images Section -->
+        ${images.length ? `<div class="campaign-images">${imgsHTML}</div>` : ''}
+        
+        <!-- Compression Stats -->
+        ${images.length > 0 ? `
+        <div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">
+            <div class="proof-label">📊 COMPRESSION STATS</div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">
+                <span>Original: ${(totalOriginalSize/1024).toFixed(1)} KB</span>
+                <span>Compressed: ${(totalCompressedSize/1024).toFixed(1)} KB</span>
+                <span>Saved: ${savingsPercent}%</span>
+            </div>
+        </div>
+        ` : ''}
+        
+        <!-- Hashes Section -->
+        <div>
+            <div class="proof-label">🔐 START HASH</div>
+            <div class="proof-box">${hashes.start?.hash || 'PENDING'}</div>
+            ${hashes.start?.timestamp ? `<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ${new Date(hashes.start.timestamp).toLocaleString()}</div>` : ''}
+            
+            <div class="proof-label">🔐 END HASH</div>
+            <div class="proof-box">${hashes.end?.hash || 'PENDING'}</div>
+            ${hashes.end?.timestamp ? `<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ${new Date(hashes.end.timestamp).toLocaleString()}</div>` : ''}
+        </div>
+        
+        <!-- Update History -->
+        ${updates.length > 0 ? `
+        <div style="margin-top:12px;">
+            <div class="proof-label">📝 UPDATE HISTORY (${updates.length})</div>
+            ${updates.slice(-3).reverse().map(update => `
+                <div class="update-history" style="margin-top:5px;">
+                    <div style="font-size:11px;color:#f39c12;">📅 ${new Date(update.timestamp).toLocaleString()}</div>
+                    <div style="font-size:11px;margin:5px 0;">${Array.isArray(update.changes) ? update.changes.join(' | ') : update.changes || 'No details'}</div>
+                    <div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ${(update.updated_by || 'Unknown').substring(0,15)}...</div>
                 </div>
-                <span class="status-badge ${status}">${status.toUpperCase()}</span>
-            </div>
-            <div class="campaign-dates">
-                <div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">${start.toLocaleString()}</span></div>
-                <div class="date-row"><span class="date-label">■ End</span><span class="date-value">${end.toLocaleString()}</span></div>
-            </div>
-            ${images.length ? `<div class="campaign-images">${imgsHTML}</div>` : ''}
-            <div>
-                <div class="proof-label">START HASH</div>
-                <div class="proof-box">${hashes.start?.hash || 'PENDING'}</div>
-                <div class="proof-label">END HASH</div>
-                <div class="proof-box">${hashes.end?.hash || 'PENDING'}</div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn-edit"    onclick="openEditModal('${c.id}')">✏️ Edit</button>
-                <button class="btn-pdf"     onclick="showPDFPreview('${c.id}')">📄 PDF Proof</button>
-                <button class="btn-danger"  onclick="deleteCampaign('${c.id}')">🗑️ Delete</button>
-            </div>
-        </div>`;
-    }
+            `).join('')}
+            ${updates.length > 3 ? `<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+${updates.length - 3} more updates</span></div>` : ''}
+        </div>
+        ` : ''}
+        
+        <!-- Image Info -->
+        <div style="margin-top:12px;font-size:11px;color:#a0a0a0;">
+            📸 ${c.image_count || images.length} image(s) | 
+            👤 Created by: ${(c.created_by || 'Unknown').substring(0,15)}... | 
+            📅 Created: ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn-edit"    onclick="openEditModal('${c.id}')">✏️ Edit</button>
+            <button class="btn-pdf"     onclick="showPDFPreview('${c.id}')">📄 PDF Proof</button>
+            <button class="btn-danger"  onclick="deleteCampaign('${c.id}')">🗑️ Delete</button>
+        </div>
+    </div>`;
+}
 
     function displayProofs() {
         const list = document.getElementById('proofsList');
@@ -1093,31 +1176,36 @@
     
     window.removeFile = function(i) { selectedFiles.splice(i,1); renderImagePreviews(); };
 
-    async function compressImage(file, maxSizeKB=200) {
-        return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = e => {
-                const img = new Image();
-                img.onload = () => {
-                    let q = 0.8, w = img.width, h = img.height;
-                    if (w > 800) { h = Math.round(h * 800/w); w = 800; }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w; canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    const tryCompress = (quality) => {
-                        const data = canvas.toDataURL('image/jpeg', quality);
-                        const sizeKB = data.length * 0.75 / 1024;
-                        if (sizeKB > maxSizeKB && quality > 0.1) tryCompress(quality - 0.1);
-                        else resolve(data);
-                    };
-                    tryCompress(q);
+async function compressImage(file, maxSizeKB=200) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                let q = 0.8, w = img.width, h = img.height;
+                if (w > 800) { h = Math.round(h * 800/w); w = 800; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const tryCompress = (quality) => {
+                    const data = canvas.toDataURL('image/jpeg', quality);
+                    const sizeKB = data.length * 0.75 / 1024;
+                    if (sizeKB > maxSizeKB && quality > 0.1) tryCompress(quality - 0.1);
+                    else resolve({
+                        data: data,
+                        name: file.name,
+                        originalSize: file.size,
+                        compressedSize: Math.round(sizeKB * 1024)
+                    });
                 };
-                img.src = e.target.result;
+                tryCompress(q);
             };
-            reader.readAsDataURL(file);
-        });
-    }
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
 
     document.getElementById('addCampaignForm')?.addEventListener('submit', async e => {
         e.preventDefault();
@@ -1152,18 +1240,35 @@
             const startHash = document.getElementById('startHashPreview').textContent;
             const endHash   = document.getElementById('endHashPreview').textContent;
             const uid = currentUser?.uid || 'anonymous';
-            const docRef = await db.collection('customers').add({
-                name, station,
-                start_date: firebase.firestore.Timestamp.fromDate(startDT),
-                end_date:   firebase.firestore.Timestamp.fromDate(endDT),
-                images: imagesData,
-                hashes: {
-                    start: { hash: startHash, timestamp: new Date().toISOString() },
-                    end:   { hash: endHash,   timestamp: new Date().toISOString() }
-                },
-                created_by: uid,
-                created_at: firebase.firestore.FieldValue.serverTimestamp()
-            });
+const docRef = await db.collection('customers').add({
+    name: name,
+    station: station,
+    start_datetime: startDT.toISOString(),  // Store as ISO string
+    end_datetime: endDT.toISOString(),      // Store as ISO string
+    start_date: firebase.firestore.Timestamp.fromDate(startDT),  // Keep for queries
+    end_date: firebase.firestore.Timestamp.fromDate(endDT),      // Keep for queries
+    images: imagesData,
+    image_count: imagesData.length,
+    hashes: {
+        start: { 
+            hash: startHash, 
+            timestamp: startDT.toISOString() 
+        },
+        end: { 
+            hash: endHash, 
+            timestamp: endDT.toISOString() 
+        }
+    },
+    compression_stats: {
+        compressed_size: imagesData.reduce((sum, img) => sum + (img.compressedSize || 0), 0),
+        original_size: imagesData.reduce((sum, img) => sum + (img.originalSize || 0), 0),
+        savings_percent: "0.0"
+    },
+    created_by: uid,
+    created_at: firebase.firestore.FieldValue.serverTimestamp(),
+    status: getAdStatus({ start_date: firebase.firestore.Timestamp.fromDate(startDT), end_date: firebase.firestore.Timestamp.fromDate(endDT) }),
+    update_history: []  // Initialize empty update history
+});
             await db.collection('blockchain').add({ campaign_id: docRef.id, customer_name: name, hash: startHash, type: 'start', created_at: firebase.firestore.FieldValue.serverTimestamp() });
             await db.collection('blockchain').add({ campaign_id: docRef.id, customer_name: name, hash: endHash,   type: 'end',   created_at: firebase.firestore.FieldValue.serverTimestamp() });
             document.getElementById('uploadProgress').style.display = 'none';
@@ -1195,56 +1300,128 @@
     
     window.closeEditModal = function() { document.getElementById('editModal').classList.remove('active'); };
     
-    document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const id = document.getElementById('editCampaignId').value;
-        const btn = document.getElementById('editSaveBtn');
-        btn.disabled = true;
-        document.getElementById('editSaveText').style.display = 'none';
-        document.getElementById('editSaveLoading').style.display = 'inline-block';
+document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = document.getElementById('editCampaignId').value;
+    const btn = document.getElementById('editSaveBtn');
+    btn.disabled = true;
+    document.getElementById('editSaveText').style.display = 'none';
+    document.getElementById('editSaveLoading').style.display = 'inline-block';
+    
+    try {
+        const old = allAdCampaigns.find(x=>x.id===id) || {};
+        const updates = old.update_history || old.updates || [];
         
-        try {
-            const old = allAdCampaigns.find(x=>x.id===id) || {};
-            const updates = old.updates || [];
-            const newName = document.getElementById('editCustomerName').value;
-            const newStation = document.getElementById('editStationName').value;
-            const newStart = new Date(document.getElementById('editStartDateTime').value);
-            const newEnd = new Date(document.getElementById('editEndDateTime').value);
-            const oldStart = old.start_date?.toDate?.() || new Date();
-            const oldEnd = old.end_date?.toDate?.() || new Date();
-            const newStatus = getAdStatus({ start_date: { toDate: () => newStart }, end_date: { toDate: () => newEnd } });
-            
-            const changeLogs = [];
-            if (old.name !== newName) changeLogs.push({ field: 'Customer Name', old_value: old.name, new_value: newName, timestamp: new Date().toISOString(), updated_by: currentUser?.uid || 'anonymous', changes: `Customer Name changed from "${old.name}" to "${newName}"` });
-            if (old.station !== newStation) changeLogs.push({ field: 'Station', old_value: old.station, new_value: newStation, timestamp: new Date().toISOString(), updated_by: currentUser?.uid || 'anonymous', changes: `Station changed from "${old.station}" to "${newStation}"` });
-            if (oldStart.getTime() !== newStart.getTime()) changeLogs.push({ field: 'Start Date', old_value: oldStart.toLocaleString(), new_value: newStart.toLocaleString(), timestamp: new Date().toISOString(), updated_by: currentUser?.uid || 'anonymous', changes: `Start Date changed from "${oldStart.toLocaleString()}" to "${newStart.toLocaleString()}"` });
-            if (oldEnd.getTime() !== newEnd.getTime()) changeLogs.push({ field: 'End Date', old_value: oldEnd.toLocaleString(), new_value: newEnd.toLocaleString(), timestamp: new Date().toISOString(), updated_by: currentUser?.uid || 'anonymous', changes: `End Date changed from "${oldEnd.toLocaleString()}" to "${newEnd.toLocaleString()}"` });
-            
-            changeLogs.forEach(log => updates.push(log));
-            if (changeLogs.length === 0) updates.push({ field: 'Campaign Details', changes: 'Campaign details updated', timestamp: new Date().toISOString(), updated_by: currentUser?.uid || 'anonymous' });
-            
-            await db.collection('customers').doc(id).update({
-                name: newName, station: newStation,
-                start_date: firebase.firestore.Timestamp.fromDate(newStart),
-                end_date: firebase.firestore.Timestamp.fromDate(newEnd),
-                status: newStatus, updates: updates
+        const newName = document.getElementById('editCustomerName').value;
+        const newStation = document.getElementById('editStationName').value;
+        const newStart = new Date(document.getElementById('editStartDateTime').value);
+        const newEnd = new Date(document.getElementById('editEndDateTime').value);
+        
+        const oldStart = old.start_date?.toDate?.() || new Date(old.start_datetime);
+        const oldEnd = old.end_date?.toDate?.() || new Date(old.end_datetime);
+        const newStatus = getAdStatus({ start_date: { toDate: () => newStart }, end_date: { toDate: () => newEnd } });
+        
+        // Track detailed changes
+        const changeLogs = [];
+        const changesArray = [];
+        
+        if (old.name !== newName) {
+            changesArray.push(`Customer Name: "${old.name}" → "${newName}"`);
+            changeLogs.push({
+                field: 'Customer Name',
+                old_value: old.name,
+                new_value: newName,
+                timestamp: new Date().toISOString(),
+                updated_by: currentUser?.uid || 'anonymous',
+                changes: `Customer Name changed from "${old.name}" to "${newName}"`
             });
-            
-            closeEditModal();
-            await loadAdData();
-            const a = document.getElementById('editAlert');
-            a.className='alert success'; a.textContent='✅ Campaign updated successfully!'; a.style.display='block';
-            setTimeout(() => a.style.display = 'none', 3000);
-        } catch(err) {
-            const a = document.getElementById('editAlert');
-            a.className='alert error'; a.textContent='❌ ' + err.message; a.style.display='block';
-            setTimeout(() => a.style.display = 'none', 3000);
-        } finally {
-            btn.disabled = false;
-            document.getElementById('editSaveText').style.display = 'inline';
-            document.getElementById('editSaveLoading').style.display = 'none';
         }
-    });
+        
+        if (old.station !== newStation) {
+            changesArray.push(`Station: "${old.station}" → "${newStation}"`);
+            changeLogs.push({
+                field: 'Station',
+                old_value: old.station,
+                new_value: newStation,
+                timestamp: new Date().toISOString(),
+                updated_by: currentUser?.uid || 'anonymous',
+                changes: `Station changed from "${old.station}" to "${newStation}"`
+            });
+        }
+        
+        if (oldStart.getTime() !== newStart.getTime()) {
+            changesArray.push(`Start: ${oldStart.toLocaleString()} → ${newStart.toLocaleString()}`);
+            changeLogs.push({
+                field: 'Start Date',
+                old_value: oldStart.toLocaleString(),
+                new_value: newStart.toLocaleString(),
+                timestamp: new Date().toISOString(),
+                updated_by: currentUser?.uid || 'anonymous',
+                changes: `Start Date changed from "${oldStart.toLocaleString()}" to "${newStart.toLocaleString()}"`
+            });
+        }
+        
+        if (oldEnd.getTime() !== newEnd.getTime()) {
+            changesArray.push(`End: ${oldEnd.toLocaleString()} → ${newEnd.toLocaleString()}`);
+            changeLogs.push({
+                field: 'End Date',
+                old_value: oldEnd.toLocaleString(),
+                new_value: newEnd.toLocaleString(),
+                timestamp: new Date().toISOString(),
+                updated_by: currentUser?.uid || 'anonymous',
+                changes: `End Date changed from "${oldEnd.toLocaleString()}" to "${newEnd.toLocaleString()}"`
+            });
+        }
+        
+        // Create update record matching your database structure
+        const updateRecord = {
+            changes: changesArray,  // Array of changes
+            field: changesArray.join(' | '),  // Combined string for backward compatibility
+            old_value: `${old.station} - ${old.name} (${old.start_datetime || old.start_date?.toDate?.()} to ${old.end_datetime || old.end_date?.toDate?.()})`,
+            new_value: `${newStation} - ${newName} (${newStart.toISOString()} to ${newEnd.toISOString()})`,
+            timestamp: new Date().toISOString(),
+            updated_by: currentUser?.uid || 'anonymous'
+        };
+        
+        updates.push(updateRecord);
+        
+        // Prepare update data
+        const updateData = {
+            name: newName,
+            station: newStation,
+            start_datetime: newStart.toISOString(),  // Store as string
+            end_datetime: newEnd.toISOString(),      // Store as string
+            start_date: firebase.firestore.Timestamp.fromDate(newStart),  // Keep for compatibility
+            end_date: firebase.firestore.Timestamp.fromDate(newEnd),      // Keep for compatibility
+            status: newStatus,
+            update_history: updates,  // Use the field name from your database
+            updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+            updated_by: currentUser?.uid || 'anonymous'
+        };
+        
+        await db.collection('customers').doc(id).update(updateData);
+        
+        closeEditModal();
+        await loadAdData();
+        
+        const a = document.getElementById('editAlert');
+        a.className='alert success'; 
+        a.textContent='✅ Campaign updated: ' + changesArray.join(', '); 
+        a.style.display='block';
+        setTimeout(() => a.style.display = 'none', 4000);
+        
+    } catch(err) {
+        const a = document.getElementById('editAlert');
+        a.className='alert error'; 
+        a.textContent='❌ ' + err.message; 
+        a.style.display='block';
+        setTimeout(() => a.style.display = 'none', 3000);
+    } finally {
+        btn.disabled = false;
+        document.getElementById('editSaveText').style.display = 'inline';
+        document.getElementById('editSaveLoading').style.display = 'none';
+    }
+});
 
     // DELETE
     window.deleteCampaign = async function(id) {
