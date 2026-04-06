@@ -601,7 +601,7 @@
                 <p class="header-subtitle">Manage ads, products, and track redemptions</p>
                 
                 <div class="header-controls">
-                    <span class="auto-refresh-badge" id="autoRefreshStatus">🔄 Auto-refresh: ON (3s)</span>
+                    <span class="auto-refresh-badge" id="autoRefreshStatus">🔄 Auto-refresh: ON (10s)</span>
                     <button class="btn btn-change-password" onclick="showChangePasswordModal()">
                         🔑 Change Password
                     </button>
@@ -822,7 +822,7 @@
             autoRefreshInterval = setInterval(() => {
                 console.log("Auto-refreshing dashboard at:", new Date().toLocaleTimeString());
                 refreshAllData();
-            }, 3000); // Refresh every 3 seconds
+            }, 10000); // Refresh every 10 seconds
         }
         
         function stopAutoRefresh() {
