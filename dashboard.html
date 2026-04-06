@@ -24,6 +24,10 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 20px;
         }
+        .login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
         
         .login-container {
             background: white;
@@ -798,24 +802,60 @@
         let allCampaigns = [];
         let autoRefreshInterval = null;
         
-        function login() {
-            const inputPassword = document.getElementById('passwordInput').value;
-            const storedPassword = localStorage.getItem(STORAGE_KEY);
-            
-            if (inputPassword === storedPassword) {
+     function login() {
+    const inputPassword = document.getElementById('passwordInput').value;
+    const storedPassword = localStorage.getItem(STORAGE_KEY);
+    const errorDiv = document.getElementById('loginError');
+    const loginBtn = document.querySelector('.login-btn');
+    
+    // Clear previous error
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+    
+    // Check if password is empty
+    if (!inputPassword) {
+        errorDiv.textContent = '❌ Please enter your password';
+        errorDiv.style.display = 'block';
+        document.getElementById('passwordInput').focus();
+        return;
+    }
+    
+    // Check password
+    if (inputPassword === storedPassword) {
+        // Password correct - show logging in message
+        const originalBtnText = loginBtn.innerHTML;
+        loginBtn.innerHTML = '⏳ Logging in...';
+        loginBtn.disabled = true;
+        
+        setTimeout(() => {
+            try {
+                // Hide login screen
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('dashboardContent').style.display = 'block';
-                document.getElementById('loginError').style.display = 'none';
                 document.getElementById('passwordInput').value = '';
                 sessionStorage.setItem('dashboard_logged_in', 'true');
+                
+                // Load data
                 refreshAllData();
                 startAutoRefresh();
-            } else {
-                document.getElementById('loginError').style.display = 'block';
-                document.getElementById('passwordInput').value = '';
-                document.getElementById('passwordInput').focus();
+                
+                console.log("✅ Login successful");
+            } catch (err) {
+                console.error("Login error:", err);
+                errorDiv.textContent = '❌ Error during login: ' + err.message;
+                errorDiv.style.display = 'block';
+                loginBtn.innerHTML = originalBtnText;
+                loginBtn.disabled = false;
             }
-        }
+        }, 500);
+    } else {
+        // Password wrong
+        errorDiv.textContent = '❌ Incorrect password. Please try again.';
+        errorDiv.style.display = 'block';
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').focus();
+    }
+}
         
         function startAutoRefresh() {
             if (autoRefreshInterval) clearInterval(autoRefreshInterval);
