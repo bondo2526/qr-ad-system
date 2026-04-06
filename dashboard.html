@@ -565,6 +565,9 @@
     </div>
 
     <script>
+    // ═══════════════════════════════════════════════════════
+    //  FIREBASE — single project: ad-coupon-system (coupon DB)
+    // ═══════════════════════════════════════════════════════
     const firebaseConfig = {
         apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
         authDomain: "ad-coupon-system.firebaseapp.com",
@@ -579,10 +582,14 @@
     const db   = firebase.firestore();
     db.enablePersistence().catch(err => console.log('Persistence error:', err));
 
+    // ═══════════════════════════════════════════════════════
+    //  PASSWORD / SESSION
+    // ═══════════════════════════════════════════════════════
     const STORAGE_KEY    = 'dashboard_password';
     const DEFAULT_PASS   = 'admin123';
     if (!localStorage.getItem(STORAGE_KEY)) localStorage.setItem(STORAGE_KEY, DEFAULT_PASS);
 
+    // Global variables
     let currentUser = null;
     let allAdCampaigns = [];
     let allProofs = [];
@@ -602,23 +609,35 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('passwordInput').focus();
-        if (sessionStorage.getItem('dashboard_logged_in') === 'true') bootDashboard();
+        if (sessionStorage.getItem('dashboard_logged_in') === 'true') {
+            bootDashboard();
+        }
     });
 
     function handleLogin() {
         const pass = document.getElementById('passwordInput').value;
         const errDiv = document.getElementById('loginError');
         errDiv.style.display = 'none';
-        if (!pass) { errDiv.textContent = '❌ Please enter your password'; errDiv.style.display = 'block'; return; }
+        
+        if (!pass) { 
+            errDiv.textContent = '❌ Please enter your password'; 
+            errDiv.style.display = 'block'; 
+            return; 
+        }
+        
         if (pass !== localStorage.getItem(STORAGE_KEY)) {
-            errDiv.textContent = '❌ Incorrect password.'; errDiv.style.display = 'block';
-            document.getElementById('passwordInput').value = ''; document.getElementById('passwordInput').focus();
+            errDiv.textContent = '❌ Incorrect password.'; 
+            errDiv.style.display = 'block';
+            document.getElementById('passwordInput').value = ''; 
+            document.getElementById('passwordInput').focus();
             return;
         }
+        
         const btn = document.getElementById('loginBtn');
         document.getElementById('loginText').style.display = 'none';
         document.getElementById('loginLoading').style.display = 'inline-block';
         btn.disabled = true;
+        
         setTimeout(() => {
             sessionStorage.setItem('dashboard_logged_in', 'true');
             bootDashboard();
@@ -628,89 +647,176 @@
     function handleLogout() {
         stopAutoRefresh();
         sessionStorage.removeItem('dashboard_logged_in');
-        auth.signOut().catch(()=>{});
+        if (auth) {
+            auth.signOut().catch(()=>{});
+        }
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('dashboardContent').style.display = 'none';
         document.getElementById('loginText').style.display = 'inline';
         document.getElementById('loginLoading').style.display = 'none';
-        document.getElementById('loginBtn').disabled = false;
-        document.getElementById('passwordInput').value = '';
-        document.getElementById('loginError').style.display = 'none';
-        document.getElementById('passwordInput').focus();
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) loginBtn.disabled = false;
+        const passwordInput = document.getElementById('passwordInput');
+        if (passwordInput) {
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+        const loginError = document.getElementById('loginError');
+        if (loginError) loginError.style.display = 'none';
     }
 
-    function showChangePasswordModal() { document.getElementById('passwordModal').classList.add('active'); }
+    function showChangePasswordModal() { 
+        document.getElementById('passwordModal').classList.add('active'); 
+    }
+    
     function closePasswordModal() {
         document.getElementById('passwordModal').classList.remove('active');
-        ['cpCurrentPassword','cpNewPassword','cpConfirmPassword'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('passwordModalError').style.display = 'none';
+        ['cpCurrentPassword','cpNewPassword','cpConfirmPassword'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const err = document.getElementById('passwordModalError');
+        if (err) err.style.display = 'none';
     }
+    
     function changeUnifiedPassword() {
         const cur = document.getElementById('cpCurrentPassword').value;
         const nw = document.getElementById('cpNewPassword').value;
         const conf = document.getElementById('cpConfirmPassword').value;
         const err = document.getElementById('passwordModalError');
         err.style.display = 'none';
-        if (cur !== localStorage.getItem(STORAGE_KEY)) { err.textContent = '❌ Current password incorrect'; err.style.display = 'block'; return; }
-        if (nw.length < 6) { err.textContent = '❌ New password must be at least 6 characters'; err.style.display = 'block'; return; }
-        if (nw !== conf) { err.textContent = '❌ Passwords do not match'; err.style.display = 'block'; return; }
+        
+        if (cur !== localStorage.getItem(STORAGE_KEY)) { 
+            err.textContent = '❌ Current password incorrect'; 
+            err.style.display = 'block'; 
+            return; 
+        }
+        if (nw.length < 6) { 
+            err.textContent = '❌ New password must be at least 6 characters'; 
+            err.style.display = 'block'; 
+            return; 
+        }
+        if (nw !== conf) { 
+            err.textContent = '❌ Passwords do not match'; 
+            err.style.display = 'block'; 
+            return; 
+        }
+        
         localStorage.setItem(STORAGE_KEY, nw);
-        db.collection('settings').doc('dashboard').set({ password: nw, updated_at: firebase.firestore.FieldValue.serverTimestamp() }).catch(()=>{});
+        // sync to Firestore for Ad system compatibility
+        db.collection('settings').doc('dashboard').set({ 
+            password: nw, 
+            updated_at: firebase.firestore.FieldValue.serverTimestamp() 
+        }).catch(()=>{});
+        
         alert('✅ Password changed successfully!');
         closePasswordModal();
     }
-
+    
+    // Ad stats tab inline password change
     window.changeAdPassword = async function() {
         const btn = document.getElementById('changeAdPasswordBtn');
         const cur = document.getElementById('currentPasswordAd').value;
         const nw = document.getElementById('newPasswordAd').value;
         const cnf = document.getElementById('confirmPasswordAd').value;
+        
         const showAlert = (msg, type) => {
             const a = document.getElementById('passwordAdAlert');
-            a.className = 'alert ' + type; a.textContent = msg; a.style.display = 'block';
+            a.className = 'alert ' + type; 
+            a.textContent = msg; 
+            a.style.display = 'block';
             setTimeout(() => a.style.display = 'none', 4000);
         };
-        if (cur !== localStorage.getItem(STORAGE_KEY)) { showAlert('Current password incorrect', 'error'); return; }
-        if (nw.length < 6) { showAlert('New password must be at least 6 characters', 'error'); return; }
-        if (nw !== cnf) { showAlert('Passwords do not match', 'error'); return; }
+        
+        if (cur !== localStorage.getItem(STORAGE_KEY)) { 
+            showAlert('Current password incorrect', 'error'); 
+            return; 
+        }
+        if (nw.length < 6) { 
+            showAlert('New password must be at least 6 characters', 'error'); 
+            return; 
+        }
+        if (nw !== cnf) { 
+            showAlert('Passwords do not match', 'error'); 
+            return; 
+        }
+        
         btn.disabled = true;
         document.getElementById('changeAdPasswordText').style.display = 'none';
         document.getElementById('changeAdPasswordLoading').style.display = 'inline-block';
+        
         localStorage.setItem(STORAGE_KEY, nw);
-        await db.collection('settings').doc('dashboard').set({ password: nw, updated_at: firebase.firestore.FieldValue.serverTimestamp() });
+        await db.collection('settings').doc('dashboard').set({ 
+            password: nw, 
+            updated_at: firebase.firestore.FieldValue.serverTimestamp() 
+        });
+        
         btn.disabled = false;
         document.getElementById('changeAdPasswordText').style.display = 'inline';
         document.getElementById('changeAdPasswordLoading').style.display = 'none';
         showAlert('Password updated successfully!', 'success');
-        ['currentPasswordAd','newPasswordAd','confirmPasswordAd'].forEach(id => document.getElementById(id).value = '');
+        
+        ['currentPasswordAd','newPasswordAd','confirmPasswordAd'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
     };
 
+    // ═══════════════════════════════════════════════════════
+    //  BOOT
+    // ═══════════════════════════════════════════════════════
     function bootDashboard() {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('dashboardContent').style.display = 'block';
-        document.getElementById('lastLoginTime').textContent = new Date().toLocaleString();
+        const loginScreen = document.getElementById('loginScreen');
+        const dashboardContent = document.getElementById('dashboardContent');
+        const lastLoginTime = document.getElementById('lastLoginTime');
+        
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (dashboardContent) dashboardContent.style.display = 'block';
+        if (lastLoginTime) lastLoginTime.textContent = new Date().toLocaleString();
+        
+        // Firebase anonymous auth for Ad system write operations
         auth.signInAnonymously().then(cred => {
             currentUser = cred.user;
-            document.getElementById('userBadge').textContent = `ID: ${cred.user.uid.slice(0,6)}...`;
-            document.getElementById('userId').textContent = cred.user.uid.slice(0,8) + '...';
-        }).catch(() => { document.getElementById('userBadge').textContent = 'Guest'; });
+            const userBadge = document.getElementById('userBadge');
+            const userIdSpan = document.getElementById('userId');
+            if (userBadge) userBadge.textContent = `ID: ${cred.user.uid.slice(0,6)}...`;
+            if (userIdSpan) userIdSpan.textContent = cred.user.uid.slice(0,8) + '...';
+        }).catch(() => { 
+            const userBadge = document.getElementById('userBadge');
+            if (userBadge) userBadge.textContent = 'Guest'; 
+        });
+        
         setDefaultDates();
         loadAdData();
         loadCouponData();
         startAutoRefresh();
     }
 
+    // ═══════════════════════════════════════════════════════
+    //  AUTO REFRESH
+    // ═══════════════════════════════════════════════════════
     function startAutoRefresh() {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-        document.getElementById('autoRefreshStatus').textContent = '🔄 Auto-refresh: ON (10s)';
-        autoRefreshInterval = setInterval(() => { loadAdData(); loadCouponData(); }, 10000);
+        const statusEl = document.getElementById('autoRefreshStatus');
+        if (statusEl) statusEl.textContent = '🔄 Auto-refresh: ON (10s)';
+        autoRefreshInterval = setInterval(() => {
+            loadAdData(); 
+            loadCouponData();
+        }, 10000);
     }
+    
     function stopAutoRefresh() {
-        if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+        if (autoRefreshInterval) { 
+            clearInterval(autoRefreshInterval); 
+            autoRefreshInterval = null; 
+        }
         const el = document.getElementById('autoRefreshStatus');
         if (el) el.textContent = '⏸️ Auto-refresh: OFF';
     }
 
+    // ═══════════════════════════════════════════════════════
+    //  TAB SWITCHING
+    // ═══════════════════════════════════════════════════════
     window.switchTab = function(tab) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -722,7 +828,6 @@
         if (tab === 'coupon-claims') { filterByClaimDate(); }
         if (tab === 'coupon-campaigns') { renderCouponCampaignsList(); }
     };
-
     async function loadAdData() { await loadAdCampaigns(); await loadProofs(); updateAdStatistics(); }
     
     async function loadAdCampaigns() {
