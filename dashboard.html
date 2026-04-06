@@ -971,180 +971,139 @@ function buildAdCampaignHTML(c) {
         const updates = c.update_history || c.updates || [];
         const hashes = c.hashes || {};
         
-        // Images Section with safe handling
-  // Images Section - Fixed for all data types
-let imgsHTML = '';
-if (images && images.length > 0) {
-    console.log(`Rendering ${images.length} images for campaign ${c.name}`);
-    console.log('Image data type:', typeof images[0]);
-    console.log('Image data:', images[0]);
-    
-    imgsHTML = images.slice(0, 5).map((img, idx) => {
-        try {
-            // Try multiple ways to get the image data as a string
-            let imageData = null;
-            
-            // Case 1: img is a string
-            if (typeof img === 'string') {
-                imageData = img;
-            }
-            // Case 2: img is an object with data property
-            else if (img && typeof img === 'object') {
-                if (img.data && typeof img.data === 'string') {
-                    imageData = img.data;
-                } 
-                // Case 3: img has imgData property
-                else if (img.imgData && typeof img.imgData === 'string') {
-                    imageData = img.imgData;
-                }
-                // Case 4: img itself is the data URL (unlikely but possible)
-                else if (typeof img === 'string') {
-                    imageData = img;
-                }
-            }
-            
-            // Validate we have a string and it looks like an image
-            if (imageData && typeof imageData === 'string') {
-                // Check if it's a valid data URL
-                if (imageData.startsWith('data:image')) {
-                    const imageName = img.name || `Image ${idx + 1}`;
-                    return `<img class="campaign-thumb" src="${imageData}" onclick="showImage('${imageData}')" title="${imageName}" style="cursor:pointer; object-fit:cover;">`;
-                } else {
-                    console.warn('Image data doesn\'t start with data:image:', imageData.substring(0, 50));
-                    return `<div style="width:58px;height:58px;background:#ffc107;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;text-align:center;padding:5px;">Invalid format</div>`;
-                }
-            } else {
-                console.warn(`Invalid image data for ${c.name}:`, img);
-                return `<div style="width:58px;height:58px;background:#dc3545;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;text-align:center;padding:5px;">No data</div>`;
-            }
-        } catch (err) {
-            console.error('Error processing image:', err, img);
-            return `<div style="width:58px;height:58px;background:#dc3545;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">Error</div>`;
-        }
-    }).join('');
-    
-    if (!imgsHTML) {
-        imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 Image data corrupted</div>';
-    }
-} else {
-    imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 No images uploaded</div>';
-}
+        // Images Section - Fixed for all data types
+        let imgsHTML = '';
+        if (images && images.length > 0) {
+            imgsHTML = images.slice(0, 5).map(function(img, idx) {
+                try {
+                    let imageData = null;
                     
-                    // Only create image if we have valid data
-                    if (imageData && imageData.startsWith('data:image')) {
-                        const imageName = img.name || `Image ${idx + 1}`;
-                        return `<img class="campaign-thumb" src="${imageData}" onclick="showImage('${imageData}')" title="${imageName}">`;
-                    } else {
-                        return '';
+                    if (typeof img === 'string') {
+                        imageData = img;
+                    } else if (img && typeof img === 'object') {
+                        if (img.data && typeof img.data === 'string') {
+                            imageData = img.data;
+                        } else if (img.imgData && typeof img.imgData === 'string') {
+                            imageData = img.imgData;
+                        }
                     }
-                } catch (imgErr) {
-                    console.error('Error rendering image:', imgErr);
-                    return '';
+                    
+                    if (imageData && typeof imageData === 'string' && imageData.startsWith('data:image')) {
+                        var imageName = img.name || ('Image ' + (idx + 1));
+                        return '<img class="campaign-thumb" src="' + imageData + '" onclick="showImage(\'' + imageData.replace(/'/g, "\\'") + '\')" title="' + imageName + '" style="cursor:pointer; object-fit:cover;">';
+                    } else {
+                        return '<div style="width:58px;height:58px;background:#dc3545;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">Error</div>';
+                    }
+                } catch(err) {
+                    console.error('Error processing image:', err);
+                    return '<div style="width:58px;height:58px;background:#dc3545;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">Error</div>';
                 }
             }).join('');
+            
+            if (!imgsHTML) {
+                imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 Image data corrupted</div>';
+            }
+        } else {
+            imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 No images uploaded</div>';
         }
         
         // Calculate compression stats safely
         let totalOriginalSize = 0;
         let totalCompressedSize = 0;
-        images.forEach(img => {
+        for (var i = 0; i < images.length; i++) {
+            var img = images[i];
             if (img) {
                 totalOriginalSize += img.originalSize || 0;
                 totalCompressedSize += img.compressedSize || 0;
             }
-        });
-        const savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
+        }
+        var savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
         
-        return `<div class="campaign-item ${status}">
-            <div class="campaign-header-row">
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                    <span class="campaign-name">${escapeHtml(c.name || 'Unknown')}</span>
-                    <span class="campaign-id">${c.id}</span>
-                    <span class="campaign-station">${escapeHtml(c.station || 'Unknown')}</span>
-                    ${updates.length ? `<span class="update-badge">↑${updates.length} updates</span>` : ''}
-                </div>
-                <span class="status-badge ${status}">${status.toUpperCase()}</span>
-            </div>
-            
-            <!-- Dates Section -->
-            <div class="campaign-dates">
-                <div class="date-row">
-                    <span class="date-label">▶ Start</span>
-                    <span class="date-value">${start.toLocaleString()}</span>
-                </div>
-                <div class="date-row">
-                    <span class="date-label">■ End</span>
-                    <span class="date-value">${end.toLocaleString()}</span>
-                </div>
-                <div class="date-row">
-                    <span class="date-label">⏱️ Duration</span>
-                    <span class="date-value">${Math.round((end - start) / 3600000)} hours</span>
-                </div>
-            </div>
-            
-            <!-- Images Section -->
-            ${images.length && imgsHTML ? `<div class="campaign-images">${imgsHTML}</div>` : '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;text-align:center;">📷 No images available</div>'}
-            
-            <!-- Compression Stats -->
-            ${images.length > 0 && totalOriginalSize > 0 ? `
-            <div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">
-                <div class="proof-label">📊 COMPRESSION STATS</div>
-                <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">
-                    <span>Original: ${(totalOriginalSize/1024).toFixed(1)} KB</span>
-                    <span>Compressed: ${(totalCompressedSize/1024).toFixed(1)} KB</span>
-                    <span>Saved: ${savingsPercent}%</span>
-                </div>
-            </div>
-            ` : ''}
-            
-            <!-- Hashes Section -->
-            <div>
-                <div class="proof-label">🔐 START HASH</div>
-                <div class="proof-box">${hashes.start?.hash || 'PENDING'}</div>
-                ${hashes.start?.timestamp ? `<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ${new Date(hashes.start.timestamp).toLocaleString()}</div>` : ''}
-                
-                <div class="proof-label">🔐 END HASH</div>
-                <div class="proof-box">${hashes.end?.hash || 'PENDING'}</div>
-                ${hashes.end?.timestamp ? `<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ${new Date(hashes.end.timestamp).toLocaleString()}</div>` : ''}
-            </div>
-            
-            <!-- Update History -->
-            ${updates.length > 0 ? `
-            <div style="margin-top:12px;">
-                <div class="proof-label">📝 UPDATE HISTORY (${updates.length})</div>
-                ${updates.slice(-3).reverse().map(update => `
-                    <div class="update-history" style="margin-top:5px;">
-                        <div style="font-size:11px;color:#f39c12;">📅 ${update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date'}</div>
-                        <div style="font-size:11px;margin:5px 0;">${Array.isArray(update.changes) ? update.changes.join(' | ') : (update.changes || 'No details')}</div>
-                        <div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ${(update.updated_by || 'Unknown').substring(0,15)}...</div>
-                    </div>
-                `).join('')}
-                ${updates.length > 3 ? `<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+${updates.length - 3} more updates</span></div>` : ''}
-            </div>
-            ` : ''}
-            
-            <!-- Image Info -->
-            <div style="margin-top:12px;font-size:11px;color:#a0a0a0;">
-                📸 ${c.image_count || images.length} image(s) | 
-                👤 Created by: ${(c.created_by || 'Unknown').substring(0,15)}... | 
-                📅 Created: ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}
-            </div>
-            
-            <div class="action-buttons">
-                <button class="btn-edit"    onclick="openEditModal('${c.id}')">✏️ Edit</button>
-                <button class="btn-pdf"     onclick="showPDFPreview('${c.id}')">📄 PDF Proof</button>
-                <button class="btn-danger"  onclick="deleteCampaign('${c.id}')">🗑️ Delete</button>
-            </div>
-        </div>`;
+        var html = '<div class="campaign-item ' + status + '">';
+        html += '<div class="campaign-header-row">';
+        html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
+        html += '<span class="campaign-name">' + (c.name || 'Unknown') + '</span>';
+        html += '<span class="campaign-id">' + c.id + '</span>';
+        html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
+        if (updates.length) {
+            html += '<span class="update-badge">↑' + updates.length + ' updates</span>';
+        }
+        html += '</div>';
+        html += '<span class="status-badge ' + status + '">' + status.toUpperCase() + '</span>';
+        html += '</div>';
+        
+        html += '<div class="campaign-dates">';
+        html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + start.toLocaleString() + '</span></div>';
+        html += '<div class="date-row"><span class="date-label">■ End</span><span class="date-value">' + end.toLocaleString() + '</span></div>';
+        html += '<div class="date-row"><span class="date-label">⏱️ Duration</span><span class="date-value">' + Math.round((end - start) / 3600000) + ' hours</span></div>';
+        html += '</div>';
+        
+        html += '<div class="campaign-images">' + imgsHTML + '</div>';
+        
+        if (images.length > 0 && totalOriginalSize > 0) {
+            html += '<div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">';
+            html += '<div class="proof-label">📊 COMPRESSION STATS</div>';
+            html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">';
+            html += '<span>Original: ' + (totalOriginalSize/1024).toFixed(1) + ' KB</span>';
+            html += '<span>Compressed: ' + (totalCompressedSize/1024).toFixed(1) + ' KB</span>';
+            html += '<span>Saved: ' + savingsPercent + '%</span>';
+            html += '</div></div>';
+        }
+        
+        html += '<div>';
+        html += '<div class="proof-label">🔐 START HASH</div>';
+        html += '<div class="proof-box">' + (hashes.start?.hash || 'PENDING') + '</div>';
+        if (hashes.start?.timestamp) {
+            html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + new Date(hashes.start.timestamp).toLocaleString() + '</div>';
+        }
+        html += '<div class="proof-label">🔐 END HASH</div>';
+        html += '<div class="proof-box">' + (hashes.end?.hash || 'PENDING') + '</div>';
+        if (hashes.end?.timestamp) {
+            html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + new Date(hashes.end.timestamp).toLocaleString() + '</div>';
+        }
+        html += '</div>';
+        
+        if (updates.length > 0) {
+            html += '<div style="margin-top:12px;">';
+            html += '<div class="proof-label">📝 UPDATE HISTORY (' + updates.length + ')</div>';
+            var recentUpdates = updates.slice(-3).reverse();
+            for (var u = 0; u < recentUpdates.length; u++) {
+                var update = recentUpdates[u];
+                html += '<div class="update-history" style="margin-top:5px;">';
+                html += '<div style="font-size:11px;color:#f39c12;">📅 ' + (update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date') + '</div>';
+                html += '<div style="font-size:11px;margin:5px 0;">' + (Array.isArray(update.changes) ? update.changes.join(' | ') : (update.changes || 'No details')) + '</div>';
+                html += '<div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ' + ((update.updated_by || 'Unknown').substring(0,15)) + '...</div>';
+                html += '</div>';
+            }
+            if (updates.length > 3) {
+                html += '<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+' + (updates.length - 3) + ' more updates</span></div>';
+            }
+            html += '</div>';
+        }
+        
+        html += '<div style="margin-top:12px;font-size:11px;color:#a0a0a0;">';
+        html += '📸 ' + (c.image_count || images.length) + ' image(s) | ';
+        html += '👤 Created by: ' + ((c.created_by || 'Unknown').substring(0,15)) + '... | ';
+        html += '📅 Created: ' + (c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown');
+        html += '</div>';
+        
+        html += '<div class="action-buttons">';
+        html += '<button class="btn-edit" onclick="openEditModal(\'' + c.id + '\')">✏️ Edit</button>';
+        html += '<button class="btn-pdf" onclick="showPDFPreview(\'' + c.id + '\')">📄 PDF Proof</button>';
+        html += '<button class="btn-danger" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
+        html += '</div>';
+        html += '</div>';
+        
+        return html;
     } catch (err) {
         console.error('Error building campaign HTML:', err, c);
-        return `<div class="campaign-item expired">
-            <div class="campaign-header-row">
-                <span class="campaign-name">Error loading campaign</span>
-                <span class="campaign-id">${c.id}</span>
-            </div>
-            <div style="color:#dc3545;padding:10px;">Failed to display: ${err.message}</div>
-        </div>`;
+        return '<div class="campaign-item expired">' +
+            '<div class="campaign-header-row">' +
+            '<span class="campaign-name">Error loading campaign</span>' +
+            '<span class="campaign-id">' + c.id + '</span>' +
+            '</div>' +
+            '<div style="color:#dc3545;padding:10px;">Failed to display: ' + err.message + '</div>' +
+            '</div>';
     }
 }
 
@@ -1543,8 +1502,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
     // IMAGE MODAL
 window.showImage = function(url) { 
     try {
-        // Ensure we have a string URL
-        let imageUrl = '';
+        var imageUrl = '';
         if (typeof url === 'string') {
             imageUrl = url;
         } else if (url && typeof url === 'object' && url.data) {
@@ -1553,7 +1511,7 @@ window.showImage = function(url) {
             imageUrl = url.imgData;
         }
         
-        if (imageUrl && imageUrl.startsWith('data:image')) {
+        if (imageUrl && imageUrl.indexOf('data:image') === 0) {
             document.getElementById('modalImage').src = imageUrl; 
             document.getElementById('imageModal').style.display = 'block';
         } else {
