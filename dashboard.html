@@ -1100,14 +1100,14 @@ Status: SOLD OUT
 ⚠️ Action Required: Remove this ad from display system.
     `;
     
-    const url = `https://api.telegram.org/bot${8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk}/sendMessage`;
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
     
     try {
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: 6597376744,
+                chat_id: CHAT_ID,
                 text: message,
                 parse_mode: 'HTML'
             })
