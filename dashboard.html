@@ -1596,38 +1596,29 @@ window.showImage = function(url) {
     // PDF
     let pdfCampaignId = null;
     
-    window.showPDFPreview = function(id) {
-        const c = allAdCampaigns.find(x=>x.id===id); 
-        if(!c) return;
-        pdfCampaignId = id;
-        document.getElementById('pdfTitle').textContent = `Campaign Proof Report - ${c.name}`;
+let updatesHTML = '';
+if (updates && updates.length > 0) {
+    updatesHTML = `<div style="background:#fff3e0;border-left:5px solid #f39c12;padding:20px;border-radius:8px;margin:30px 0;">
+        <h3 style="color:#e67e22;margin-bottom:15px;">Update History (${updates.length} updates)</h3>`;
+    
+    updates.slice(-3).reverse().forEach(update => {
+        const updateDate = update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date';
+        const updatedBy = update.updated_by || 'Unknown';
+        let changeDetails = update.changes || 'Campaign updated';
         
-        const start = c.start_date?.toDate?.() || new Date();
-        const end = c.end_date?.toDate?.() || new Date();
-        const images = c.images || [];
-        const updates = c.updates || [];
-        const now = new Date();
+        if (update.details && update.details.length > 0) {
+            changeDetails = update.details.join(' | ');
+        } else if (update.field && update.old_value && update.new_value) {
+            changeDetails = `${update.field}: ${update.old_value} → ${update.new_value}`;
+        }
         
-        let status = 'UPCOMING', statusColor = '#ffc107';
-        if (now >= start && now <= end) { status = 'ACTIVE'; statusColor = '#28a745'; }
-        else if (now > end) { status = 'EXPIRED'; statusColor = '#dc3545'; }
-        
-        const durationHours = Math.round((end - start) / 3600000);
-        const durationDays = Math.floor(durationHours / 24);
-        const remainingHours = Math.abs(durationHours % 24);
-        const durationText = durationDays > 0 ? `${durationDays} days ${remainingHours} hours` : `${Math.abs(durationHours)} hours`;
-        
-     let imagesHTML = '';
-if (images.length > 0) {
-    imagesHTML = `<div style="margin:30px 0"><h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px;">📸 Campaign Images (${images.length})</h3><div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;">`;
-    images.forEach((img, idx) => { 
-        const imageData = img.data || img;  // FIX: Get the data URL correctly
-        imagesHTML += `<div style="text-align:center;background:white;padding:15px;border-radius:8px;width:150px;">
-            <img src="${imageData}" style="width:120px;height:120px;object-fit:cover;border-radius:5px;border:2px solid #3498db;">
-            <div style="font-size:11px;color:#7f8c8d;margin-top:8px;">${img.name || `Image ${idx+1}`}</div>
+        updatesHTML += `<div style="margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #f39c12;">
+            <div style="color:#e67e22;font-size:12px;font-weight:bold;">📅 ${updateDate}</div>
+            <div style="font-size:12px;margin:8px 0;background:#2c3e50;padding:10px;border-radius:5px;color:#ecf0f1;">${changeDetails}</div>
+            <div style="font-size:10px;color:#7f8c8d;">👤 Updated by: ${updatedBy.substring(0,15)}...</div>
         </div>`;
     });
-    imagesHTML += `</div></div>`;
+    updatesHTML += `</div>`;
 }
         let updatesHTML = '';
         if (updates && updates.length > 0) {
@@ -1703,144 +1694,280 @@ if (images.length > 0) {
     
     window.closePDFPreview = function() { document.getElementById('pdfPreview').classList.remove('active'); pdfCampaignId = null; };
     
-    window.downloadPDF = function() {
-        const c = allAdCampaigns.find(x=>x.id===pdfCampaignId); 
-        if(!c) return;
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const start = c.start_date?.toDate?.() || new Date();
-        const end = c.end_date?.toDate?.() || new Date();
-        const images = c.images || [];
-        const updates = c.updates || [];
-        const now = new Date();
-        let yPos = 20;
-        
-        pdf.setFontSize(24); pdf.setTextColor(44,62,80); pdf.setFont('helvetica','bold'); 
-        pdf.text('Cryptographic Proof Report', 105, yPos, { align: 'center' }); yPos += 10;
-        pdf.setFontSize(10); pdf.setTextColor(127,140,141); pdf.setFont('helvetica','normal'); 
-        pdf.text(`Generated: ${new Date().toLocaleString()}`, 105, yPos, { align: 'center' }); yPos += 15;
-        
-        pdf.setFillColor(248,249,250); pdf.rect(20, yPos, 170, 10, 'F'); 
-        pdf.setFontSize(10); pdf.setTextColor(52,152,219); pdf.setFont('courier','bold'); 
-        pdf.text(`Campaign ID: ${c.id}`, 105, yPos + 6, { align: 'center' }); yPos += 15;
-        
-        pdf.setFontSize(16); pdf.setTextColor(44,62,80); pdf.setFont('helvetica','bold'); 
-        pdf.text('Campaign Details', 20, yPos); yPos += 8;
-        
-        const durationHours = Math.round((end - start) / 3600000);
-        const durationDays = Math.floor(Math.abs(durationHours) / 24);
-        const remainingHours = Math.abs(durationHours) % 24;
-        const durationText = durationDays > 0 ? `${durationDays} days ${remainingHours} hours` : `${Math.abs(durationHours)} hours`;
-        
-        let status = 'UPCOMING', statusColor = [255,193,7];
-        if (now >= start && now <= end) { status = 'ACTIVE'; statusColor = [40,167,69]; }
-        else if (now > end) { status = 'EXPIRED'; statusColor = [220,53,69]; }
-        
-        pdf.setFillColor(248,249,250); pdf.rect(20, yPos, 170, 65, 'F');
-        pdf.setFontSize(10); pdf.setTextColor(52,73,94); 
-        pdf.setFont('helvetica','bold'); pdf.text('Station:', 25, yPos + 7); 
-        pdf.setFont('helvetica','normal'); pdf.text(c.station || 'N/A', 70, yPos + 7);
-        pdf.setFont('helvetica','bold'); pdf.text('Customer:', 25, yPos + 14); 
-        pdf.setFont('helvetica','normal'); pdf.text(c.name, 70, yPos + 14);
-        pdf.setFont('helvetica','bold'); pdf.text('Status:', 25, yPos + 21); 
-        pdf.setFont('helvetica','normal'); pdf.setTextColor(statusColor[0],statusColor[1],statusColor[2]); 
-        pdf.text(status, 70, yPos + 21); pdf.setTextColor(52,73,94);
-        pdf.setFont('helvetica','bold'); pdf.text('Start:', 25, yPos + 28); 
-        pdf.setFont('helvetica','normal'); pdf.text(start.toLocaleString(), 70, yPos + 28);
-        pdf.setFont('helvetica','bold'); pdf.text('End:', 25, yPos + 35); 
-        pdf.setFont('helvetica','normal'); pdf.text(end.toLocaleString(), 70, yPos + 35);
-        pdf.setFont('helvetica','bold'); pdf.text('Duration:', 25, yPos + 42); 
-        pdf.setFont('helvetica','normal'); pdf.text(durationText, 70, yPos + 42);
-        pdf.setFont('helvetica','bold'); pdf.text('Images:', 25, yPos + 49); 
-        pdf.setFont('helvetica','normal'); pdf.text(`${images.length} images`, 70, yPos + 49);
-        pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.text('Created:', 25, yPos + 56); 
-        pdf.setFont('helvetica','normal'); pdf.text(`${c.created_by?.substring(0,15) || 'Unknown'} at ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}`, 70, yPos + 56);
-        yPos += 70;
-        
-    if (images.length > 0) {
-    pdf.setFontSize(14); pdf.setTextColor(44,62,80); pdf.setFont('helvetica','bold'); 
-    pdf.text('Campaign Images', 20, yPos); yPos += 8;
-    const imgSize = 40;
-    for (let i = 0; i < Math.min(images.length, 4); i++) {
-        try {
-            const img = images[i];
-            const imageData = img.data || img;  // FIX: Get the data URL correctly
-            const imgData = imageData.split(',')[1];  // Extract base64 part
-            const col = i % 2, row = Math.floor(i / 2);
-            const x = 20 + (col * 45), y = yPos + (row * 45);
-            pdf.addImage(imgData, 'JPEG', x, y, imgSize, imgSize);
-            pdf.setFontSize(7); pdf.setTextColor(127,140,141); 
-            pdf.text((img.name || `Image ${i+1}`).substring(0,12), x, y + imgSize + 3);
-        } catch(e) {
-            console.error('Failed to add image to PDF:', e);
-        }
+ window.downloadPDF = function() {
+    const c = allAdCampaigns.find(x => x.id === pdfCampaignId);
+    if (!c) return;
+    
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    
+    const start = c.start_date?.toDate ? c.start_date.toDate() : (c.start_datetime ? new Date(c.start_datetime) : new Date());
+    const end = c.end_date?.toDate ? c.end_date.toDate() : (c.end_datetime ? new Date(c.end_datetime) : new Date());
+    const images = c.images || [];
+    const updates = c.update_history || c.updates || [];
+    const now = new Date();
+    
+    let yPos = 20;
+    
+    // Title
+    pdf.setFontSize(24);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Cryptographic Proof Report', 105, yPos, { align: 'center' });
+    yPos += 10;
+    
+    // Generation date
+    pdf.setFontSize(10);
+    pdf.setTextColor(127, 140, 141);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Generated: ${now.toLocaleString()}`, 105, yPos, { align: 'center' });
+    yPos += 15;
+    
+    // Campaign ID box
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 10, 'F');
+    pdf.setFontSize(10);
+    pdf.setTextColor(52, 152, 219);
+    pdf.setFont('courier', 'bold');
+    pdf.text(`Campaign ID: ${c.id}`, 105, yPos + 6, { align: 'center' });
+    yPos += 15;
+    
+    // Campaign Details header
+    pdf.setFontSize(16);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Campaign Details', 20, yPos);
+    yPos += 8;
+    
+    // Calculate duration
+    const durationHours = Math.round((end - start) / 3600000);
+    const durationDays = Math.floor(Math.abs(durationHours) / 24);
+    const remainingHours = Math.abs(durationHours) % 24;
+    const durationText = durationDays > 0 ? `${durationDays} days ${remainingHours} hours` : `${Math.abs(durationHours)} hours`;
+    
+    // Determine status
+    let status = 'UPCOMING';
+    let statusColor = [255, 193, 7];
+    if (now >= start && now <= end) {
+        status = 'ACTIVE';
+        statusColor = [40, 167, 69];
+    } else if (now > end) {
+        status = 'EXPIRED';
+        statusColor = [220, 53, 69];
     }
-    yPos += 45 * (Math.ceil(Math.min(images.length, 4) / 2)) + 15;
-}
+    
+    // Campaign details box
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 65, 'F');
+    pdf.setFontSize(10);
+    pdf.setTextColor(52, 73, 94);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Station:', 25, yPos + 7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.station || 'N/A', 70, yPos + 7);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Customer:', 25, yPos + 14);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.name || 'Unknown', 70, yPos + 14);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Status:', 25, yPos + 21);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+    pdf.text(status, 70, yPos + 21);
+    pdf.setTextColor(52, 73, 94);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Start:', 25, yPos + 28);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(start.toLocaleString(), 70, yPos + 28);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('End:', 25, yPos + 35);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(end.toLocaleString(), 70, yPos + 35);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Duration:', 25, yPos + 42);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(durationText, 70, yPos + 42);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Images:', 25, yPos + 49);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${images.length} image(s)`, 70, yPos + 49);
+    
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Created:', 25, yPos + 56);
+    pdf.setFont('helvetica', 'normal');
+    const createdBy = (c.created_by || 'Unknown').substring(0, 15);
+    const createdDate = c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : (c.created_at || 'Unknown');
+    pdf.text(`${createdBy} at ${createdDate}`, 70, yPos + 56);
+    yPos += 70;
+    
+    // Add images
+    if (images.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setTextColor(44, 62, 80);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Campaign Images', 20, yPos);
+        yPos += 8;
         
-        if (updates && updates.length > 0) {
-            pdf.setFontSize(14); pdf.setTextColor(243,156,18); pdf.setFont('helvetica','bold'); 
-            pdf.text('Update History', 20, yPos); yPos += 8;
-            pdf.setFontSize(8); pdf.setTextColor(0,0,0);
-            updates.slice(-3).forEach(update => {
-                const updateDate = update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date';
-                const updatedBy = update.updated_by?.substring(0,10) || 'Unknown';
-                let changeDetails = update.changes || 'Campaign updated';
-                if (update.details && update.details.length > 0) changeDetails = update.details.join(' | ');
-                const updateText = `📅 ${updateDate}`;
-                const changeText = `   ✏️ ${changeDetails}`;
-                const byText = `   👤 by: ${updatedBy}`;
-                pdf.setFont('helvetica','bold');
-                pdf.text(updateText, 20, yPos); yPos += 4;
-                pdf.setFont('helvetica','normal');
-                const changeLines = pdf.splitTextToSize(changeText, 165);
-                pdf.text(changeLines, 20, yPos);
-                yPos += (changeLines.length * 4);
-                pdf.setFontSize(7);
-                pdf.setTextColor(127,140,141);
-                pdf.text(byText, 20, yPos);
-                yPos += 5;
-                pdf.setFontSize(8);
-                pdf.setTextColor(0,0,0);
-            });
+        const imgSize = 40;
+        for (let i = 0; i < Math.min(images.length, 4); i++) {
+            try {
+                const img = images[i];
+                let imageData = null;
+                
+                // Get image data correctly
+                if (typeof img === 'string') {
+                    imageData = img;
+                } else if (img && img.data) {
+                    imageData = img.data;
+                } else if (img && img.imgData) {
+                    imageData = img.imgData;
+                }
+                
+                if (imageData && imageData.indexOf('base64') > -1 || imageData.indexOf('data:image') === 0) {
+                    // Extract base64 data
+                    const base64Data = imageData.split(',')[1];
+                    if (base64Data) {
+                        const col = i % 2;
+                        const row = Math.floor(i / 2);
+                        const x = 20 + (col * 45);
+                        const y = yPos + (row * 45);
+                        pdf.addImage(base64Data, 'JPEG', x, y, imgSize, imgSize);
+                        pdf.setFontSize(7);
+                        pdf.setTextColor(127, 140, 141);
+                        const imgName = (img.name || `Image ${i + 1}`).substring(0, 12);
+                        pdf.text(imgName, x, y + imgSize + 3);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to add image to PDF:', e);
+            }
+        }
+        yPos += 45 * (Math.ceil(Math.min(images.length, 4) / 2)) + 15;
+    }
+    
+    // Update History
+    if (updates && updates.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setTextColor(243, 156, 18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Update History', 20, yPos);
+        yPos += 8;
+        pdf.setFontSize(8);
+        pdf.setTextColor(0, 0, 0);
+        
+        const recentUpdates = updates.slice(-3).reverse();
+        for (let u = 0; u < recentUpdates.length; u++) {
+            const update = recentUpdates[u];
+            const updateDate = update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date';
+            const updatedBy = (update.updated_by || 'Unknown').substring(0, 10);
+            let changeDetails = update.changes || 'Campaign updated';
+            
+            if (update.details && update.details.length > 0) {
+                changeDetails = update.details.join(' | ');
+            } else if (update.field && update.old_value && update.new_value) {
+                changeDetails = `${update.field}: ${update.old_value} → ${update.new_value}`;
+            }
+            
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`📅 ${updateDate}`, 20, yPos);
+            yPos += 4;
+            pdf.setFont('helvetica', 'normal');
+            const changeLines = pdf.splitTextToSize(`   ✏️ ${changeDetails}`, 165);
+            pdf.text(changeLines, 20, yPos);
+            yPos += changeLines.length * 4;
+            pdf.setFontSize(7);
+            pdf.setTextColor(127, 140, 141);
+            pdf.text(`   👤 by: ${updatedBy}...`, 20, yPos);
             yPos += 5;
+            pdf.setFontSize(8);
+            pdf.setTextColor(0, 0, 0);
         }
-        
-        pdf.setFontSize(14); pdf.setTextColor(44,62,80); pdf.setFont('helvetica','bold'); 
-        pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos); yPos += 8;
-        pdf.setFillColor(248,249,250); pdf.rect(20, yPos, 170, 28, 'F'); 
-        pdf.setFontSize(10); pdf.setTextColor(39,174,96); pdf.setFont('helvetica','bold'); 
-        pdf.text('START HASH', 25, yPos + 6); 
-        pdf.setFontSize(7); pdf.setTextColor(0,0,0); pdf.setFont('courier','normal'); 
-        const startLines = pdf.splitTextToSize(c.hashes?.start?.hash || 'PENDING', 160);
-        pdf.text(startLines, 25, yPos + 12);
-        if (c.hashes?.start?.timestamp) {
-            pdf.setFontSize(6); pdf.setTextColor(127,140,141); pdf.setFont('helvetica','normal');
-            pdf.text(`Generated: ${new Date(c.hashes.start.timestamp).toLocaleString()}`, 25, yPos + 24);
-        }
-        yPos += 33;
-        pdf.setFillColor(248,249,250); pdf.rect(20, yPos, 170, 28, 'F'); 
-        pdf.setFontSize(10); pdf.setTextColor(231,76,60); pdf.setFont('helvetica','bold'); 
-        pdf.text('END HASH', 25, yPos + 6); 
-        pdf.setFontSize(7); pdf.setTextColor(0,0,0); pdf.setFont('courier','normal'); 
-        const endLines = pdf.splitTextToSize(c.hashes?.end?.hash || 'PENDING', 160);
-        pdf.text(endLines, 25, yPos + 12);
-        if (c.hashes?.end?.timestamp) {
-            pdf.setFontSize(6); pdf.setTextColor(127,140,141); pdf.setFont('helvetica','normal');
-            pdf.text(`Generated: ${new Date(c.hashes.end.timestamp).toLocaleString()}`, 25, yPos + 24);
-        }
-        yPos += 33;
-        pdf.setFontSize(8); pdf.setTextColor(149,165,166); pdf.setFont('helvetica','normal');
-        pdf.text(`Report Generated: ${new Date().toLocaleString()}`, 20, yPos + 5);
-        pdf.text(`Generated by: ${currentUser?.uid?.substring(0,8) || 'Anonymous'}`, 105, yPos + 5, { align: 'center' });
-        pdf.text(`Verification ID: ${Math.random().toString(36).substring(2,10).toUpperCase()}`, 20, yPos + 12);
-        pdf.text(`Campaign ID: ${c.id.substring(0,8)}...`, 190, yPos + 12, { align: 'right' });
-        pdf.setFontSize(7); pdf.setTextColor(100);
-        pdf.text('🔒 Blockchain Verified Proof', 105, yPos + 20, { align: 'center' });
-        const safeName = c.name.replace(/[^a-z0-9]/gi,'_').substring(0,20);
-        pdf.save(`${safeName}_${c.id.substring(0,6)}_Proof.pdf`);
-        closePDFPreview();
-    };
+        yPos += 5;
+    }
+    
+    // Hashes Section
+    pdf.setFontSize(14);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
+    yPos += 8;
+    
+    // Start Hash
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 28, 'F');
+    pdf.setFontSize(10);
+    pdf.setTextColor(39, 174, 96);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('START HASH', 25, yPos + 6);
+    pdf.setFontSize(7);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('courier', 'normal');
+    const startHash = c.hashes?.start?.hash || 'PENDING';
+    const startLines = pdf.splitTextToSize(startHash, 160);
+    pdf.text(startLines, 25, yPos + 12);
+    if (c.hashes?.start?.timestamp) {
+        pdf.setFontSize(6);
+        pdf.setTextColor(127, 140, 141);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Generated: ${new Date(c.hashes.start.timestamp).toLocaleString()}`, 25, yPos + 24);
+    }
+    yPos += 33;
+    
+    // End Hash
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 28, 'F');
+    pdf.setFontSize(10);
+    pdf.setTextColor(231, 76, 60);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('END HASH', 25, yPos + 6);
+    pdf.setFontSize(7);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('courier', 'normal');
+    const endHash = c.hashes?.end?.hash || 'PENDING';
+    const endLines = pdf.splitTextToSize(endHash, 160);
+    pdf.text(endLines, 25, yPos + 12);
+    if (c.hashes?.end?.timestamp) {
+        pdf.setFontSize(6);
+        pdf.setTextColor(127, 140, 141);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Generated: ${new Date(c.hashes.end.timestamp).toLocaleString()}`, 25, yPos + 24);
+    }
+    yPos += 33;
+    
+    // FOOTER - Fixed with proper encoding
+    pdf.setFontSize(8);
+    pdf.setTextColor(149, 165, 166);
+    pdf.setFont('helvetica', 'normal');
+    
+    const verificationId = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const shortCampaignId = c.id.substring(0, 8);
+    const generatedBy = (currentUser?.uid || 'Anonymous').substring(0, 8);
+    
+    pdf.text(`Report Generated: ${now.toLocaleString()}`, 20, yPos + 5);
+    pdf.text(`Generated by: ${generatedBy}...`, 105, yPos + 5, { align: 'center' });
+    pdf.text(`Verification ID: ${verificationId}`, 20, yPos + 12);
+    pdf.text(`Campaign ID: ${shortCampaignId}...`, 190, yPos + 12, { align: 'right' });
+    
+    pdf.setFontSize(7);
+    pdf.setTextColor(100);
+    pdf.text('Blockchain Verified Proof', 105, yPos + 20, { align: 'center' });
+    
+    // Save PDF with date and timestamp in filename
+    const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+    const dateStr = now.toISOString().slice(0, 19).replace(/:/g, '-');
+    const fileName = `${safeName}_${dateStr}_Proof.pdf`;
+    
+    pdf.save(fileName);
+    closePDFPreview();
+};
     
     window.exportAdToExcel = function() {
         if (!allAdCampaigns.length) { alert('No data to export'); return; }
