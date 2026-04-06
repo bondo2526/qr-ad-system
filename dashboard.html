@@ -972,22 +972,63 @@ function buildAdCampaignHTML(c) {
         const hashes = c.hashes || {};
         
         // Images Section with safe handling
-        let imgsHTML = '';
-        if (images.length > 0) {
-            imgsHTML = images.slice(0, 5).map((img, idx) => {
-                try {
-                    // Handle different image formats
-                    let imageData = '';
-                    if (typeof img === 'string') {
-                        imageData = img;
-                    } else if (img && img.data) {
-                        imageData = img.data;
-                    } else if (img && img.imgData) {
-                        imageData = img.imgData;
-                    } else {
-                        console.warn('Invalid image format for campaign', c.id, img);
-                        return '';
-                    }
+  // Images Section - Fixed for all data types
+let imgsHTML = '';
+if (images && images.length > 0) {
+    console.log(`Rendering ${images.length} images for campaign ${c.name}`);
+    console.log('Image data type:', typeof images[0]);
+    console.log('Image data:', images[0]);
+    
+    imgsHTML = images.slice(0, 5).map((img, idx) => {
+        try {
+            // Try multiple ways to get the image data as a string
+            let imageData = null;
+            
+            // Case 1: img is a string
+            if (typeof img === 'string') {
+                imageData = img;
+            }
+            // Case 2: img is an object with data property
+            else if (img && typeof img === 'object') {
+                if (img.data && typeof img.data === 'string') {
+                    imageData = img.data;
+                } 
+                // Case 3: img has imgData property
+                else if (img.imgData && typeof img.imgData === 'string') {
+                    imageData = img.imgData;
+                }
+                // Case 4: img itself is the data URL (unlikely but possible)
+                else if (typeof img === 'string') {
+                    imageData = img;
+                }
+            }
+            
+            // Validate we have a string and it looks like an image
+            if (imageData && typeof imageData === 'string') {
+                // Check if it's a valid data URL
+                if (imageData.startsWith('data:image')) {
+                    const imageName = img.name || `Image ${idx + 1}`;
+                    return `<img class="campaign-thumb" src="${imageData}" onclick="showImage('${imageData}')" title="${imageName}" style="cursor:pointer; object-fit:cover;">`;
+                } else {
+                    console.warn('Image data doesn\'t start with data:image:', imageData.substring(0, 50));
+                    return `<div style="width:58px;height:58px;background:#ffc107;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;text-align:center;padding:5px;">Invalid format</div>`;
+                }
+            } else {
+                console.warn(`Invalid image data for ${c.name}:`, img);
+                return `<div style="width:58px;height:58px;background:#dc3545;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;text-align:center;padding:5px;">No data</div>`;
+            }
+        } catch (err) {
+            console.error('Error processing image:', err, img);
+            return `<div style="width:58px;height:58px;background:#dc3545;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">Error</div>`;
+        }
+    }).join('');
+    
+    if (!imgsHTML) {
+        imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 Image data corrupted</div>';
+    }
+} else {
+    imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 No images uploaded</div>';
+}
                     
                     // Only create image if we have valid data
                     if (imageData && imageData.startsWith('data:image')) {
@@ -1501,8 +1542,28 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
 
     // IMAGE MODAL
 window.showImage = function(url) { 
-    document.getElementById('modalImage').src = url; 
-    document.getElementById('imageModal').style.display = 'block'; 
+    try {
+        // Ensure we have a string URL
+        let imageUrl = '';
+        if (typeof url === 'string') {
+            imageUrl = url;
+        } else if (url && typeof url === 'object' && url.data) {
+            imageUrl = url.data;
+        } else if (url && url.imgData) {
+            imageUrl = url.imgData;
+        }
+        
+        if (imageUrl && imageUrl.startsWith('data:image')) {
+            document.getElementById('modalImage').src = imageUrl; 
+            document.getElementById('imageModal').style.display = 'block';
+        } else {
+            console.error('Invalid image URL:', imageUrl);
+            alert('Cannot display this image - invalid format');
+        }
+    } catch(err) {
+        console.error('Error showing image:', err);
+        alert('Error displaying image');
+    }
 };
     window.closeModal = function() { document.getElementById('imageModal').style.display = 'none'; };
 
