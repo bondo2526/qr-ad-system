@@ -1039,35 +1039,97 @@
                 alert("Error: " + error.message);
             }
         }
-        
-        async function updateProductQuantity(advertiserName, productName, inputId) {
-            const input = document.getElementById(inputId);
-            const newTotal = parseInt(input.value);
-            
-            if (isNaN(newTotal) || newTotal < 0) {
-                alert("Please enter a valid number");
-                return;
-            }
-            
-            try {
-                const campaignRef = db.collection('ad_campaigns').doc(advertiserName);
-                const campaign = await campaignRef.get();
-                const products = campaign.data().products || [];
-                
-                const productIndex = products.findIndex(p => p.productName === productName);
-                if (productIndex === -1) return;
-                
-                const oldRedeemed = products[productIndex].redeemedCount || 0;
-                products[productIndex].totalProducts = newTotal;
-                products[productIndex].remaining = newTotal - oldRedeemed;
-                
-                await campaignRef.update({ products: products });
-                alert(`✅ Updated ${productName} to ${newTotal} units`);
-                await loadCampaigns();
-            } catch (error) {
-                alert("Error: " + error.message);
-            }
+        // Telegram notification for sold out products
+async function sendSoldOutTelegram(advertiserName, productName, totalProducts, redeemedCount, remaining) {
+    const BOT_TOKEN = "8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk";
+    const CHAT_ID = "6597376744";
+    
+    const timestamp = new Date().toLocaleString();
+    const message = `
+🔴 PRODUCT SOLD OUT ALERT 🔴
+
+Advertiser: ${advertiserName}
+Product: ${productName}
+Total Quantity: ${totalProducts}
+Redeemed: ${redeemedCount}
+Remaining: ${remaining}
+Status: SOLD OUT
+
+⏰ Time: ${timestamp}
+
+⚠️ Action Required: Remove this ad from display system.
+    `;
+    
+    const url = `https://api.telegram.org/bot${8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk}/sendMessage`;
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: 6597376744,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        });
+        const result = await response.json();
+        if (result.ok) {
+            console.log("✅ Telegram notification sent for sold out product:", productName);
+        } else {
+            console.error("Telegram error:", result);
         }
+    } catch (error) {
+        console.error("Failed to send Telegram notification:", error);
+    }
+}
+      async function updateProductQuantity(advertiserName, productName, inputId) {
+    const input = document.getElementById(inputId);
+    const newTotal = parseInt(input.value);
+    
+    if (isNaN(newTotal) || newTotal < 0) {
+        alert("Please enter a valid number");
+        return;
+    }
+    
+    try {
+        const campaignRef = db.collection('ad_campaigns').doc(advertiserName);
+        const campaign = await campaignRef.get();
+        const products = campaign.data().products || [];
+        
+        const productIndex = products.findIndex(p => p.productName === productName);
+        if (productIndex === -1) return;
+        
+        const oldTotal = products[productIndex].totalProducts;
+        const oldRedeemed = products[productIndex].redeemedCount || 0;
+        const oldRemaining = oldTotal - oldRedeemed;
+        
+        products[productIndex].totalProducts = newTotal;
+        products[productIndex].remaining = newTotal - oldRedeemed;
+        
+        await campaignRef.update({ products: products });
+        
+        const newRemaining = newTotal - oldRedeemed;
+        
+        // Check if product became sold out (remaining <= 0 and previously had stock)
+        if (newRemaining <= 0 && oldRemaining > 0) {
+            await sendSoldOutTelegram(
+                advertiserName,
+                productName,
+                newTotal,
+                oldRedeemed,
+                newRemaining
+            );
+            alert(`🔴 ${productName} is now SOLD OUT! Telegram notification sent.`);
+        } else {
+            alert(`✅ Updated ${productName} to ${newTotal} units (Remaining: ${newRemaining})`);
+        }
+        
+        await loadCampaigns();
+    } catch (error) {
+        console.error("Error updating product:", error);
+        alert("Error: " + error.message);
+    }
+}
         
         async function removeProduct(advertiserName, productName) {
             if (!confirm(`Remove "${productName}" from ${advertiserName}? This will NOT delete existing claims.`)) return;
