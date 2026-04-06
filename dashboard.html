@@ -959,10 +959,28 @@ function buildAdCampaignHTML(c) {
     const updates = c.update_history || c.updates || [];  // Changed to match your field name
     const hashes = c.hashes || {};
 // Images Section - FIXED
+// Images Section - FIXED with better error handling
 const imgsHTML = images.slice(0,5).map(img => {
     // Handle both old and new image format
-    const imageData = img.data || img;  // Get the data URL
-    const imageName = img.name || 'image';
+    let imageData = '';
+    let imageName = img.name || 'image';
+    
+    if (typeof img === 'string') {
+        imageData = img;
+    } else if (img.data) {
+        imageData = img.data;
+    } else if (img.imgData) {
+        imageData = img.imgData;
+    } else {
+        console.warn('Invalid image format:', img);
+        return '<div style="color:red;font-size:10px;">Invalid image</div>';
+    }
+    
+    // Make sure the data URL is complete
+    if (!imageData.startsWith('data:image')) {
+        console.warn('Image data missing proper prefix:', imageData.substring(0, 50));
+    }
+    
     return `<img class="campaign-thumb" src="${imageData}" onclick="showImage('${imageData}')" title="${imageName}">`;
 }).join('');
     
@@ -1230,14 +1248,19 @@ async function compressImage(file, maxSizeKB=200) {
             if (!name || !station) throw new Error('Please fill all fields');
             if (endDT <= startDT) throw new Error('End date must be after start date');
             document.getElementById('uploadProgress').style.display = 'block';
-            const imagesData = [];
-            for (let i=0;i<selectedFiles.length;i++) {
-                document.getElementById('progressPercent').textContent = `${Math.round((i/selectedFiles.length)*100)}%`;
-                document.getElementById('progressFill').style.width    = `${Math.round((i/selectedFiles.length)*100)}%`;
-                document.getElementById('progressCurrent').textContent = `Processing ${selectedFiles[i].name}`;
-                const data = await compressImage(selectedFiles[i]);
-                imagesData.push({ name: selectedFiles[i].name, data });
-            }
+const imagesData = [];
+for (let i=0;i<selectedFiles.length;i++) {
+    document.getElementById('progressPercent').textContent = `${Math.round((i/selectedFiles.length)*100)}%`;
+    document.getElementById('progressFill').style.width    = `${Math.round((i/selectedFiles.length)*100)}%`;
+    document.getElementById('progressCurrent').textContent = `Processing ${selectedFiles[i].name}`;
+    const compressedImage = await compressImage(selectedFiles[i]);
+    imagesData.push({ 
+        name: compressedImage.name, 
+        data: compressedImage.data,
+        originalSize: compressedImage.originalSize,
+        compressedSize: compressedImage.compressedSize
+    });
+}
             document.getElementById('progressPercent').textContent = '100%';
             document.getElementById('progressFill').style.width    = '100%';
             document.getElementById('progressCurrent').textContent = 'Saving...';
