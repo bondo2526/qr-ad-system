@@ -374,6 +374,58 @@
             .filter-input, .date-input { width:100%; min-width:unset; }
             .date-range { flex-direction:column; align-items:stretch; }
         }
+            /* Modern Date Pickers */
+    input[type="datetime-local"] {
+        background: #2a2f38;
+        border: 2px solid #3a4050;
+        color: white;
+        border-radius: 10px;
+        padding: 13px 14px;
+        font-size: 15px;
+        font-family: inherit;
+        cursor: pointer;
+    }
+
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+        padding: 5px;
+    }
+
+    input[type="datetime-local"]:hover {
+        border-color: #4a9eff;
+    }
+
+    /* Better date range pickers for coupon section */
+    .date-range {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: #2a2f38;
+        padding: 8px 15px;
+        border-radius: 10px;
+        border: 1px solid #3a4050;
+    }
+
+    .date-range span {
+        color: #4a9eff;
+        font-weight: bold;
+    }
+
+    input[type="date"] {
+        background: #1a1e24;
+        border: 2px solid #3a4050;
+        color: white;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+    }
     </style>
 </head>
 <body>
@@ -1185,14 +1237,28 @@ function escapeHtml(str) {
     window.manualRefresh = async function() { await loadAdData(); await loadCouponData(); };
 
     // ADD CAMPAIGN FORM
-    function setDefaultDates() {
-        const now = new Date();
-        const end = new Date(now.getTime() + 7*24*3600000);
-        const fmt = d => d.toISOString().slice(0,16);
-        const s = document.getElementById('startDateTime'); if(s) s.value = fmt(now);
-        const e = document.getElementById('endDateTime');   if(e) e.value = fmt(end);
-        updateHashPreviews();
-    }
+function setDefaultDates() {
+    const now = new Date();
+    const end = new Date(now.getTime() + 7 * 24 * 3600000);
+    
+    // Format for datetime-local input (YYYY-MM-DDThh:mm)
+    const formatDateTime = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
+    const startInput = document.getElementById('startDateTime');
+    const endInput = document.getElementById('endDateTime');
+    
+    if (startInput) startInput.value = formatDateTime(now);
+    if (endInput) endInput.value = formatDateTime(end);
+    
+    updateHashPreviews();
+}
 
     async function sha256(str) {
         const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -1446,24 +1512,33 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
     document.getElementById('editSaveLoading').style.display = 'inline-block';
     
     try {
-        const old = allAdCampaigns.find(x=>x.id===id) || {};
+        const old = allAdCampaigns.find(x => x.id === id) || {};
         const updates = old.update_history || old.updates || [];
         
-        const newName = document.getElementById('editCustomerName').value;
+        const newName = document.getElementById('editCustomerName').value.trim();
         const newStation = document.getElementById('editStationName').value;
-        const newStart = new Date(document.getElementById('editStartDateTime').value);
-        const newEnd = new Date(document.getElementById('editEndDateTime').value);
+        const newStartStr = document.getElementById('editStartDateTime').value;
+        const newEndStr = document.getElementById('editEndDateTime').value;
         
-        const oldStart = old.start_date?.toDate?.() || new Date(old.start_datetime);
-        const oldEnd = old.end_date?.toDate?.() || new Date(old.end_datetime);
-        const newStatus = getAdStatus({ start_date: { toDate: () => newStart }, end_date: { toDate: () => newEnd } });
+        const newStart = new Date(newStartStr);
+        const newEnd = new Date(newEndStr);
         
-        // Track detailed changes
+        const oldStart = old.start_date?.toDate?.() || (old.start_datetime ? new Date(old.start_datetime) : new Date());
+        const oldEnd = old.end_date?.toDate?.() || (old.end_datetime ? new Date(old.end_datetime) : new Date());
+        
+        const newStatus = getAdStatus({ 
+            start_date: { toDate: () => newStart }, 
+            end_date: { toDate: () => newEnd } 
+        });
+        
+        // Track ONLY changed fields
+        const changedFields = [];
+        const updateData = {};
         const changeLogs = [];
-        const changesArray = [];
         
         if (old.name !== newName) {
-            changesArray.push(`Customer Name: "${old.name}" → "${newName}"`);
+            changedFields.push('Customer Name');
+            updateData.name = newName;
             changeLogs.push({
                 field: 'Customer Name',
                 old_value: old.name,
@@ -1475,7 +1550,8 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         }
         
         if (old.station !== newStation) {
-            changesArray.push(`Station: "${old.station}" → "${newStation}"`);
+            changedFields.push('Station');
+            updateData.station = newStation;
             changeLogs.push({
                 field: 'Station',
                 old_value: old.station,
@@ -1487,7 +1563,9 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         }
         
         if (oldStart.getTime() !== newStart.getTime()) {
-            changesArray.push(`Start: ${oldStart.toLocaleString()} → ${newStart.toLocaleString()}`);
+            changedFields.push('Start Date');
+            updateData.start_datetime = newStart.toISOString();
+            updateData.start_date = firebase.firestore.Timestamp.fromDate(newStart);
             changeLogs.push({
                 field: 'Start Date',
                 old_value: oldStart.toLocaleString(),
@@ -1499,7 +1577,9 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         }
         
         if (oldEnd.getTime() !== newEnd.getTime()) {
-            changesArray.push(`End: ${oldEnd.toLocaleString()} → ${newEnd.toLocaleString()}`);
+            changedFields.push('End Date');
+            updateData.end_datetime = newEnd.toISOString();
+            updateData.end_date = firebase.firestore.Timestamp.fromDate(newEnd);
             changeLogs.push({
                 field: 'End Date',
                 old_value: oldEnd.toLocaleString(),
@@ -1510,48 +1590,55 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
             });
         }
         
-        // Create update record matching your database structure
+        // Only update if something actually changed
+        if (changedFields.length === 0) {
+            const a = document.getElementById('editAlert');
+            a.className = 'alert warning';
+            a.textContent = '⚠️ No changes detected. Nothing was updated.';
+            a.style.display = 'block';
+            setTimeout(() => a.style.display = 'none', 3000);
+            btn.disabled = false;
+            document.getElementById('editSaveText').style.display = 'inline';
+            document.getElementById('editSaveLoading').style.display = 'none';
+            return;
+        }
+        
+        // Add common update fields
+        updateData.status = newStatus;
+        updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
+        updateData.updated_by = currentUser?.uid || 'anonymous';
+        
+        // Create update record ONLY for changed fields
         const updateRecord = {
-            changes: changesArray,  // Array of changes
-            field: changesArray.join(' | '),  // Combined string for backward compatibility
-            old_value: `${old.station} - ${old.name} (${old.start_datetime || old.start_date?.toDate?.()} to ${old.end_datetime || old.end_date?.toDate?.()})`,
-            new_value: `${newStation} - ${newName} (${newStart.toISOString()} to ${newEnd.toISOString()})`,
+            changes: changeLogs.map(log => log.changes),
+            field: changedFields.join(', '),
+            old_value: `Station: ${old.station} | Customer: ${old.name} | Start: ${oldStart.toLocaleString()} | End: ${oldEnd.toLocaleString()}`,
+            new_value: `Station: ${newStation} | Customer: ${newName} | Start: ${newStart.toLocaleString()} | End: ${newEnd.toLocaleString()}`,
             timestamp: new Date().toISOString(),
-            updated_by: currentUser?.uid || 'anonymous'
+            updated_by: currentUser?.uid || 'anonymous',
+            changed_fields: changedFields  // Track which fields were changed
         };
         
         updates.push(updateRecord);
+        updateData.update_history = updates;
         
-        // Prepare update data
-        const updateData = {
-            name: newName,
-            station: newStation,
-            start_datetime: newStart.toISOString(),  // Store as string
-            end_datetime: newEnd.toISOString(),      // Store as string
-            start_date: firebase.firestore.Timestamp.fromDate(newStart),  // Keep for compatibility
-            end_date: firebase.firestore.Timestamp.fromDate(newEnd),      // Keep for compatibility
-            status: newStatus,
-            update_history: updates,  // Use the field name from your database
-            updated_at: firebase.firestore.FieldValue.serverTimestamp(),
-            updated_by: currentUser?.uid || 'anonymous'
-        };
-        
+        // Apply the update to Firestore
         await db.collection('customers').doc(id).update(updateData);
         
         closeEditModal();
         await loadAdData();
         
         const a = document.getElementById('editAlert');
-        a.className='alert success'; 
-        a.textContent='✅ Campaign updated: ' + changesArray.join(', '); 
-        a.style.display='block';
+        a.className = 'alert success';
+        a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
+        a.style.display = 'block';
         setTimeout(() => a.style.display = 'none', 4000);
         
-    } catch(err) {
+    } catch (err) {
         const a = document.getElementById('editAlert');
-        a.className='alert error'; 
-        a.textContent='❌ ' + err.message; 
-        a.style.display='block';
+        a.className = 'alert error';
+        a.textContent = '❌ ' + err.message;
+        a.style.display = 'block';
         setTimeout(() => a.style.display = 'none', 3000);
     } finally {
         btn.disabled = false;
