@@ -1412,33 +1412,39 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
     const btn = document.getElementById('submitBtn');
     const showAlert = (msg, type) => {
         const a = document.getElementById('addAlert');
-        a.className = 'alert ' + type; a.textContent = msg; a.style.display = 'block';
+        a.className = 'alert ' + type;
+        a.textContent = msg;
+        a.style.display = 'block';
         setTimeout(() => a.style.display = 'none', 5000);
     };
+    
     btn.disabled = true;
     document.getElementById('submitText').style.display = 'none';
     document.getElementById('submitLoading').style.display = 'inline-block';
+    
     try {
-        const name  = document.getElementById('customerName').value.trim();
+        const name = document.getElementById('customerName').value.trim();
         const station = document.getElementById('stationName').value;
         
-        // Get raw datetime values (already in "YYYY-MM-DDThh:mm" format)
+        // Get raw datetime values (format: "2026-04-08T15:24")
         const startRaw = document.getElementById('startDateTime').value;
         const endRaw = document.getElementById('endDateTime').value;
         
-        // Create UTC datetime strings in "YYYY-MM-DDThh:mm:ss" format
-        const startUTCString = startRaw + ':00';  // Adds seconds
-        const endUTCString = endRaw + ':00';      // Adds seconds
+        // Add seconds to match "2026-04-08T15:24:00" format
+        const startDateTimeString = startRaw + ':00';
+        const endDateTimeString = endRaw + ':00';
         
         // Parse for validation
         const startDT = new Date(startRaw);
         const endDT = new Date(endRaw);
         
         if (!name || !station) throw new Error('Please fill all fields');
+        if (!startRaw || !endRaw) throw new Error('Please select start and end dates');
         if (endDT <= startDT) throw new Error('End date must be after start date');
         
         document.getElementById('uploadProgress').style.display = 'block';
         const imagesData = [];
+        
         for (let i = 0; i < selectedFiles.length; i++) {
             document.getElementById('progressPercent').textContent = `${Math.round((i / selectedFiles.length) * 100)}%`;
             document.getElementById('progressFill').style.width = `${Math.round((i / selectedFiles.length) * 100)}%`;
@@ -1452,55 +1458,85 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
                 wasCompressed: compressedImage.wasCompressed || false
             });
         }
+        
         document.getElementById('progressPercent').textContent = '100%';
-        document.getElementById('progressFill').style.width    = '100%';
+        document.getElementById('progressFill').style.width = '100%';
         document.getElementById('progressCurrent').textContent = 'Saving...';
         
         const startHash = document.getElementById('startHashPreview').textContent;
-        const endHash   = document.getElementById('endHashPreview').textContent;
+        const endHash = document.getElementById('endHashPreview').textContent;
         const uid = currentUser?.uid || 'anonymous';
         
+        // Calculate status based on datetime strings
+        const now = new Date();
+        let status = 'upcoming';
+        if (now >= startDT && now <= endDT) status = 'active';
+        if (now > endDT) status = 'expired';
+        
+        // Calculate compression stats
+        const totalOriginalSize = imagesData.reduce((sum, img) => sum + (img.originalSize || 0), 0);
+        const totalCompressedSize = imagesData.reduce((sum, img) => sum + (img.compressedSize || 0), 0);
+        const savingsPercent = totalOriginalSize > 0 ? 
+            ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : "0.0";
+        
+        // IMPORTANT: Only save start_datetime and end_datetime as strings
+        // NO start_date or end_date Timestamps!
         const docRef = await db.collection('customers').add({
             name: name,
             station: station,
-            // Store as simple UTC datetime strings without timezone
-            start_datetime: startUTCString,
-            end_datetime: endUTCString,
-            // Also store as Timestamp for queries (interpret as UTC)
-            start_date: firebase.firestore.Timestamp.fromDate(new Date(startRaw + 'Z')),
-            end_date: firebase.firestore.Timestamp.fromDate(new Date(endRaw + 'Z')),
+            start_datetime: startDateTimeString,  // "2026-04-08T15:24:00"
+            end_datetime: endDateTimeString,      // "2026-04-08T15:24:00"
+            // ❌ DO NOT INCLUDE start_date or end_date fields
             images: imagesData,
             image_count: imagesData.length,
             hashes: {
                 start: { 
                     hash: startHash, 
-                    timestamp: startUTCString
+                    timestamp: startDateTimeString
                 },
                 end: { 
                     hash: endHash, 
-                    timestamp: endUTCString
+                    timestamp: endDateTimeString
                 }
             },
             compression_stats: {
-                compressed_size: imagesData.reduce((sum, img) => sum + (img.compressedSize || 0), 0),
-                original_size: imagesData.reduce((sum, img) => sum + (img.originalSize || 0), 0),
-                savings_percent: "0.0"
+                compressed_size: totalCompressedSize,
+                original_size: totalOriginalSize,
+                savings_percent: savingsPercent
             },
             created_by: uid,
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
-            status: getAdStatus({ start_date: firebase.firestore.Timestamp.fromDate(new Date(startRaw + 'Z')), end_date: firebase.firestore.Timestamp.fromDate(new Date(endRaw + 'Z')) }),
+            status: status,
             update_history: []
         });
         
-        await db.collection('blockchain').add({ campaign_id: docRef.id, customer_name: name, hash: startHash, type: 'start', created_at: firebase.firestore.FieldValue.serverTimestamp() });
-        await db.collection('blockchain').add({ campaign_id: docRef.id, customer_name: name, hash: endHash,   type: 'end',   created_at: firebase.firestore.FieldValue.serverTimestamp() });
+        // Add blockchain records
+        await db.collection('blockchain').add({ 
+            campaign_id: docRef.id, 
+            customer_name: name, 
+            hash: startHash, 
+            type: 'start', 
+            created_at: firebase.firestore.FieldValue.serverTimestamp() 
+        });
+        
+        await db.collection('blockchain').add({ 
+            campaign_id: docRef.id, 
+            customer_name: name, 
+            hash: endHash,   
+            type: 'end',   
+            created_at: firebase.firestore.FieldValue.serverTimestamp() 
+        });
         
         document.getElementById('uploadProgress').style.display = 'none';
-        selectedFiles = []; renderImagePreviews();
-        document.getElementById('addCampaignForm').reset(); setDefaultDates();
+        selectedFiles = [];
+        renderImagePreviews();
+        document.getElementById('addCampaignForm').reset();
+        setDefaultDates();
         showAlert('✅ Campaign added successfully!', 'success');
         await loadAdData();
+        
     } catch(err) {
+        console.error('Error adding campaign:', err);
         showAlert('❌ ' + err.message, 'error');
         document.getElementById('uploadProgress').style.display = 'none';
     } finally {
@@ -1558,20 +1594,21 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         // Get form values
         const newName = document.getElementById('editCustomerName').value.trim();
         const newStation = document.getElementById('editStationName').value;
-        const newStartStr = document.getElementById('editStartDateTime').value;
-        const newEndStr = document.getElementById('editEndDateTime').value;
+        const newStartRaw = document.getElementById('editStartDateTime').value;
+        const newEndRaw = document.getElementById('editEndDateTime').value;
         
-        const newStart = new Date(newStartStr);
-        const newEnd = new Date(newEndStr);
+        // Create datetime strings
+        const newStartDateTimeString = newStartRaw + ':00';
+        const newEndDateTimeString = newEndRaw + ':00';
         
-        // Get old values
+        const newStart = new Date(newStartRaw);
+        const newEnd = new Date(newEndRaw);
+        
+        // Get old values from datetime strings
         const oldName = old.name || '';
         const oldStation = old.station || '';
-        const oldStart = old.start_date?.toDate?.() || (old.start_datetime ? new Date(old.start_datetime) : new Date());
-        const oldEnd = old.end_date?.toDate?.() || (old.end_datetime ? new Date(old.end_datetime) : new Date());
-        
-        console.log('Old values:', { oldName, oldStation, oldStart, oldEnd });
-        console.log('New values:', { newName, newStation, newStart, newEnd });
+        const oldStart = new Date(old.start_datetime);
+        const oldEnd = new Date(old.end_datetime);
         
         // Track ONLY changed fields
         const changedFields = [];
@@ -1579,37 +1616,46 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         
         // Check Customer Name
         if (oldName !== newName) {
-            console.log('Customer Name changed from', oldName, 'to', newName);
             changedFields.push('Customer Name');
             updateData.name = newName;
         }
         
         // Check Station
         if (oldStation !== newStation) {
-            console.log('Station changed from', oldStation, 'to', newStation);
             changedFields.push('Station');
             updateData.station = newStation;
         }
         
         // Check Start Date
         if (oldStart.getTime() !== newStart.getTime()) {
-            console.log('Start Date changed from', oldStart, 'to', newStart);
             changedFields.push('Start Date');
-            updateData.start_datetime = newStart.toISOString();
-            updateData.start_date = firebase.firestore.Timestamp.fromDate(newStart);
+            updateData.start_datetime = newStartDateTimeString;
+            // Update hash timestamp too
+            if (old.hashes?.start) {
+                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
+                updateData.hashes.start = {
+                    ...old.hashes.start,
+                    timestamp: newStartDateTimeString
+                };
+            }
         }
         
         // Check End Date
         if (oldEnd.getTime() !== newEnd.getTime()) {
-            console.log('End Date changed from', oldEnd, 'to', newEnd);
             changedFields.push('End Date');
-            updateData.end_datetime = newEnd.toISOString();
-            updateData.end_date = firebase.firestore.Timestamp.fromDate(newEnd);
+            updateData.end_datetime = newEndDateTimeString;
+            // Update hash timestamp too
+            if (old.hashes?.end) {
+                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
+                updateData.hashes.end = {
+                    ...old.hashes.end,
+                    timestamp: newEndDateTimeString
+                };
+            }
         }
         
         // If nothing changed, show message and exit
         if (changedFields.length === 0) {
-            console.log('No changes detected');
             const a = document.getElementById('editAlert');
             a.className = 'alert warning';
             a.textContent = '⚠️ No changes detected. Nothing was updated.';
@@ -1621,14 +1667,11 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
             return;
         }
         
-        console.log('Fields to update:', changedFields);
-        console.log('Update data:', updateData);
-        
-        // Update status based on new dates (only if dates changed)
-        const newStatus = getAdStatus({ 
-            start_date: { toDate: () => newStart }, 
-            end_date: { toDate: () => newEnd } 
-        });
+        // Update status based on new dates
+        const now = new Date();
+        let newStatus = 'upcoming';
+        if (now >= newStart && now <= newEnd) newStatus = 'active';
+        if (now > newEnd) newStatus = 'expired';
         updateData.status = newStatus;
         
         // Add common update fields
@@ -1656,8 +1699,6 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         
         // Apply ONLY the changed fields to Firestore
         await db.collection('customers').doc(id).update(updateData);
-        
-        console.log('Update successful!');
         
         closeEditModal();
         await loadAdData();
