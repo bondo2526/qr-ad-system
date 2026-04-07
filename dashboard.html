@@ -1526,16 +1526,12 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const oldStart = old.start_date?.toDate?.() || (old.start_datetime ? new Date(old.start_datetime) : new Date());
         const oldEnd = old.end_date?.toDate?.() || (old.end_datetime ? new Date(old.end_datetime) : new Date());
         
-        const newStatus = getAdStatus({ 
-            start_date: { toDate: () => newStart }, 
-            end_date: { toDate: () => newEnd } 
-        });
-        
         // Track ONLY changed fields
         const changedFields = [];
         const updateData = {};
         const changeLogs = [];
         
+        // Check each field individually
         if (old.name !== newName) {
             changedFields.push('Customer Name');
             updateData.name = newName;
@@ -1544,8 +1540,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
                 old_value: old.name,
                 new_value: newName,
                 timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous',
-                changes: `Customer Name changed from "${old.name}" to "${newName}"`
+                updated_by: currentUser?.uid || 'anonymous'
             });
         }
         
@@ -1557,8 +1552,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
                 old_value: old.station,
                 new_value: newStation,
                 timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous',
-                changes: `Station changed from "${old.station}" to "${newStation}"`
+                updated_by: currentUser?.uid || 'anonymous'
             });
         }
         
@@ -1571,8 +1565,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
                 old_value: oldStart.toLocaleString(),
                 new_value: newStart.toLocaleString(),
                 timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous',
-                changes: `Start Date changed from "${oldStart.toLocaleString()}" to "${newStart.toLocaleString()}"`
+                updated_by: currentUser?.uid || 'anonymous'
             });
         }
         
@@ -1585,12 +1578,11 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
                 old_value: oldEnd.toLocaleString(),
                 new_value: newEnd.toLocaleString(),
                 timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous',
-                changes: `End Date changed from "${oldEnd.toLocaleString()}" to "${newEnd.toLocaleString()}"`
+                updated_by: currentUser?.uid || 'anonymous'
             });
         }
         
-        // Only update if something actually changed
+        // If nothing changed, show message and exit
         if (changedFields.length === 0) {
             const a = document.getElementById('editAlert');
             a.className = 'alert warning';
@@ -1603,26 +1595,32 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
             return;
         }
         
-        // Add common update fields
+        // Add status update (always update status based on new dates)
+        const newStatus = getAdStatus({ 
+            start_date: { toDate: () => newStart }, 
+            end_date: { toDate: () => newEnd } 
+        });
         updateData.status = newStatus;
+        
+        // Add common update fields
         updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
         updateData.updated_by = currentUser?.uid || 'anonymous';
         
-        // Create update record ONLY for changed fields
+        // Create update record with ONLY the changed fields
+        const changeDetails = changeLogs.map(log => `${log.field}: "${log.old_value}" → "${log.new_value}"`).join(' | ');
+        
         const updateRecord = {
-            changes: changeLogs.map(log => log.changes),
-            field: changedFields.join(', '),
-            old_value: `Station: ${old.station} | Customer: ${old.name} | Start: ${oldStart.toLocaleString()} | End: ${oldEnd.toLocaleString()}`,
-            new_value: `Station: ${newStation} | Customer: ${newName} | Start: ${newStart.toLocaleString()} | End: ${newEnd.toLocaleString()}`,
+            changes: changeDetails,
+            changed_fields: changedFields,  // Array of which fields changed
+            details: changeLogs,  // Detailed log of each change
             timestamp: new Date().toISOString(),
-            updated_by: currentUser?.uid || 'anonymous',
-            changed_fields: changedFields  // Track which fields were changed
+            updated_by: currentUser?.uid || 'anonymous'
         };
         
         updates.push(updateRecord);
         updateData.update_history = updates;
         
-        // Apply the update to Firestore
+        // Apply ONLY the changed fields to Firestore
         await db.collection('customers').doc(id).update(updateData);
         
         closeEditModal();
