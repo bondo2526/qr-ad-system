@@ -1846,13 +1846,12 @@ window.downloadPDF = function() {
     pdf.text(`Generated: ${now.toLocaleString()}`, 105, yPos, { align: 'center' });
     yPos += 10;
     
-    // Campaign ID - FULL, no truncation
+    // Campaign ID
     pdf.setFillColor(248, 249, 250);
     pdf.rect(20, yPos, 170, 8, 'F');
     pdf.setFontSize(7);
     pdf.setTextColor(52, 152, 219);
     pdf.setFont('courier', 'bold');
-    // Use splitTextToSize to handle long IDs properly
     const campaignIdLines = pdf.splitTextToSize(`Campaign ID: ${c.id}`, 160);
     pdf.text(campaignIdLines, 105, yPos + 5, { align: 'center' });
     yPos += 12;
@@ -1988,7 +1987,7 @@ window.downloadPDF = function() {
         yPos += 40 * (Math.ceil(Math.min(images.length, 4) / 2)) + 8;
     }
     
-    // Update History as TABLE - FULL CONTENT (no truncation)
+    // Update History as TABLE - PROPERLY PARSED
     if (updates && updates.length > 0) {
         pdf.setFontSize(12);
         pdf.setTextColor(243, 156, 18);
@@ -2020,53 +2019,98 @@ window.downloadPDF = function() {
             const updateDate = update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown';
             const updatedBy = (update.updated_by || 'Unknown').substring(0, 10);
             
-            let fieldName = 'Changes';
-            let oldVal = '-';
-            let newVal = '-';
+            let fieldName = '';
+            let oldVal = '';
+            let newVal = '';
             
+            // Method 1: Check if we have details array (new format)
             if (update.details && update.details.length > 0) {
-                for (let d of update.details) {
-                    if (d.includes('→')) {
-                        const parts = d.split('→');
-                        if (parts.length === 2) {
-                            fieldName = parts[0].split(':')[0] || 'Field';
-                            oldVal = parts[0].split(':')[1] || parts[0];
-                            newVal = parts[1];
-                            break;
-                        }
-                    } else if (d.includes(':')) {
-                        const colonIndex = d.indexOf(':');
-                        fieldName = d.substring(0, colonIndex);
-                        const rest = d.substring(colonIndex + 1);
-                        if (rest.includes('→')) {
-                            const valParts = rest.split('→');
-                            oldVal = valParts[0];
-                            newVal = valParts[1];
-                        } else {
-                            oldVal = '-';
-                            newVal = rest;
-                        }
-                        break;
+                // Get the first detail
+                const detail = update.details[0];
+                if (detail.field) {
+                    fieldName = detail.field;
+                    oldVal = detail.old_value || '-';
+                    newVal = detail.new_value || '-';
+                } else if (typeof detail === 'string' && detail.includes('→')) {
+                    const parts = detail.split('→');
+                    if (parts.length === 2) {
+                        const fieldPart = parts[0].split(':')[0] || 'Changes';
+                        fieldName = fieldPart.trim();
+                        oldVal = parts[0].split(':')[1] || parts[0];
+                        newVal = parts[1];
                     }
                 }
-            } else if (update.field && update.old_value && update.new_value) {
-                fieldName = update.field;
-                oldVal = String(update.old_value);
-                newVal = String(update.new_value);
-            } else if (update.changes) {
-                newVal = update.changes;
             }
             
-            // NO truncation - use splitTextToSize for multi-line cell content
-            fieldName = fieldName.replace(/[^\x20-\x7E]/g, '');
-            oldVal = String(oldVal).replace(/[^\x20-\x7E]/g, '');
-            newVal = String(newVal).replace(/[^\x20-\x7E]/g, '');
+            // Method 2: Check if we have changed_fields array
+            if (!fieldName && update.changed_fields && update.changed_fields.length > 0) {
+                fieldName = update.changed_fields.join(', ');
+                if (update.changes && typeof update.changes === 'string') {
+                    const changeParts = update.changes.split('|');
+                    if (changeParts.length > 0) {
+                        const firstChange = changeParts[0];
+                        if (firstChange.includes('→')) {
+                            const arrowParts = firstChange.split('→');
+                            if (arrowParts.length === 2) {
+                                const colonParts = arrowParts[0].split(':');
+                                if (colonParts.length >= 2) {
+                                    fieldName = colonParts[0].trim();
+                                    oldVal = colonParts.slice(1).join(':').trim();
+                                    newVal = arrowParts[1].trim();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             
-            // Calculate row height based on content
-            const fieldLines = pdf.splitTextToSize(fieldName, 20);
+            // Method 3: Parse from changes string (format: "Field: old → new")
+            if (!fieldName && update.changes && typeof update.changes === 'string') {
+                const changeStr = update.changes;
+                const arrowIndex = changeStr.indexOf('→');
+                if (arrowIndex > -1) {
+                    const beforeArrow = changeStr.substring(0, arrowIndex);
+                    const afterArrow = changeStr.substring(arrowIndex + 1);
+                    const colonIndex = beforeArrow.indexOf(':');
+                    if (colonIndex > -1) {
+                        fieldName = beforeArrow.substring(0, colonIndex).trim();
+                        oldVal = beforeArrow.substring(colonIndex + 1).trim();
+                        newVal = afterArrow.trim();
+                    } else {
+                        fieldName = 'Changes';
+                        oldVal = beforeArrow.trim();
+                        newVal = afterArrow.trim();
+                    }
+                } else {
+                    fieldName = 'Changes';
+                    newVal = changeStr;
+                    oldVal = '-';
+                }
+            }
+            
+            // Method 4: Direct field/old_value/new_value
+            if (!fieldName && update.field) {
+                fieldName = update.field;
+                oldVal = update.old_value || '-';
+                newVal = update.new_value || '-';
+            }
+            
+            // Fallback
+            if (!fieldName) {
+                fieldName = 'Changes';
+                oldVal = '-';
+                newVal = update.changes || 'Campaign updated';
+            }
+            
+            // Clean up values
+            fieldName = fieldName.replace(/[^\x20-\x7E]/g, '').substring(0, 20);
+            oldVal = String(oldVal).replace(/[^\x20-\x7E]/g, '').substring(0, 30);
+            newVal = String(newVal).replace(/[^\x20-\x7E]/g, '').substring(0, 30);
+            
+            // Calculate row height
             const oldLines = pdf.splitTextToSize(oldVal, 30);
             const newLines = pdf.splitTextToSize(newVal, 30);
-            const maxLines = Math.max(fieldLines.length, oldLines.length, newLines.length, 1);
+            const maxLines = Math.max(1, oldLines.length, newLines.length);
             const rowHeight = Math.max(5, maxLines * 3.5);
             
             // Alternate row background
@@ -2075,35 +2119,34 @@ window.downloadPDF = function() {
                 pdf.rect(20, yPos - 1, 170, rowHeight, 'F');
             }
             
-            // Truncate date for display (date can be long)
+            // Shorten date if needed
             let shortDate = updateDate;
             if (updateDate.length > 18) {
                 shortDate = updateDate.substring(0, 15) + '...';
             }
             
-            // Write multi-line cell content
+            // Write cell content
             pdf.text(shortDate, 22, yPos + 3);
-            pdf.text(fieldLines, 55, yPos + 3);
+            pdf.text(fieldName, 55, yPos + 3);
             pdf.text(oldLines, 80, yPos + 3);
             pdf.text(newLines, 115, yPos + 3);
             pdf.text(updatedBy, 150, yPos + 3);
             
             yPos += rowHeight + 1;
             
-            // Stop if running out of space
             if (yPos > 240) break;
         }
         yPos += 3;
     }
     
-    // Cryptographic Hashes - FULL HASH (no truncation)
+    // Cryptographic Hashes
     pdf.setFontSize(12);
     pdf.setTextColor(44, 62, 80);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
     yPos += 5;
     
-    // Start Hash - multi-line to show full hash
+    // Start Hash
     pdf.setFillColor(240, 255, 240);
     const startHash = c.hashes?.start?.hash || 'PENDING';
     const startHashLines = pdf.splitTextToSize(startHash, 160);
@@ -2118,7 +2161,7 @@ window.downloadPDF = function() {
     pdf.text(startHashLines, 45, yPos + 4);
     yPos += startBoxHeight + 3;
     
-    // End Hash - multi-line to show full hash
+    // End Hash
     pdf.setFillColor(255, 240, 240);
     const endHash = c.hashes?.end?.hash || 'PENDING (will be generated when campaign ends)';
     const endHashLines = pdf.splitTextToSize(endHash, 160);
@@ -2133,11 +2176,10 @@ window.downloadPDF = function() {
     pdf.text(endHashLines, 45, yPos + 4);
     yPos += endBoxHeight + 5;
     
-    // FOOTER - Full content (no truncation)
+    // FOOTER
     const pageHeight = pdf.internal.pageSize.getHeight();
     const pageWidth = pdf.internal.pageSize.getWidth();
     
-    // Add new page if footer won't fit
     if (yPos > pageHeight - 25) {
         pdf.addPage();
         yPos = 20;
@@ -2145,7 +2187,6 @@ window.downloadPDF = function() {
     
     const footerY = pageHeight - 18;
     
-    // Footer line separator
     pdf.setDrawColor(200, 200, 200);
     pdf.line(20, footerY - 3, pageWidth - 20, footerY - 3);
     
@@ -2153,40 +2194,32 @@ window.downloadPDF = function() {
     pdf.setTextColor(149, 165, 166);
     pdf.setFont('helvetica', 'normal');
     
-    // Verification ID - FULL
     let verificationId = '';
     if (c.hashes?.start?.hash && c.hashes.start.hash !== 'PENDING') {
-        verificationId = c.hashes.start.hash;
+        verificationId = c.hashes.start.hash.substring(0, 16);
     } else {
-        verificationId = c.id || Math.random().toString(36);
+        verificationId = c.id ? c.id.substring(0, 16) : Math.random().toString(36).substring(2, 18);
     }
-    const verificationLines = pdf.splitTextToSize(verificationId, 80);
     
-    const shortCampaignId = c.id || 'UNKNOWN';
-    
-    // Safe user ID retrieval
     let generatedBy = 'System';
     try {
         if (typeof currentUser !== 'undefined' && currentUser && currentUser.uid) {
-            generatedBy = currentUser.uid;
-        } else if (typeof window !== 'undefined' && window.currentUser && window.currentUser.uid) {
-            generatedBy = window.currentUser.uid;
+            generatedBy = currentUser.uid.substring(0, 8);
         }
     } catch(e) {
         generatedBy = 'System';
     }
     
     pdf.text(`Generated: ${now.toLocaleString()}`, 20, footerY);
-    pdf.text(`By: ${generatedBy.substring(0, 20)}...`, pageWidth / 2, footerY, { align: 'center' });
-    pdf.text(`Verification:`, 20, footerY + 4);
-    pdf.text(verificationLines, 38, footerY + 4);
-    pdf.text(`Campaign: ${shortCampaignId.substring(0, 20)}...`, pageWidth - 20, footerY + 8, { align: 'right' });
+    pdf.text(`By: ${generatedBy}...`, pageWidth / 2, footerY, { align: 'center' });
+    pdf.text(`Verification: ${verificationId.substring(0, 16)}`, 20, footerY + 4);
+    pdf.text(`Campaign: ${c.id ? c.id.substring(0, 8) : 'UNKNOWN'}...`, pageWidth - 20, footerY + 4, { align: 'right' });
     
     pdf.setFontSize(6);
     pdf.setTextColor(100, 100, 100);
-    pdf.text('Blockchain Verified Proof', pageWidth / 2, footerY + 12, { align: 'center' });
+    pdf.text('Blockchain Verified Proof', pageWidth / 2, footerY + 10, { align: 'center' });
     
-    // Save PDF with correct timestamp
+    // Save PDF
     const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
