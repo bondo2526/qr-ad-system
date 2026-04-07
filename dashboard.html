@@ -1919,54 +1919,59 @@ if (updates && updates.length > 0) {
     yPos += 5;
 }
     
-    // Hashes Section
-    pdf.setFontSize(14);
-    pdf.setTextColor(44, 62, 80);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
-    yPos += 8;
-    
-    // Start Hash
-    pdf.setFillColor(248, 249, 250);
-    pdf.rect(20, yPos, 170, 28, 'F');
-    pdf.setFontSize(10);
-    pdf.setTextColor(39, 174, 96);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('START HASH', 25, yPos + 6);
-    pdf.setFontSize(7);
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('courier', 'normal');
-    const startHash = c.hashes?.start?.hash || 'PENDING';
-    const startLines = pdf.splitTextToSize(startHash, 160);
-    pdf.text(startLines, 25, yPos + 12);
-    if (c.hashes?.start?.timestamp) {
-        pdf.setFontSize(6);
-        pdf.setTextColor(127, 140, 141);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Generated: ${new Date(c.hashes.start.timestamp).toLocaleString()}`, 25, yPos + 24);
-    }
-    yPos += 33;
-    
-    // End Hash
-    pdf.setFillColor(248, 249, 250);
-    pdf.rect(20, yPos, 170, 28, 'F');
-    pdf.setFontSize(10);
-    pdf.setTextColor(231, 76, 60);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('END HASH', 25, yPos + 6);
-    pdf.setFontSize(7);
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('courier', 'normal');
-    const endHash = c.hashes?.end?.hash || 'PENDING';
-    const endLines = pdf.splitTextToSize(endHash, 160);
-    pdf.text(endLines, 25, yPos + 12);
-    if (c.hashes?.end?.timestamp) {
-        pdf.setFontSize(6);
-        pdf.setTextColor(127, 140, 141);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Generated: ${new Date(c.hashes.end.timestamp).toLocaleString()}`, 25, yPos + 24);
-    }
-    yPos += 33;
+ // Hashes Section
+pdf.setFontSize(14);
+pdf.setTextColor(44, 62, 80);
+pdf.setFont('helvetica', 'bold');
+pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
+yPos += 8;
+
+// Start Hash
+pdf.setFillColor(248, 249, 250);
+pdf.rect(20, yPos, 170, 28, 'F');
+pdf.setFontSize(10);
+pdf.setTextColor(39, 174, 96);
+pdf.setFont('helvetica', 'bold');
+pdf.text('START HASH', 25, yPos + 6);
+pdf.setFontSize(7);
+pdf.setTextColor(0, 0, 0);
+pdf.setFont('courier', 'normal');
+const startHash = c.hashes?.start?.hash || 'PENDING';
+const startLines = pdf.splitTextToSize(startHash, 160);
+pdf.text(startLines, 25, yPos + 12);
+if (c.hashes?.start?.timestamp) {
+    pdf.setFontSize(6);
+    pdf.setTextColor(127, 140, 141);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Generated: ${new Date(c.hashes.start.timestamp).toLocaleString()}`, 25, yPos + 24);
+}
+yPos += 33;
+
+// End Hash
+pdf.setFillColor(248, 249, 250);
+pdf.rect(20, yPos, 170, 28, 'F');
+pdf.setFontSize(10);
+pdf.setTextColor(231, 76, 60);
+pdf.setFont('helvetica', 'bold');
+pdf.text('END HASH', 25, yPos + 6);
+pdf.setFontSize(7);
+pdf.setTextColor(0, 0, 0);
+pdf.setFont('courier', 'normal');
+const endHash = c.hashes?.end?.hash || 'PENDING - Campaign not yet completed';
+const endLines = pdf.splitTextToSize(endHash, 160);
+pdf.text(endLines, 25, yPos + 12);
+if (c.hashes?.end?.timestamp) {
+    pdf.setFontSize(6);
+    pdf.setTextColor(127, 140, 141);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Generated: ${new Date(c.hashes.end.timestamp).toLocaleString()}`, 25, yPos + 24);
+} else {
+    pdf.setFontSize(6);
+    pdf.setTextColor(127, 140, 141);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Generated: PENDING (will be created when campaign ends)`, 25, yPos + 24);
+}
+yPos += 33;
     
 // FOOTER - Fixed with proper encoding and preview compatibility
 pdf.setFontSize(8);
