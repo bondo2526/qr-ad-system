@@ -1017,52 +1017,13 @@ async function loadAdCampaigns() {
 function buildAdCampaignHTML(c) {
     try {
         const status = getAdStatus(c);
-        
-        // Get dates for display - use stored local format if available
-        let startDisplay, endDisplay;
-        let startDateObj, endDateObj;
-        
-        // Get date objects for calculations
-        if (c.start_date?.toDate) {
-            startDateObj = c.start_date.toDate();
-        } else if (c.start_datetime) {
-            startDateObj = new Date(c.start_datetime);
-        } else {
-            startDateObj = new Date();
-        }
-        
-        if (c.end_date?.toDate) {
-            endDateObj = c.end_date.toDate();
-        } else if (c.end_datetime) {
-            endDateObj = new Date(c.end_datetime);
-        } else {
-            endDateObj = new Date();
-        }
-        
-        // Display using stored local format if available
-        if (c.start_datetime_local) {
-            const [datePart, timePart] = c.start_datetime_local.split('T');
-            const [year, month, day] = datePart.split('-');
-            const [hours, minutes] = timePart.split(':');
-            startDisplay = `${day}/${month}/${year} ${hours}:${minutes}`;
-        } else {
-            startDisplay = startDateObj.toLocaleString();
-        }
-        
-        if (c.end_datetime_local) {
-            const [datePart, timePart] = c.end_datetime_local.split('T');
-            const [year, month, day] = datePart.split('-');
-            const [hours, minutes] = timePart.split(':');
-            endDisplay = `${day}/${month}/${year} ${hours}:${minutes}`;
-        } else {
-            endDisplay = endDateObj.toLocaleString();
-        }
-        
+        const start = c.start_date?.toDate ? c.start_date.toDate() : (c.start_datetime ? new Date(c.start_datetime) : new Date());
+        const end = c.end_date?.toDate ? c.end_date.toDate() : (c.end_datetime ? new Date(c.end_datetime) : new Date());
         const images = c.images || [];
         const updates = c.update_history || c.updates || [];
         const hashes = c.hashes || {};
         
-        // Images Section
+        // Images Section - Fixed for all data types
         let imgsHTML = '';
         if (images && images.length > 0) {
             imgsHTML = images.slice(0, 5).map(function(img, idx) {
@@ -1110,18 +1071,12 @@ function buildAdCampaignHTML(c) {
         }
         var savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
         
-        // Calculate duration
-        const durationHours = Math.round((endDateObj - startDateObj) / 3600000);
-        const durationDays = Math.floor(durationHours / 24);
-        const remainingHours = durationHours % 24;
-        const durationText = durationDays > 0 ? `${durationDays} days ${remainingHours} hours` : `${durationHours} hours`;
-        
         var html = '<div class="campaign-item ' + status + '">';
         html += '<div class="campaign-header-row">';
         html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
-        html += '<span class="campaign-name">' + escapeHtml(c.name || 'Unknown') + '</span>';
+        html += '<span class="campaign-name">' + (c.name || 'Unknown') + '</span>';
         html += '<span class="campaign-id">' + c.id + '</span>';
-        html += '<span class="campaign-station">' + escapeHtml(c.station || 'Unknown') + '</span>';
+        html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
         if (updates.length) {
             html += '<span class="update-badge">↑' + updates.length + ' updates</span>';
         }
@@ -1130,9 +1085,9 @@ function buildAdCampaignHTML(c) {
         html += '</div>';
         
         html += '<div class="campaign-dates">';
-        html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + startDisplay + '</span></div>';
-        html += '<div class="date-row"><span class="date-label">■ End</span><span class="date-value">' + endDisplay + '</span></div>';
-        html += '<div class="date-row"><span class="date-label">⏱️ Duration</span><span class="date-value">' + durationText + '</span></div>';
+        html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + start.toLocaleString() + '</span></div>';
+        html += '<div class="date-row"><span class="date-label">■ End</span><span class="date-value">' + end.toLocaleString() + '</span></div>';
+        html += '<div class="date-row"><span class="date-label">⏱️ Duration</span><span class="date-value">' + Math.round((end - start) / 3600000) + ' hours</span></div>';
         html += '</div>';
         
         html += '<div class="campaign-images">' + imgsHTML + '</div>';
@@ -1151,14 +1106,12 @@ function buildAdCampaignHTML(c) {
         html += '<div class="proof-label">🔐 START HASH</div>';
         html += '<div class="proof-box">' + (hashes.start?.hash || 'PENDING') + '</div>';
         if (hashes.start?.timestamp) {
-            const hashDate = new Date(hashes.start.timestamp);
-            html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + hashDate.toLocaleString() + '</div>';
+            html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + new Date(hashes.start.timestamp).toLocaleString() + '</div>';
         }
         html += '<div class="proof-label">🔐 END HASH</div>';
         html += '<div class="proof-box">' + (hashes.end?.hash || 'PENDING') + '</div>';
         if (hashes.end?.timestamp) {
-            const hashDate = new Date(hashes.end.timestamp);
-            html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + hashDate.toLocaleString() + '</div>';
+            html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + new Date(hashes.end.timestamp).toLocaleString() + '</div>';
         }
         html += '</div>';
         
@@ -1183,8 +1136,7 @@ function buildAdCampaignHTML(c) {
         html += '<div style="margin-top:12px;font-size:11px;color:#a0a0a0;">';
         html += '📸 ' + (c.image_count || images.length) + ' image(s) | ';
         html += '👤 Created by: ' + ((c.created_by || 'Unknown').substring(0,15)) + '... | ';
-        const createdDate = c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : (c.created_at || 'Unknown');
-        html += '📅 Created: ' + createdDate;
+        html += '📅 Created: ' + (c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown');
         html += '</div>';
         
         html += '<div class="action-buttons">';
@@ -1217,6 +1169,7 @@ function escapeHtml(str) {
         return m;
     });
 }
+
     function displayProofs() {
         const list = document.getElementById('proofsList');
         if (!list) return;
@@ -1288,8 +1241,8 @@ function setDefaultDates() {
     const now = new Date();
     const end = new Date(now.getTime() + 7 * 24 * 3600000);
     
-    // Format for datetime-local input (YYYY-MM-DDThh:mm) in LOCAL time
-    const formatDateTimeLocal = (date) => {
+    // Format for datetime-local input (YYYY-MM-DDThh:mm)
+    const formatDateTime = (date) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
@@ -1301,29 +1254,10 @@ function setDefaultDates() {
     const startInput = document.getElementById('startDateTime');
     const endInput = document.getElementById('endDateTime');
     
-    if (startInput) startInput.value = formatDateTimeLocal(now);
-    if (endInput) endInput.value = formatDateTimeLocal(end);
+    if (startInput) startInput.value = formatDateTime(now);
+    if (endInput) endInput.value = formatDateTime(end);
     
     updateHashPreviews();
-}
-// Parse datetime-local string as LOCAL time (no timezone shift)
-function parseLocalDateTime(localDateTimeStr) {
-    if (!localDateTimeStr) return null;
-    const [datePart, timePart] = localDateTimeStr.split('T');
-    const [year, month, day] = datePart.split('-');
-    const [hours, minutes] = timePart.split(':');
-    // Create date using local time components (month is 0-indexed)
-    return new Date(year, month - 1, day, hours, minutes, 0);
-}
-
-// Format date for datetime-local input
-function formatDateTimeLocal(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
     async function sha256(str) {
@@ -1332,26 +1266,18 @@ function formatDateTimeLocal(date) {
     }
     
     window.updateHashPreviews = async function() {
-    const name = document.getElementById('customerName')?.value || '';
-    const startDateTimeStr = document.getElementById('startDateTime')?.value || '';
-    const endDateTimeStr = document.getElementById('endDateTime')?.value || '';
-    
-    if (name && startDateTimeStr) {
-        const startDT = parseLocalDateTime(startDateTimeStr);
-        const sh = await sha256(`START:${name}:${startDT.toISOString()}:${Date.now()}`);
-        document.getElementById('startHashPreview').textContent = sh;
-    } else {
-        document.getElementById('startHashPreview').textContent = 'START hash will be generated...';
-    }
-    
-    if (name && endDateTimeStr) {
-        const endDT = parseLocalDateTime(endDateTimeStr);
-        const eh = await sha256(`END:${name}:${endDT.toISOString()}:${Date.now()}`);
-        document.getElementById('endHashPreview').textContent = eh;
-    } else {
-        document.getElementById('endHashPreview').textContent = 'END hash will be generated...';
-    }
-};
+        const name = document.getElementById('customerName')?.value || '';
+        const start= document.getElementById('startDateTime')?.value || '';
+        const end  = document.getElementById('endDateTime')?.value   || '';
+        if (name && start) {
+            const sh = await sha256(`START:${name}:${start}:${Date.now()}`);
+            document.getElementById('startHashPreview').textContent = sh;
+        }
+        if (name && end) {
+            const eh = await sha256(`END:${name}:${end}:${Date.now()}`);
+            document.getElementById('endHashPreview').textContent = eh;
+        }
+    };
 
     // Image handling
     document.getElementById('imageInput')?.addEventListener('change', e => {
@@ -1478,7 +1404,7 @@ async function compressImage(file) {
     });
 }
 
-   document.getElementById('addCampaignForm')?.addEventListener('submit', async e => {
+document.getElementById('addCampaignForm')?.addEventListener('submit', async e => {
     e.preventDefault();
     const btn = document.getElementById('submitBtn');
     const showAlert = (msg, type) => {
@@ -1492,16 +1418,20 @@ async function compressImage(file) {
     try {
         const name  = document.getElementById('customerName').value.trim();
         const station = document.getElementById('stationName').value;
-        const startDateTimeStr = document.getElementById('startDateTime').value;
-        const endDateTimeStr = document.getElementById('endDateTime').value;
+        
+        // Get raw datetime values (already in "YYYY-MM-DDThh:mm" format)
+        const startRaw = document.getElementById('startDateTime').value;
+        const endRaw = document.getElementById('endDateTime').value;
+        
+        // Create UTC datetime strings in "YYYY-MM-DDThh:mm:ss" format
+        const startUTCString = startRaw + ':00';  // Adds seconds
+        const endUTCString = endRaw + ':00';      // Adds seconds
+        
+        // Parse for validation
+        const startDT = new Date(startRaw);
+        const endDT = new Date(endRaw);
         
         if (!name || !station) throw new Error('Please fill all fields');
-        
-        // Parse as LOCAL time (no timezone shift)
-        const startDT = parseLocalDateTime(startDateTimeStr);
-        const endDT = parseLocalDateTime(endDateTimeStr);
-        
-        if (!startDT || !endDT) throw new Error('Invalid date/time values');
         if (endDT <= startDT) throw new Error('End date must be after start date');
         
         document.getElementById('uploadProgress').style.display = 'block';
@@ -1527,32 +1457,25 @@ async function compressImage(file) {
         const endHash   = document.getElementById('endHashPreview').textContent;
         const uid = currentUser?.uid || 'anonymous';
         
-        // Store dates in multiple formats for compatibility
-        const startISO = startDT.toISOString();
-        const endISO = endDT.toISOString();
-        
         const docRef = await db.collection('customers').add({
             name: name,
             station: station,
-            // Store the original local format "2026-04-08T15:24"
-            start_datetime_local: startDateTimeStr,
-            end_datetime_local: endDateTimeStr,
-            // Store ISO format for sorting
-            start_datetime: startISO,
-            end_datetime: endISO,
-            // Store as Firestore Timestamp for queries
-            start_date: firebase.firestore.Timestamp.fromDate(startDT),
-            end_date: firebase.firestore.Timestamp.fromDate(endDT),
+            // Store as simple UTC datetime strings without timezone
+            start_datetime: startUTCString,
+            end_datetime: endUTCString,
+            // Also store as Timestamp for queries (interpret as UTC)
+            start_date: firebase.firestore.Timestamp.fromDate(new Date(startRaw + 'Z')),
+            end_date: firebase.firestore.Timestamp.fromDate(new Date(endRaw + 'Z')),
             images: imagesData,
             image_count: imagesData.length,
             hashes: {
                 start: { 
                     hash: startHash, 
-                    timestamp: startISO 
+                    timestamp: startUTCString
                 },
                 end: { 
                     hash: endHash, 
-                    timestamp: endISO 
+                    timestamp: endUTCString
                 }
             },
             compression_stats: {
@@ -1562,7 +1485,7 @@ async function compressImage(file) {
             },
             created_by: uid,
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
-            status: getAdStatus({ start_date: firebase.firestore.Timestamp.fromDate(startDT), end_date: firebase.firestore.Timestamp.fromDate(endDT) }),
+            status: getAdStatus({ start_date: firebase.firestore.Timestamp.fromDate(new Date(startRaw + 'Z')), end_date: firebase.firestore.Timestamp.fromDate(new Date(endRaw + 'Z')) }),
             update_history: []
         });
         
@@ -1595,36 +1518,21 @@ window.openEditModal = function(id) {
     document.getElementById('editCustomerName').value = c.name || '';
     document.getElementById('editStationName').value = c.station || 'Station 1';
     
-    // Try to get the original local format first
-    let startDateTimeStr = c.start_datetime_local;
-    let endDateTimeStr = c.end_datetime_local;
+    // Format dates properly for datetime-local input
+    const startDate = c.start_date?.toDate?.() || (c.start_datetime ? new Date(c.start_datetime) : new Date());
+    const endDate = c.end_date?.toDate?.() || (c.end_datetime ? new Date(c.end_datetime) : new Date());
     
-    if (!startDateTimeStr && (c.start_date || c.start_datetime)) {
-        const startDate = c.start_date?.toDate?.() || (c.start_datetime ? new Date(c.start_datetime) : null);
-        if (startDate && !isNaN(startDate.getTime())) {
-            startDateTimeStr = formatDateTimeLocal(startDate);
-        }
-    }
+    const formatDateTime = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
     
-    if (!endDateTimeStr && (c.end_date || c.end_datetime)) {
-        const endDate = c.end_date?.toDate?.() || (c.end_datetime ? new Date(c.end_datetime) : null);
-        if (endDate && !isNaN(endDate.getTime())) {
-            endDateTimeStr = formatDateTimeLocal(endDate);
-        }
-    }
-    
-    // Fallback to current time if still no value
-    if (!startDateTimeStr) {
-        startDateTimeStr = formatDateTimeLocal(new Date());
-    }
-    if (!endDateTimeStr) {
-        const defaultEnd = new Date();
-        defaultEnd.setDate(defaultEnd.getDate() + 7);
-        endDateTimeStr = formatDateTimeLocal(defaultEnd);
-    }
-    
-    document.getElementById('editStartDateTime').value = startDateTimeStr;
-    document.getElementById('editEndDateTime').value = endDateTimeStr;
+    document.getElementById('editStartDateTime').value = formatDateTime(startDate);
+    document.getElementById('editEndDateTime').value = formatDateTime(endDate);
     
     document.getElementById('editModal').classList.add('active');
 };
@@ -1649,9 +1557,8 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const newStartStr = document.getElementById('editStartDateTime').value;
         const newEndStr = document.getElementById('editEndDateTime').value;
         
-        // Parse as LOCAL time
-        const newStart = parseLocalDateTime(newStartStr);
-        const newEnd = parseLocalDateTime(newEndStr);
+        const newStart = new Date(newStartStr);
+        const newEnd = new Date(newEndStr);
         
         // Get old values
         const oldName = old.name || '';
@@ -1659,40 +1566,46 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const oldStart = old.start_date?.toDate?.() || (old.start_datetime ? new Date(old.start_datetime) : new Date());
         const oldEnd = old.end_date?.toDate?.() || (old.end_datetime ? new Date(old.end_datetime) : new Date());
         
+        console.log('Old values:', { oldName, oldStation, oldStart, oldEnd });
+        console.log('New values:', { newName, newStation, newStart, newEnd });
+        
         // Track ONLY changed fields
         const changedFields = [];
         const updateData = {};
         
         // Check Customer Name
         if (oldName !== newName) {
+            console.log('Customer Name changed from', oldName, 'to', newName);
             changedFields.push('Customer Name');
             updateData.name = newName;
         }
         
         // Check Station
         if (oldStation !== newStation) {
+            console.log('Station changed from', oldStation, 'to', newStation);
             changedFields.push('Station');
             updateData.station = newStation;
         }
         
         // Check Start Date
         if (oldStart.getTime() !== newStart.getTime()) {
+            console.log('Start Date changed from', oldStart, 'to', newStart);
             changedFields.push('Start Date');
-            updateData.start_datetime_local = newStartStr;
             updateData.start_datetime = newStart.toISOString();
             updateData.start_date = firebase.firestore.Timestamp.fromDate(newStart);
         }
         
         // Check End Date
         if (oldEnd.getTime() !== newEnd.getTime()) {
+            console.log('End Date changed from', oldEnd, 'to', newEnd);
             changedFields.push('End Date');
-            updateData.end_datetime_local = newEndStr;
             updateData.end_datetime = newEnd.toISOString();
             updateData.end_date = firebase.firestore.Timestamp.fromDate(newEnd);
         }
         
         // If nothing changed, show message and exit
         if (changedFields.length === 0) {
+            console.log('No changes detected');
             const a = document.getElementById('editAlert');
             a.className = 'alert warning';
             a.textContent = '⚠️ No changes detected. Nothing was updated.';
@@ -1703,62 +1616,6 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
             document.getElementById('editSaveLoading').style.display = 'none';
             return;
         }
-        
-        // Update status based on new dates (only if dates changed)
-        const newStatus = getAdStatus({ 
-            start_date: { toDate: () => newStart }, 
-            end_date: { toDate: () => newEnd } 
-        });
-        updateData.status = newStatus;
-        
-        // Add common update fields
-        updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
-        updateData.updated_by = currentUser?.uid || 'anonymous';
-        
-        // Create update record with ONLY the changed fields
-        const changeDetails = changedFields.map(field => {
-            if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
-            if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
-            if (field === 'Start Date') return `${field}: "${oldStart.toLocaleString()}" → "${newStart.toLocaleString()}"`;
-            if (field === 'End Date') return `${field}: "${oldEnd.toLocaleString()}" → "${newEnd.toLocaleString()}"`;
-            return field;
-        }).join(' | ');
-        
-        const updateRecord = {
-            changes: changeDetails,
-            changed_fields: changedFields,
-            timestamp: new Date().toISOString(),
-            updated_by: currentUser?.uid || 'anonymous'
-        };
-        
-        updates.push(updateRecord);
-        updateData.update_history = updates;
-        
-        // Apply ONLY the changed fields to Firestore
-        await db.collection('customers').doc(id).update(updateData);
-        
-        closeEditModal();
-        await loadAdData();
-        
-        const a = document.getElementById('editAlert');
-        a.className = 'alert success';
-        a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
-        a.style.display = 'block';
-        setTimeout(() => a.style.display = 'none', 4000);
-        
-    } catch (err) {
-        console.error('Edit error:', err);
-        const a = document.getElementById('editAlert');
-        a.className = 'alert error';
-        a.textContent = '❌ ' + err.message;
-        a.style.display = 'block';
-        setTimeout(() => a.style.display = 'none', 3000);
-    } finally {
-        btn.disabled = false;
-        document.getElementById('editSaveText').style.display = 'inline';
-        document.getElementById('editSaveLoading').style.display = 'none';
-    }
-});
         
         console.log('Fields to update:', changedFields);
         console.log('Update data:', updateData);
