@@ -1490,16 +1490,34 @@ const docRef = await db.collection('customers').add({
     });
 
     // EDIT MODAL
-    window.openEditModal = function(id) {
-        const c = allAdCampaigns.find(x => x.id === id); if(!c) return;
-        document.getElementById('editCampaignId').value    = id;
-        document.getElementById('editCustomerName').value  = c.name;
-        document.getElementById('editStationName').value   = c.station;
-        const fmt = d => d.toISOString ? d.toISOString().slice(0,16) : '';
-        document.getElementById('editStartDateTime').value = fmt(c.start_date?.toDate?.() || new Date());
-        document.getElementById('editEndDateTime').value   = fmt(c.end_date?.toDate?.()   || new Date());
-        document.getElementById('editModal').classList.add('active');
+window.openEditModal = function(id) {
+    const c = allAdCampaigns.find(x => x.id === id);
+    if (!c) return;
+    
+    console.log('Opening edit for campaign:', c);
+    
+    document.getElementById('editCampaignId').value = id;
+    document.getElementById('editCustomerName').value = c.name || '';
+    document.getElementById('editStationName').value = c.station || 'Station 1';
+    
+    // Format dates properly for datetime-local input
+    const startDate = c.start_date?.toDate?.() || (c.start_datetime ? new Date(c.start_datetime) : new Date());
+    const endDate = c.end_date?.toDate?.() || (c.end_datetime ? new Date(c.end_datetime) : new Date());
+    
+    const formatDateTime = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
+    
+    document.getElementById('editStartDateTime').value = formatDateTime(startDate);
+    document.getElementById('editEndDateTime').value = formatDateTime(endDate);
+    
+    document.getElementById('editModal').classList.add('active');
+};
     
     window.closeEditModal = function() { document.getElementById('editModal').classList.remove('active'); };
     
@@ -1515,6 +1533,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const old = allAdCampaigns.find(x => x.id === id) || {};
         const updates = old.update_history || old.updates || [];
         
+        // Get form values
         const newName = document.getElementById('editCustomerName').value.trim();
         const newStation = document.getElementById('editStationName').value;
         const newStartStr = document.getElementById('editStartDateTime').value;
@@ -1523,67 +1542,52 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const newStart = new Date(newStartStr);
         const newEnd = new Date(newEndStr);
         
+        // Get old values
+        const oldName = old.name || '';
+        const oldStation = old.station || '';
         const oldStart = old.start_date?.toDate?.() || (old.start_datetime ? new Date(old.start_datetime) : new Date());
         const oldEnd = old.end_date?.toDate?.() || (old.end_datetime ? new Date(old.end_datetime) : new Date());
+        
+        console.log('Old values:', { oldName, oldStation, oldStart, oldEnd });
+        console.log('New values:', { newName, newStation, newStart, newEnd });
         
         // Track ONLY changed fields
         const changedFields = [];
         const updateData = {};
-        const changeLogs = [];
         
-        // Check each field individually
-        if (old.name !== newName) {
+        // Check Customer Name
+        if (oldName !== newName) {
+            console.log('Customer Name changed from', oldName, 'to', newName);
             changedFields.push('Customer Name');
             updateData.name = newName;
-            changeLogs.push({
-                field: 'Customer Name',
-                old_value: old.name,
-                new_value: newName,
-                timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous'
-            });
         }
         
-        if (old.station !== newStation) {
+        // Check Station
+        if (oldStation !== newStation) {
+            console.log('Station changed from', oldStation, 'to', newStation);
             changedFields.push('Station');
             updateData.station = newStation;
-            changeLogs.push({
-                field: 'Station',
-                old_value: old.station,
-                new_value: newStation,
-                timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous'
-            });
         }
         
+        // Check Start Date
         if (oldStart.getTime() !== newStart.getTime()) {
+            console.log('Start Date changed from', oldStart, 'to', newStart);
             changedFields.push('Start Date');
             updateData.start_datetime = newStart.toISOString();
             updateData.start_date = firebase.firestore.Timestamp.fromDate(newStart);
-            changeLogs.push({
-                field: 'Start Date',
-                old_value: oldStart.toLocaleString(),
-                new_value: newStart.toLocaleString(),
-                timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous'
-            });
         }
         
+        // Check End Date
         if (oldEnd.getTime() !== newEnd.getTime()) {
+            console.log('End Date changed from', oldEnd, 'to', newEnd);
             changedFields.push('End Date');
             updateData.end_datetime = newEnd.toISOString();
             updateData.end_date = firebase.firestore.Timestamp.fromDate(newEnd);
-            changeLogs.push({
-                field: 'End Date',
-                old_value: oldEnd.toLocaleString(),
-                new_value: newEnd.toLocaleString(),
-                timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous'
-            });
         }
         
         // If nothing changed, show message and exit
         if (changedFields.length === 0) {
+            console.log('No changes detected');
             const a = document.getElementById('editAlert');
             a.className = 'alert warning';
             a.textContent = '⚠️ No changes detected. Nothing was updated.';
@@ -1595,7 +1599,10 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
             return;
         }
         
-        // Add status update (always update status based on new dates)
+        console.log('Fields to update:', changedFields);
+        console.log('Update data:', updateData);
+        
+        // Update status based on new dates (only if dates changed)
         const newStatus = getAdStatus({ 
             start_date: { toDate: () => newStart }, 
             end_date: { toDate: () => newEnd } 
@@ -1607,12 +1614,17 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         updateData.updated_by = currentUser?.uid || 'anonymous';
         
         // Create update record with ONLY the changed fields
-        const changeDetails = changeLogs.map(log => `${log.field}: "${log.old_value}" → "${log.new_value}"`).join(' | ');
+        const changeDetails = changedFields.map(field => {
+            if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
+            if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
+            if (field === 'Start Date') return `${field}: "${oldStart.toLocaleString()}" → "${newStart.toLocaleString()}"`;
+            if (field === 'End Date') return `${field}: "${oldEnd.toLocaleString()}" → "${newEnd.toLocaleString()}"`;
+            return field;
+        }).join(' | ');
         
         const updateRecord = {
             changes: changeDetails,
-            changed_fields: changedFields,  // Array of which fields changed
-            details: changeLogs,  // Detailed log of each change
+            changed_fields: changedFields,
             timestamp: new Date().toISOString(),
             updated_by: currentUser?.uid || 'anonymous'
         };
@@ -1622,6 +1634,8 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         
         // Apply ONLY the changed fields to Firestore
         await db.collection('customers').doc(id).update(updateData);
+        
+        console.log('Update successful!');
         
         closeEditModal();
         await loadAdData();
@@ -1633,6 +1647,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         setTimeout(() => a.style.display = 'none', 4000);
         
     } catch (err) {
+        console.error('Edit error:', err);
         const a = document.getElementById('editAlert');
         a.className = 'alert error';
         a.textContent = '❌ ' + err.message;
