@@ -405,7 +405,7 @@ Status: SOLD OUT
             }
         });
         
-   async function login() {
+ async function login() {
     const advertiserName = document.getElementById('advertiserName').value.trim();
     const password = document.getElementById('advertiserPassword').value.trim();
     const errorDiv = document.getElementById('loginError');
@@ -416,78 +416,49 @@ Status: SOLD OUT
     if (password.length < 6) { errorDiv.textContent = '❌ Password must be at least 6 characters'; return; }
     
     try {
-        // FIRST: Check if advertiser already exists by document ID
+        // ONLY check for existing advertiser - NO AUTO-CREATION
         const existingDoc = await db.collection(ADVERTISERS_COLLECTION).doc(advertiserName).get();
         
-        if (existingDoc.exists) {
-            // EXISTING USER - verify password (NO new account creation)
-            const advertiserData = existingDoc.data();
-            
-            if (advertiserData.password !== password) {
-                errorDiv.textContent = '❌ Incorrect password';
-                document.getElementById('advertiserPassword').value = '';
-                return;
-            }
-            
-            currentAdvertiser = {
-                id: existingDoc.id,
-                name: advertiserData.displayName,
-                advertiserName: advertiserData.displayName,
-                couponValidations: advertiserData.couponValidations || 0
-            };
-            
-            alert(`✅ Welcome back, ${advertiserName}!`);
-        } else {
-            // Check if displayName exists elsewhere (edge case)
-            const nameQuery = await db.collection(ADVERTISERS_COLLECTION)
-                .where('displayName', '==', advertiserName)
-                .limit(1)
-                .get();
-            
-            if (!nameQuery.empty) {
-                errorDiv.textContent = `❌ Business name "${advertiserName}" is already registered. Please use correct password.`;
-                return;
-            }
-            
-            // ONLY CREATE NEW ACCOUNT IF NAME DOES NOT EXIST AT ALL
-            const newAdvertiser = {
-                advertiserName: advertiserName,
-                displayName: advertiserName,
-                password: password,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-                couponValidations: 0,
-                isActive: true
-            };
-            
-            await db.collection(ADVERTISERS_COLLECTION)
-                .doc(advertiserName)
-                .set(newAdvertiser);
-            
-            currentAdvertiser = {
-                id: advertiserName,
-                name: advertiserName,
-                advertiserName: advertiserName,
-                couponValidations: 0
-            };
-            
-            alert(`✅ New account created for ${advertiserName}!`);
+        if (!existingDoc.exists) {
+            // Account doesn't exist - show error, don't create
+            errorDiv.textContent = `❌ Account "${advertiserName}" does not exist. Please contact admin to create an account.`;
+            document.getElementById('advertiserPassword').value = '';
+            return;
         }
+        
+        // Account exists - verify password
+        const advertiserData = existingDoc.data();
+        
+        if (advertiserData.password !== password) {
+            errorDiv.textContent = '❌ Incorrect password';
+            document.getElementById('advertiserPassword').value = '';
+            return;
+        }
+        
+        // Login success
+        currentAdvertiser = {
+            id: existingDoc.id,
+            name: advertiserData.displayName,
+            advertiserName: advertiserData.displayName,
+            couponValidations: advertiserData.couponValidations || 0
+        };
         
         sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
         document.getElementById('advertiserName').value = '';
         document.getElementById('advertiserPassword').value = '';
         showScannerSection();
+        alert(`✅ Welcome back, ${advertiserName}!`);
         
     } catch (error) {
         console.error("Login error:", error);
         if (error.code === 'permission-denied') {
+            // Demo fallback
             if (advertiserName === 'Test Shop' && password === 'test123') {
                 currentAdvertiser = { id: 'test_shop_demo', name: 'Test Shop', isTest: true };
                 sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
                 showScannerSection();
             } else {
-                errorDiv.innerHTML = `❌ Demo mode - try Test Shop / test123`;
+                errorDiv.innerHTML = `❌ Demo mode - only "Test Shop" / "test123" works`;
             }
         } else {
             errorDiv.textContent = '❌ Login error: ' + error.message;
