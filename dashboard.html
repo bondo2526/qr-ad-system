@@ -898,8 +898,8 @@
     // ═══════════════════════════════════════════════════════
     //  CREATE NEW ADVERTISERS ACCOUNTS
     // ═══════════════════════════════════════════════════════
-      async function createAdvertiserAccount() {
-    // Open input boxes
+ // Add this to your dashboard
+async function createAdvertiserAccount() {
     const displayName = prompt("Enter business name (e.g., ph3, CafeDeluxe):");
     
     if (!displayName) {
@@ -919,7 +919,6 @@
         return false;
     }
     
-    // Confirm before creating
     const confirmCreate = confirm(`Create account for "${displayName}" with password "${password}"?`);
     if (!confirmCreate) {
         alert("❌ Creation cancelled");
@@ -927,7 +926,6 @@
     }
     
     try {
-        // Check if account already exists
         const existingDoc = await db.collection('advertisers').doc(displayName).get();
         
         if (existingDoc.exists) {
@@ -935,12 +933,13 @@
             return false;
         }
         
-        // Create new advertiser account
         const newAdvertiser = {
             displayName: displayName,
             advertiserName: displayName,
             password: password,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastLogin: null,
+            lastPasswordChange: firebase.firestore.FieldValue.serverTimestamp(),
             createdBy: 'admin',
             couponValidations: 0,
             isActive: true
@@ -955,6 +954,122 @@
         console.error("Create account error:", error);
         alert(`❌ Error: ${error.message}`);
         return false;
+    }
+}
+
+// Function to view advertiser details (last login, password last change)
+async function viewAdvertiserDetails() {
+    const businessName = prompt("Enter business name to view details:");
+    
+    if (!businessName) return;
+    
+    try {
+        const doc = await db.collection('advertisers').doc(businessName).get();
+        
+        if (!doc.exists) {
+            alert(`❌ Account "${businessName}" not found`);
+            return;
+        }
+        
+        const data = doc.data();
+        
+        const formatDate = (timestamp) => {
+            if (!timestamp) return 'Never';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleString();
+        };
+        
+        alert(`
+📋 ACCOUNT DETAILS: ${businessName}
+
+🔐 Password Last Changed: ${formatDate(data.lastPasswordChange)}
+📅 Last Login: ${formatDate(data.lastLogin)}
+📆 Created At: ${formatDate(data.createdAt)}
+✅ Total Validations: ${data.couponValidations || 0}
+${data.isActive ? '🟢 Status: Active' : '🔴 Status: Inactive'}
+        `);
+        
+    } catch (error) {
+        console.error("Error:", error);
+        alert(`❌ Error: ${error.message}`);
+    }
+}
+
+// Function to change password with old password verification
+async function changeAdvertiserPassword() {
+    const businessName = prompt("Enter business name:");
+    
+    if (!businessName) return;
+    
+    try {
+        const docRef = db.collection('advertisers').doc(businessName);
+        const doc = await docRef.get();
+        
+        if (!doc.exists) {
+            alert(`❌ Account "${businessName}" not found`);
+            return;
+        }
+        
+        const oldPassword = prompt("Enter OLD password:");
+        
+        if (!oldPassword) {
+            alert("❌ Old password required");
+            return;
+        }
+        
+        const data = doc.data();
+        
+        if (data.password !== oldPassword) {
+            alert("❌ Incorrect old password");
+            return;
+        }
+        
+        const newPassword = prompt("Enter NEW password (minimum 6 characters):");
+        
+        if (!newPassword) {
+            alert("❌ New password required");
+            return;
+        }
+        
+        if (newPassword.length < 6) {
+            alert("❌ New password must be at least 6 characters");
+            return;
+        }
+        
+        if (newPassword === oldPassword) {
+            alert("❌ New password must be different from old password");
+            return;
+        }
+        
+        const confirmChange = confirm(`Change password for "${businessName}"?\n\nOld: ${oldPassword}\nNew: ${newPassword}`);
+        
+        if (!confirmChange) {
+            alert("❌ Password change cancelled");
+            return;
+        }
+        
+        await docRef.update({
+            password: newPassword,
+            lastPasswordChange: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert(`✅ Password changed successfully for "${businessName}"!\n\nNew password: ${newPassword}`);
+        
+    } catch (error) {
+        console.error("Error:", error);
+        alert(`❌ Error: ${error.message}`);
+    }
+}
+
+// Function to update last login (call this when advertiser logs in)
+// Add this to your scanner's login function
+async function updateLastLogin(advertiserName) {
+    try {
+        await db.collection('advertisers').doc(advertiserName).update({
+            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error updating last login:", error);
     }
 }
     // ═══════════════════════════════════════════════════════
