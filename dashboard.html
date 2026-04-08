@@ -1352,27 +1352,28 @@ function escapeHtml(str) {
     });
 }
 
-    function displayProofs() {
-        const list = document.getElementById('proofsList');
-        if (!list) return;
-        if (allProofs.length === 0) { list.innerHTML = '<div class="loading-block">No proofs found.</div>'; return; }
-        list.innerHTML = allProofs.map(p => `
-            <div class="campaign-item">
-                <div class="campaign-header-row">
-                <span class="campaign-name">
-                 Customer: ${p.customer_name||p.name||'Unknown'} - 
-                 Product: ${document.getElementById('prodname')?.value || 'Not entered'}
-                 </span>                    
-                <span class="campaign-id">${p.id}</span>
-                </div>
-                <div class="proof-label">HASH</div>
-                <div class="proof-box">${p.hash||'N/A'}</div>
-                <div style="color:#a0a0a0;font-size:12px;margin-top:8px;">
-                    ${p.created_at ? new Date(p.created_at.toDate()).toLocaleString() : '—'}
-                    ${p.type ? ` · <span style="color:#4a9eff;">${p.type.toUpperCase()}</span>` : ''}
-                </div>
-            </div>`).join('');
+function displayProofs() {
+    const list = document.getElementById('proofsList');
+    if (!list) return;
+    if (allProofs.length === 0) {
+        list.innerHTML = '<div class="loading-block">No proofs found.</div>';
+        return;
     }
+    list.innerHTML = allProofs.map(p => `
+        <div class="campaign-item">
+            <div class="campaign-header-row">
+                <span class="campaign-name">Customer: ${p.customer_name||p.name||'Unknown'} - Product: ${p.product_name || 'Not specified'}</span>
+                <span class="campaign-id">${p.id}</span>
+            </div>
+            <div class="proof-label">HASH</div>
+            <div class="proof-box">${p.hash||'N/A'}</div>
+            <div style="color:#a0a0a0;font-size:12px;margin-top:8px;">
+                ${p.created_at ? new Date(p.created_at.toDate()).toLocaleString() : '—'}
+                ${p.type ? ` · <span style="color:#4a9eff;">${p.type.toUpperCase()}</span>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
 
     function updateAdStatistics() {
         const now = Date.now();
@@ -1660,11 +1661,12 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
         const totalCompressedSize = imagesData.reduce((sum, img) => sum + (img.compressedSize || 0), 0);
         const savingsPercent = totalOriginalSize > 0 ? 
             ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : "0.0";
-        
+        const productName = document.getElementById('prodname').value.trim();
         // IMPORTANT: Only save start_datetime and end_datetime as strings
         // NO start_date or end_date Timestamps!
         const docRef = await db.collection('customers').add({
             name: name,
+            product_name: productName,
             station: station,
             start_datetime: startDateTimeString,  // "2026-04-08T15:24:00"
             end_datetime: endDateTimeString,      // "2026-04-08T15:24:00"
