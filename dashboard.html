@@ -110,6 +110,10 @@
         .tab.tab-coupon.active { background: linear-gradient(135deg, #667eea, #764ba2); box-shadow: 0 4px 15px rgba(102,126,234,.3); }
 
         /* ─── CONTENT ────────────────────────────────────────── */
+        input:invalid, select:invalid {
+        border-color: #dc3545 !important;}
+        input:valid, select:valid {
+        border-color: #28a745 !important;}
         .content { padding: 30px; }
         .tab-pane { display: none; }
         .tab-pane.active { display: block; animation: fadeIn .3s ease; }
@@ -523,7 +527,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Campaign Images (Max 5, auto-compressed)</label>
+                            <label>Campaign Image (1 image per ad, auto-compressed)</label>
                             <div class="file-upload-area" onclick="document.getElementById('imageInput').click()">
                                 <input type="file" id="imageInput" accept="image/*" multiple>
                                 <div class="file-upload-icon">📁</div>
@@ -534,7 +538,7 @@
                             <div id="fileWarning" style="color:#ffc107;font-size:12px;margin-top:8px;"></div>
                         </div>
                         <button type="submit" class="btn-primary" id="submitBtn" style="width:100%;">
-                            <span id="submitText">Add Campaign &amp; Generate Proofs</span>
+                            <span id="submitText">Add Campaign</span>
                             <span id="submitLoading" class="loading" style="display:none;"></span>
                         </button>
                     </form>
@@ -1257,7 +1261,7 @@ function buildAdCampaignHTML(c) {
         html += '<div class="campaign-header-row">';
         html += '<div style="display:flex;flex-direction:column;gap:4px;">';
         html += '<span class="campaign-name">' + (c.name || 'Unknown') + '</span>';
-        html += '<span style="font-size:12px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
+        html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
         html += '</div>';
         html += '<span class="campaign-id">' + c.id + '</span>';
         html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
@@ -1591,9 +1595,76 @@ async function compressImage(file) {
         reader.onerror = reject;
     });
 }
-
+function validateCampaignForm() {
+    // Customer Name
+    const customerName = document.getElementById('customerName').value.trim();
+    if (!customerName) {
+        alert('❌ Please enter Customer Name');
+        document.getElementById('customerName').focus();
+        return false;
+    }
+    
+    // Product Name
+    const productName = document.getElementById('prodname').value.trim();
+    if (!productName) {
+        alert('❌ Please enter Product Name');
+        document.getElementById('prodname').focus();
+        return false;
+    }
+    
+    // Station
+    const station = document.getElementById('stationName').value;
+    if (!station || station === '') {
+        alert('❌ Please select a Station');
+        document.getElementById('stationName').focus();
+        return false;
+    }
+    
+    // Start Date Time
+    const startDateTime = document.getElementById('startDateTime').value;
+    if (!startDateTime) {
+        alert('❌ Please select Start Date & Time');
+        document.getElementById('startDateTime').focus();
+        return false;
+    }
+    
+    // End Date Time
+    const endDateTime = document.getElementById('endDateTime').value;
+    if (!endDateTime) {
+        alert('❌ Please select End Date & Time');
+        document.getElementById('endDateTime').focus();
+        return false;
+    }
+    
+    // Validate end date is after start date
+    const startDate = new Date(startDateTime);
+    const endDate = new Date(endDateTime);
+    if (endDate <= startDate) {
+        alert('❌ End Date & Time must be after Start Date & Time');
+        document.getElementById('endDateTime').focus();
+        return false;
+    }
+    
+    // Images
+    if (selectedFiles.length === 0) {
+        alert('❌ Please add at least 1 image for the campaign');
+        return false;
+    }
+    
+    return true;
+}
 document.getElementById('addCampaignForm')?.addEventListener('submit', async e => {
     e.preventDefault();
+    document.getElementById('addCampaignForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    
+    // Validation check
+    if (!validateCampaignForm()) {
+        return; // Stop here if validation fails
+    }
+    
+    const btn = document.getElementById('submitBtn');
+    // ... rest of your existing code continues here
     const btn = document.getElementById('submitBtn');
     const showAlert = (msg, type) => {
         const a = document.getElementById('addAlert');
@@ -2154,13 +2225,6 @@ pdf.setFont('helvetica', 'normal');
 pdf.text(c.product_name || 'Not specified', rightX, rowY);
 rowY += 6;
     
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Customer:', leftX, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(c.name || 'Unknown', rightX, rowY);
-    rowY += 6;
-    
     pdf.setFont('helvetica', 'bold');
     pdf.text('Status:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
@@ -2488,7 +2552,7 @@ rowY += 6;
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-    const fileName = `${prodname}_${safeName}_${dateStr}_Proof.pdf`;
+    const fileName = `${safeName}_${prodname}__${dateStr}_Proof.pdf`;
     
     pdf.save(fileName);
     closePDFPreview();
@@ -2756,7 +2820,7 @@ rowY += 6;
                         <td style="padding:10px;text-align:center;font-weight:bold;color:${statusColor};">${rem}</td>
                         <td style="padding:10px;text-align:center;"><span style="background:${isPA?'#1a2a1a':'#2a1a1a'};color:${statusColor};padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;">${isPA?'🟢 Active':'🔴 Sold Out'}</span></td>
                         <td style="padding:10px;text-align:center;">
-                            <button class="btn-sm btn-sm-blue" onclick="updateCouponProductQty('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}','${inputId}')">📦 Update</button>
+                            <button class="btn-sm btn-sm-blue" onclick="updateCouponProductQty('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}','${inputId}')">📦 Update Qty</button>
                             <button class="btn-sm btn-sm-red"  onclick="removeCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🗑️ Remove</button>
                         </td>`;
                     tbody.appendChild(row);
