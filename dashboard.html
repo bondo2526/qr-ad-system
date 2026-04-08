@@ -1359,8 +1359,11 @@ function escapeHtml(str) {
         list.innerHTML = allProofs.map(p => `
             <div class="campaign-item">
                 <div class="campaign-header-row">
-                    <span class="campaign-name">Customer: ${p.customer_name||p.name||'Unknown'} - Product : ${document.getElementById('prodname').value}</span>
-                    <span class="campaign-id">${p.id}</span>
+                <span class="campaign-name">
+                 Customer: ${p.customer_name||p.name||'Unknown'} - 
+                 Product: ${document.getElementById('prodname')?.value || 'Not entered'}
+                 </span>                    
+                <span class="campaign-id">${p.id}</span>
                 </div>
                 <div class="proof-label">HASH</div>
                 <div class="proof-box">${p.hash||'N/A'}</div>
