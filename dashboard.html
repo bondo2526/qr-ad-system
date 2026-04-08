@@ -506,7 +506,11 @@
                         </div>
                         <div class="form-group">
                             <label>Customer Name</label>
-                            <input type="text" id="customerName" placeholder="e.g., Acme Corporation" required oninput="updateHashPreviews()">
+                            <input type="text" id="customerName" placeholder="Advertiser Name Goes Here" required oninput="updateHashPreviews()">
+                        </div>  
+                        <div class="form-group">
+                            <label>Product Name</label>
+                            <input type="text" id="prodname" placeholder="Product Name Goes Here (Manual Input)" required oninput="updateHashPreviews()">
                         </div>
                         <div class="datetime-row">
                             <div class="form-group">
@@ -1355,7 +1359,7 @@ function escapeHtml(str) {
         list.innerHTML = allProofs.map(p => `
             <div class="campaign-item">
                 <div class="campaign-header-row">
-                    <span class="campaign-name">${p.customer_name||p.name||'Unknown'}</span>
+                    <span class="campaign-name">Customer: ${p.customer_name||p.name||'Unknown'} - Product : ${document.getElementById('prodname').value}</span>
                     <span class="campaign-id">${p.id}</span>
                 </div>
                 <div class="proof-label">HASH</div>
