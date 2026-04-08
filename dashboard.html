@@ -1683,12 +1683,13 @@ function validateCampaignForm() {
     
     return true;
 }
-document.getElementById('addCampaignForm')?.addEventListener('submit', async e => {
+// ADD CAMPAIGN FORM SUBMIT HANDLER
+document.getElementById('addCampaignForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     // Validation check
     if (!validateCampaignForm()) {
-        return; // Stop here if validation fails
+        return;
     }
     
     const btn = document.getElementById('submitBtn');
@@ -1707,16 +1708,10 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
     try {
         const name = document.getElementById('customerName').value.trim();
         const station = document.getElementById('stationName').value;
-        
-        // Get raw datetime values (format: "2026-04-08T15:24")
         const startRaw = document.getElementById('startDateTime').value;
         const endRaw = document.getElementById('endDateTime').value;
-        
-        // Add seconds to match "2026-04-08T15:24:00" format
         const startDateTimeString = startRaw + ':00';
         const endDateTimeString = endRaw + ':00';
-        
-        // Parse for validation
         const startDT = new Date(startRaw);
         const endDT = new Date(endRaw);
         
@@ -1749,20 +1744,16 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
         const endHash = document.getElementById('endHashPreview').textContent;
         const uid = currentUser?.uid || 'anonymous';
         
-        // Calculate status based on datetime strings
         const now = new Date();
         let status = 'upcoming';
         if (now >= startDT && now <= endDT) status = 'active';
         if (now > endDT) status = 'expired';
         
-        // Calculate compression stats
         const totalOriginalSize = imagesData.reduce((sum, img) => sum + (img.originalSize || 0), 0);
         const totalCompressedSize = imagesData.reduce((sum, img) => sum + (img.compressedSize || 0), 0);
-        const savingsPercent = totalOriginalSize > 0 ? 
-            ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : "0.0";
+        const savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : "0.0";
         const productName = document.getElementById('prodname').value.trim();
         
-        // IMPORTANT: Only save start_datetime and end_datetime as strings
         const docRef = await db.collection('customers').add({
             name: name,
             product_name: productName,
@@ -1772,14 +1763,8 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
             images: imagesData,
             image_count: imagesData.length,
             hashes: {
-                start: { 
-                    hash: startHash, 
-                    timestamp: startDateTimeString
-                },
-                end: { 
-                    hash: endHash, 
-                    timestamp: endDateTimeString
-                }
+                start: { hash: startHash, timestamp: startDateTimeString },
+                end: { hash: endHash, timestamp: endDateTimeString }
             },
             compression_stats: {
                 compressed_size: totalCompressedSize,
@@ -1792,7 +1777,6 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
             update_history: []
         });
         
-        // Add blockchain records
         await db.collection('blockchain').add({ 
             campaign_id: docRef.id, 
             customer_name: name,
