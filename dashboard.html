@@ -1838,7 +1838,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         setTimeout(() => a.style.display = 'none', 3000);
         document.getElementById('editEndDateTime').focus();
         return;
-   
+    }
     const id = document.getElementById('editCampaignId').value;
     const btn = document.getElementById('editSaveBtn');
     btn.disabled = true;
@@ -1924,7 +1924,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
             document.getElementById('editSaveLoading').style.display = 'none';
             return;
         }
-        
+    });
         // Update status based on new dates
         const now = new Date();
         let newStatus = 'upcoming';
