@@ -1824,7 +1824,8 @@ window.openEditModal = function(id) {
     
 document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
     e.preventDefault();
-        //DATE VALIDATION
+    
+    // DATE VALIDATION
     const newStartRaw = document.getElementById('editStartDateTime').value;
     const newEndRaw = document.getElementById('editEndDateTime').value;
     const newStart = new Date(newStartRaw);
@@ -1839,6 +1840,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         document.getElementById('editEndDateTime').focus();
         return;
     }
+    
     const id = document.getElementById('editCampaignId').value;
     const btn = document.getElementById('editSaveBtn');
     btn.disabled = true;
@@ -1852,15 +1854,15 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         // Get form values
         const newName = document.getElementById('editCustomerName').value.trim();
         const newStation = document.getElementById('editStationName').value;
-        const newStartRaw = document.getElementById('editStartDateTime').value;
-        const newEndRaw = document.getElementById('editEndDateTime').value;
+        const newStartRaw2 = document.getElementById('editStartDateTime').value;
+        const newEndRaw2 = document.getElementById('editEndDateTime').value;
         
         // Create datetime strings
-        const newStartDateTimeString = newStartRaw + ':00';
-        const newEndDateTimeString = newEndRaw + ':00';
+        const newStartDateTimeString = newStartRaw2 + ':00';
+        const newEndDateTimeString = newEndRaw2 + ':00';
         
-        const newStart = new Date(newStartRaw);
-        const newEnd = new Date(newEndRaw);
+        const newStart2 = new Date(newStartRaw2);
+        const newEnd2 = new Date(newEndRaw2);
         
         // Get old values from datetime strings
         const oldName = old.name || '';
@@ -1885,7 +1887,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         }
         
         // Check Start Date
-        if (oldStart.getTime() !== newStart.getTime()) {
+        if (oldStart.getTime() !== newStart2.getTime()) {
             changedFields.push('Start Date');
             updateData.start_datetime = newStartDateTimeString;
             // Update hash timestamp too
@@ -1899,7 +1901,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         }
         
         // Check End Date
-        if (oldEnd.getTime() !== newEnd.getTime()) {
+        if (oldEnd.getTime() !== newEnd2.getTime()) {
             changedFields.push('End Date');
             updateData.end_datetime = newEndDateTimeString;
             // Update hash timestamp too
@@ -1924,12 +1926,12 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
             document.getElementById('editSaveLoading').style.display = 'none';
             return;
         }
-    });
+        
         // Update status based on new dates
         const now = new Date();
         let newStatus = 'upcoming';
-        if (now >= newStart && now <= newEnd) newStatus = 'active';
-        if (now > newEnd) newStatus = 'expired';
+        if (now >= newStart2 && now <= newEnd2) newStatus = 'active';
+        if (now > newEnd2) newStatus = 'expired';
         updateData.status = newStatus;
         
         // Add common update fields
@@ -1940,8 +1942,8 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const changeDetails = changedFields.map(field => {
             if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
             if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
-            if (field === 'Start Date') return `${field}: "${oldStart.toLocaleString()}" → "${newStart.toLocaleString()}"`;
-            if (field === 'End Date') return `${field}: "${oldEnd.toLocaleString()}" → "${newEnd.toLocaleString()}"`;
+            if (field === 'Start Date') return `${field}: "${oldStart.toLocaleString()}" → "${newStart2.toLocaleString()}"`;
+            if (field === 'End Date') return `${field}: "${oldEnd.toLocaleString()}" → "${newEnd2.toLocaleString()}"`;
             return field;
         }).join(' | ');
         
@@ -1979,8 +1981,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         document.getElementById('editSaveText').style.display = 'inline';
         document.getElementById('editSaveLoading').style.display = 'none';
     }
-};
-
+});
     // DELETE
     window.deleteCampaign = async function(id) {
         if (!confirm('Delete this campaign? This cannot be undone.')) return;
