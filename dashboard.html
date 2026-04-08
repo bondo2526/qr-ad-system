@@ -811,6 +811,36 @@
     const db   = firebase.firestore();
     db.enablePersistence().catch(err => console.log('Persistence error:', err));
 
+    window.handleLogin = function() {
+    const pass = document.getElementById('passwordInput').value;
+    const errDiv = document.getElementById('loginError');
+    errDiv.style.display = 'none';
+    if (!pass) {
+        errDiv.textContent = '❌ Please enter your password';
+        errDiv.style.display = 'block';
+        return;
+    }
+    if (pass !== localStorage.getItem(STORAGE_KEY)) {
+        errDiv.textContent = '❌ Incorrect password.';
+        errDiv.style.display = 'block';
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').focus();
+        return;
+    }
+    sessionStorage.setItem('dashboard_logged_in', 'true');
+    bootDashboard();
+};
+
+window.handleLogout = function() {
+    stopAutoRefresh();
+    sessionStorage.removeItem('dashboard_logged_in');
+    auth.signOut().catch(()=>{});
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('dashboardContent').style.display = 'none';
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordInput').focus();
+};
+
     // ═══════════════════════════════════════════════════════
     //  PASSWORD / SESSION
     // ═══════════════════════════════════════════════════════
