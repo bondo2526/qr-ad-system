@@ -458,7 +458,7 @@
                 <div class="header-right">
                     <span class="auto-refresh-badge" id="autoRefreshStatus">🔄 Auto-refresh: ON (10s)</span>
                     <span class="user-badge" id="userBadge">Not logged in</span>
-                    <button onclick="createAdvertiserAccount()">➕ Create New Advertiser Account</button>
+                    <button class="btn-purple" onclick="createAdvertiserAccount()">➕ Create New Advertiser Account</button>
                     <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">Logout</button>
                 </div>
             </div>
@@ -898,7 +898,6 @@
     // ═══════════════════════════════════════════════════════
     //  CREATE NEW ADVERTISERS ACCOUNTS
     // ═══════════════════════════════════════════════════════
- // Add this to your dashboard
 async function createAdvertiserAccount() {
     const displayName = prompt("Enter business name (e.g., ph3, CafeDeluxe):");
     
@@ -938,8 +937,8 @@ async function createAdvertiserAccount() {
             advertiserName: displayName,
             password: password,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastLogin: null,
-            lastPasswordChange: firebase.firestore.FieldValue.serverTimestamp(),
+            lastLogin: null,           // ✅ ADD THIS
+            lastPasswordChange: firebase.firestore.FieldValue.serverTimestamp(),  // ✅ ADD THIS
             createdBy: 'admin',
             couponValidations: 0,
             isActive: true
@@ -947,7 +946,7 @@ async function createAdvertiserAccount() {
         
         await db.collection('advertisers').doc(displayName).set(newAdvertiser);
         
-        alert(`✅ Account "${displayName}" created successfully!\n\nPassword: ${password}\n\nThey can now login with these credentials.`);
+        alert(`✅ Account "${displayName}" created successfully!\n\nPassword: ${password}`);
         return true;
         
     } catch (error) {
