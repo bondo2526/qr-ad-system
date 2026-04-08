@@ -580,8 +580,7 @@ Status: SOLD OUT
         }
         
         function initializeScanner() {
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanError).catch(err => console.error("Scanner error:", err));
+    console.log("Scanner ready (manual entry only)");
         }
         
         function onScanSuccess(decodedText) { if (html5QrCode) html5QrCode.stop(); validateCoupon(decodedText); }
