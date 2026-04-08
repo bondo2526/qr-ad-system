@@ -1277,7 +1277,7 @@ function buildAdCampaignHTML(c) {
         var html = '<div class="campaign-item ' + status + '">';
         html += '<div class="campaign-header-row">';
         html += '<div style="display:flex;flex-direction:column;gap:4px;">';
-        html += '<span class="campaign-name">' + (c.name || 'Unknown') + '</span>';
+        html += '<span class="campaign-name" style="font-size:24px;">' + (c.name || 'Unknown') + '</span>';
         html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
         html += '</div>';
         html += '<span class="campaign-id">' + c.id + '</span>';
@@ -1979,7 +1979,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         document.getElementById('editSaveText').style.display = 'inline';
         document.getElementById('editSaveLoading').style.display = 'none';
     }
-});
+}
 
     // DELETE
     window.deleteCampaign = async function(id) {
