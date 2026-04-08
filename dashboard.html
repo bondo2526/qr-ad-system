@@ -510,7 +510,7 @@
                         </div>  
                         <div class="form-group">
                             <label>Product Name</label>
-                            <input type="text" id="prodname" placeholder="Product Name Goes Here (Manual Input)" required oninput="updateHashPreviews()">
+                            <input type="text" id="prodname" placeholder="Product Name Goes Here" required oninput="updateHashPreviews()">
                         </div>
                         <div class="datetime-row">
                             <div class="form-group">
@@ -1255,8 +1255,10 @@ function buildAdCampaignHTML(c) {
         
         var html = '<div class="campaign-item ' + status + '">';
         html += '<div class="campaign-header-row">';
-        html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
+        html += '<div style="display:flex;flex-direction:column;gap:4px;">';
         html += '<span class="campaign-name">' + (c.name || 'Unknown') + '</span>';
+        html += '<span style="font-size:12px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
+        html += '</div>';
         html += '<span class="campaign-id">' + c.id + '</span>';
         html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
         if (updates.length) {
@@ -1697,7 +1699,8 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
         // Add blockchain records
         await db.collection('blockchain').add({ 
             campaign_id: docRef.id, 
-            customer_name: name, 
+            customer_name: name,
+            product_name: productName,
             hash: startHash, 
             type: 'start', 
             created_at: firebase.firestore.FieldValue.serverTimestamp() 
@@ -1705,7 +1708,8 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async e =
         
         await db.collection('blockchain').add({ 
             campaign_id: docRef.id, 
-            customer_name: name, 
+            customer_name: name,
+            product_name: productName,
             hash: endHash,   
             type: 'end',   
             created_at: firebase.firestore.FieldValue.serverTimestamp() 
@@ -2023,6 +2027,7 @@ window.showPDFPreview = function(id) {
             <table style="width:100%;border-collapse:collapse;">
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;width:140px;">Station:</td><td style="padding:10px 0;"><strong>${c.station || 'N/A'}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Customer:</td><td style="padding:10px 0;"><strong>${c.name}</strong></td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Product:</td><td style="padding:10px 0;"><strong>${c.product_name || 'Not specified'}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Status:</td><td style="padding:10px 0;"><span style="background:${statusColor};color:white;padding:5px 15px;border-radius:20px;font-size:12px;">${status}</span></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Start Date:</td><td style="padding:10px 0;">${isNaN(start) ? 'Invalid' : start.toLocaleString()}</td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">End Date:</td><td style="padding:10px 0;">${isNaN(end) ? 'Invalid' : end.toLocaleString()}</td></tr>
@@ -2137,11 +2142,18 @@ window.downloadPDF = function() {
     const rightX = 75;
     let rowY = yPos + 6;
     
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Station:', leftX, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(c.station || 'N/A', rightX, rowY);
-    rowY += 6;
+pdf.setFont('helvetica', 'bold');
+pdf.text('Customer:', leftX, rowY);
+pdf.setFont('helvetica', 'normal');
+pdf.text(c.name || 'Unknown', rightX, rowY);
+rowY += 6;
+
+pdf.setFont('helvetica', 'bold');
+pdf.text('Product:', leftX, rowY);
+pdf.setFont('helvetica', 'normal');
+pdf.text(c.product_name || 'Not specified', rightX, rowY);
+rowY += 6;
+    
     
     pdf.setFont('helvetica', 'bold');
     pdf.text('Customer:', leftX, rowY);
@@ -2468,6 +2480,7 @@ window.downloadPDF = function() {
     
     // Save PDF
     const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+    const prodname =c.product_name;
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -2475,7 +2488,7 @@ window.downloadPDF = function() {
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-    const fileName = `${safeName}_${dateStr}_Proof.pdf`;
+    const fileName = `${prodname}_${safeName}_${dateStr}_Proof.pdf`;
     
     pdf.save(fileName);
     closePDFPreview();
