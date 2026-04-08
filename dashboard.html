@@ -458,7 +458,7 @@
                 <div class="header-right">
                     <span class="auto-refresh-badge" id="autoRefreshStatus">🔄 Auto-refresh: ON (10s)</span>
                     <span class="user-badge" id="userBadge">Not logged in</span>
-                    <button class="btn-purple" onclick="showChangePasswordModal()">🔑 Password</button>
+                    <button onclick="createAdvertiserAccount()">➕ Create New Advertiser Account</button>
                     <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">Logout</button>
                 </div>
             </div>
@@ -895,7 +895,68 @@
         loadCouponData();
         startAutoRefresh();
     }
-
+    // ═══════════════════════════════════════════════════════
+    //  CREATE NEW ADVERTISERS ACCOUNTS
+    // ═══════════════════════════════════════════════════════
+      async function createAdvertiserAccount() {
+    // Open input boxes
+    const displayName = prompt("Enter business name (e.g., ph3, CafeDeluxe):");
+    
+    if (!displayName) {
+        alert("❌ Account creation cancelled");
+        return false;
+    }
+    
+    const password = prompt("Enter password (minimum 6 characters):");
+    
+    if (!password) {
+        alert("❌ Password required");
+        return false;
+    }
+    
+    if (password.length < 6) {
+        alert("❌ Password must be at least 6 characters");
+        return false;
+    }
+    
+    // Confirm before creating
+    const confirmCreate = confirm(`Create account for "${displayName}" with password "${password}"?`);
+    if (!confirmCreate) {
+        alert("❌ Creation cancelled");
+        return false;
+    }
+    
+    try {
+        // Check if account already exists
+        const existingDoc = await db.collection('advertisers').doc(displayName).get();
+        
+        if (existingDoc.exists) {
+            alert(`❌ Account "${displayName}" already exists!`);
+            return false;
+        }
+        
+        // Create new advertiser account
+        const newAdvertiser = {
+            displayName: displayName,
+            advertiserName: displayName,
+            password: password,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: 'admin',
+            couponValidations: 0,
+            isActive: true
+        };
+        
+        await db.collection('advertisers').doc(displayName).set(newAdvertiser);
+        
+        alert(`✅ Account "${displayName}" created successfully!\n\nPassword: ${password}\n\nThey can now login with these credentials.`);
+        return true;
+        
+    } catch (error) {
+        console.error("Create account error:", error);
+        alert(`❌ Error: ${error.message}`);
+        return false;
+    }
+}
     // ═══════════════════════════════════════════════════════
     //  AUTO REFRESH
     // ═══════════════════════════════════════════════════════
