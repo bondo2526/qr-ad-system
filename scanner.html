@@ -405,7 +405,7 @@ Status: SOLD OUT
             }
         });
         
- async function login() {
+async function login() {
     const advertiserName = document.getElementById('advertiserName').value.trim();
     const password = document.getElementById('advertiserPassword').value.trim();
     const errorDiv = document.getElementById('loginError');
@@ -416,17 +416,14 @@ Status: SOLD OUT
     if (password.length < 6) { errorDiv.textContent = '❌ Password must be at least 6 characters'; return; }
     
     try {
-        // ONLY check for existing advertiser - NO AUTO-CREATION
         const existingDoc = await db.collection(ADVERTISERS_COLLECTION).doc(advertiserName).get();
         
         if (!existingDoc.exists) {
-            // Account doesn't exist - show error, don't create
-            errorDiv.textContent = `❌ Account "${advertiserName}" does not exist. Please contact admin to create an account.`;
+            errorDiv.textContent = `❌ Account "${advertiserName}" does not exist. Contact admin.`;
             document.getElementById('advertiserPassword').value = '';
             return;
         }
         
-        // Account exists - verify password
         const advertiserData = existingDoc.data();
         
         if (advertiserData.password !== password) {
@@ -435,7 +432,11 @@ Status: SOLD OUT
             return;
         }
         
-        // Login success
+        // ✅ UPDATE LAST LOGIN - ADD THIS
+        await db.collection(ADVERTISERS_COLLECTION).doc(advertiserName).update({
+            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
         currentAdvertiser = {
             id: existingDoc.id,
             name: advertiserData.displayName,
@@ -451,18 +452,7 @@ Status: SOLD OUT
         
     } catch (error) {
         console.error("Login error:", error);
-        if (error.code === 'permission-denied') {
-            // Demo fallback
-            if (advertiserName === 'Test Shop' && password === 'test123') {
-                currentAdvertiser = { id: 'test_shop_demo', name: 'Test Shop', isTest: true };
-                sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
-                showScannerSection();
-            } else {
-                errorDiv.innerHTML = `❌ Demo mode - only "Test Shop" / "test123" works`;
-            }
-        } else {
-            errorDiv.textContent = '❌ Login error: ' + error.message;
-        }
+        errorDiv.textContent = '❌ Login error: ' + error.message;
     }
 }
  async function createNewAdvertiser(displayName, password) {
@@ -523,33 +513,37 @@ Status: SOLD OUT
             document.getElementById('confirmPassword').value = '';
         }
         
-        async function changePassword() {
-            const currentPass = document.getElementById('currentPassword').value;
-            const newPass = document.getElementById('newPassword').value;
-            const confirmPass = document.getElementById('confirmPassword').value;
-            const errorDiv = document.getElementById('passwordError');
-            const successDiv = document.getElementById('passwordSuccess');
-            
-            errorDiv.textContent = '';
-            successDiv.textContent = '';
-            
-            if (!currentPass || !newPass || !confirmPass) { errorDiv.textContent = '❌ Please fill all fields'; return; }
-            if (newPass.length < 6) { errorDiv.textContent = '❌ New password must be at least 6 characters'; return; }
-            if (newPass !== confirmPass) { errorDiv.textContent = '❌ New passwords do not match'; return; }
-            
-            try {
-                const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).get();
-                if (!advertiserDoc.exists) { errorDiv.textContent = '❌ Advertiser not found'; return; }
-                if (advertiserDoc.data().password !== currentPass) { errorDiv.textContent = '❌ Current password is incorrect'; return; }
-                
-                await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).update({ password: newPass });
-                successDiv.textContent = '✅ Password changed successfully!';
-                setTimeout(() => closePasswordModal(), 2000);
-            } catch (error) {
-                errorDiv.textContent = '❌ Error: ' + error.message;
-            }
-        }
+    async function changePassword() {
+    const currentPass = document.getElementById('currentPassword').value;
+    const newPass = document.getElementById('newPassword').value;
+    const confirmPass = document.getElementById('confirmPassword').value;
+    const errorDiv = document.getElementById('passwordError');
+    const successDiv = document.getElementById('passwordSuccess');
+    
+    errorDiv.textContent = '';
+    successDiv.textContent = '';
+    
+    if (!currentPass || !newPass || !confirmPass) { errorDiv.textContent = '❌ Please fill all fields'; return; }
+    if (newPass.length < 6) { errorDiv.textContent = '❌ New password must be at least 6 characters'; return; }
+    if (newPass !== confirmPass) { errorDiv.textContent = '❌ New passwords do not match'; return; }
+    
+    try {
+        const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).get();
+        if (!advertiserDoc.exists) { errorDiv.textContent = '❌ Advertiser not found'; return; }
+        if (advertiserDoc.data().password !== currentPass) { errorDiv.textContent = '❌ Current password is incorrect'; return; }
         
+        // ✅ UPDATE PASSWORD AND LAST PASSWORD CHANGE - ADD THIS
+        await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).update({ 
+            password: newPass,
+            lastPasswordChange: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        successDiv.textContent = '✅ Password changed successfully!';
+        setTimeout(() => closePasswordModal(), 2000);
+    } catch (error) {
+        errorDiv.textContent = '❌ Error: ' + error.message;
+    }
+}
         function initializeScanner() {
     console.log("Scanner ready (manual entry only)");
         }
