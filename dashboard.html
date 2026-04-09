@@ -162,7 +162,7 @@
         .btn-cancel:hover { background:#6c7a7d; transform:translateY(-2px); }
         .btn-purple { background: linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .3s; }
         .btn-purple:hover { opacity:.9; transform:translateY(-2px); }
-        .logout-btn { background:#dc3545; color:white; border:none; padding:7px 18px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .3s; }
+        .logout-btn { background:#dc3545; color:white; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .3s; }
         .logout-btn:hover { background:#c82333; transform:translateY(-2px); }
         .logout-btn:disabled { background:#6c757d; cursor:not-allowed; transform:none; }
         /* small action buttons used in coupon campaigns */
@@ -210,6 +210,31 @@
         .filter-btn { padding:7px 18px; border:1px solid #3a4050; background:#2a2f38; color:#a0a0a0; border-radius:20px; cursor:pointer; transition:all .3s; font-size:13px; }
         .filter-btn:hover { background:#3a4050; color:white; }
         .filter-btn.active { background:#4a9eff; color:white; border-color:#4a9eff; }
+        /* Station filter buttons - Blue effect */
+.station-filter {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.station-filter:hover {
+    background: #4a9eff !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(74, 158, 255, 0.4);
+}
+
+.station-filter.active {
+    background: #4a9eff !important;
+    color: white !important;
+    box-shadow: 0 0 10px rgba(74, 158, 255, 0.5);
+    border-color: #4a9eff !important;
+}
+
+.station-filter.active:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 158, 255, 0.6);
+}
 
         /* ─── COUPON FILTER CONTROLS ─────────────────────────── */
         .controls-bar {
@@ -539,7 +564,6 @@
     <div id="imagePreview" class="preview-grid"></div>
     <div id="fileWarning" style="color:#ffc107;font-size:12px;margin-top:8px;"></div>
 </div>
-<button type="submit" class="btn-primary" id="submitBtn" style="width:100%;">
                         <button type="submit" class="btn-primary" id="submitBtn" style="width:100%;">
                             <span id="submitText">Add Campaign</span>
                             <span id="submitLoading" class="loading" style="display:none;"></span>
@@ -562,14 +586,33 @@
                         <button class="filter-btn" onclick="filterCampaigns('upcoming')">Upcoming</button>
                         <button class="filter-btn" onclick="filterCampaigns('expired')">Expired</button>
                     </div>
-                    <div class="filter-bar" style="margin-top:8px;">
-                        <button class="filter-btn" onclick="filterByStation('all')">All Stations</button>
-                        <button class="filter-btn" onclick="filterByStation('Station 1')">Station 1</button>
-                        <button class="filter-btn" onclick="filterByStation('Station 2')">Station 2</button>
-                        <button class="filter-btn" onclick="filterByStation('Station 3')">Station 3</button>
-                        <button class="filter-btn" onclick="filterByStation('Station 4')">Station 4</button>
-                        <button class="filter-btn" onclick="filterByStation('Station 5')">Station 5</button>
-                    </div>
+<div class="filter-bar" style="margin-top:8px;">
+    <button class="filter-btn station-filter" onclick="filterByStation('all')">All Stations</button>
+    <button class="filter-btn station-filter" onclick="filterByStation('Station 1')">Station 1</button>
+    <button class="filter-btn station-filter" onclick="filterByStation('Station 2')">Station 2</button>
+    <button class="filter-btn station-filter" onclick="filterByStation('Station 3')">Station 3</button>
+    <button class="filter-btn station-filter" onclick="filterByStation('Station 4')">Station 4</button>
+    <button class="filter-btn station-filter" onclick="filterByStation('Station 5')">Station 5</button>
+</div>
+                    <!-- Advertiser & Product Filter Box -->
+<div class="adv-prod-filter-box" style="background: #1a1e24; border-radius: 10px; padding: 15px; margin: 15px 0; border: 1px solid #3a4050;">
+    <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #4a9eff;">🔍 Advertiser Name</label>
+            <input type="text" id="advNameFilter" class="filter-input" placeholder="Search by advertiser name..." style="width: 100%;" onkeyup="filterByAdvName()">
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #4a9eff;">📦 Product Name</label>
+            <input type="text" id="productNameFilter" class="filter-input" placeholder="Search by product name..." style="width: 100%;" onkeyup="filterByProductName()">
+        </div>
+        <div>
+            <button class="btn-secondary" onclick="clearAdFilters()" style="padding: 11px 20px;">🗑️ Clear Filters</button>
+        </div>
+    </div>
+    <div id="filterStats" style="font-size: 12px; color: #a0a0a0; margin-top: 10px; display: none;">
+        Showing <span id="filteredCount">0</span> of <span id="totalCount">0</span> campaigns
+    </div>
+</div>
                     <div id="campaignsAdList" class="campaigns-list">
                         <div class="loading-block"><div class="spinner-large"></div>Loading...</div>
                     </div>
@@ -1204,16 +1247,7 @@ function getAdStatus(campaign) {
 }
 
     function displayAdCampaigns() {
-        const list = document.getElementById('campaignsAdList');
-        if (!list) return;
-        let campaigns = allAdCampaigns.filter(c => {
-            const st = getAdStatus(c);
-            if (currentFilter !== 'all' && st !== currentFilter) return false;
-            if (currentStationFilter !== 'all' && c.station !== currentStationFilter) return false;
-            return true;
-        });
-        if (campaigns.length === 0) { list.innerHTML = '<div class="loading-block">No campaigns found.</div>'; return; }
-        list.innerHTML = campaigns.map(c => buildAdCampaignHTML(c)).join('');
+    applyAdFilters(); // Use the new filter function instead of direct filtering
     }
 
 function buildAdCampaignHTML(c) {
@@ -1442,6 +1476,115 @@ function displayProofs() {
         });
         displayAdCampaigns();
     };
+    // Global variables for advertiser and product filters
+let advNameFilterValue = '';
+let productNameFilterValue = '';
+
+window.filterByAdvName = function() {
+    advNameFilterValue = document.getElementById('advNameFilter')?.value.toLowerCase() || '';
+    applyAdFilters();
+};
+
+window.filterByProductName = function() {
+    productNameFilterValue = document.getElementById('productNameFilter')?.value.toLowerCase() || '';
+    applyAdFilters();
+};
+
+window.clearAdFilters = function() {
+    document.getElementById('advNameFilter').value = '';
+    document.getElementById('productNameFilter').value = '';
+    advNameFilterValue = '';
+    productNameFilterValue = '';
+    applyAdFilters();
+};
+
+function applyAdFilters() {
+    const list = document.getElementById('campaignsAdList');
+    if (!list) return;
+    
+    let campaigns = allAdCampaigns.filter(c => {
+        // Station filter
+        const st = getAdStatus(c);
+        if (currentFilter !== 'all' && st !== currentFilter) return false;
+        if (currentStationFilter !== 'all' && c.station !== currentStationFilter) return false;
+        
+        // Advertiser name filter
+        if (advNameFilterValue) {
+            const advName = (c.name || '').toLowerCase();
+            if (!advName.includes(advNameFilterValue)) return false;
+        }
+        
+        // Product name filter
+        if (productNameFilterValue) {
+            const prodName = (c.product_name || '').toLowerCase();
+            if (!prodName.includes(productNameFilterValue)) return false;
+        }
+        
+        return true;
+    });
+    
+    // Update filter stats
+    const filteredCount = campaigns.length;
+    const totalCount = allAdCampaigns.length;
+    const statsDiv = document.getElementById('filterStats');
+    const filteredCountSpan = document.getElementById('filteredCount');
+    const totalCountSpan = document.getElementById('totalCount');
+    
+    if (filteredCountSpan) filteredCountSpan.textContent = filteredCount;
+    if (totalCountSpan) totalCountSpan.textContent = totalCount;
+    
+    if (statsDiv) {
+        if (advNameFilterValue || productNameFilterValue || currentFilter !== 'all' || currentStationFilter !== 'all') {
+            statsDiv.style.display = 'block';
+        } else {
+            statsDiv.style.display = 'none';
+        }
+    }
+    
+    if (campaigns.length === 0) {
+        list.innerHTML = '<div class="loading-block">No campaigns found matching your filters.</div>';
+        return;
+    }
+    list.innerHTML = campaigns.map(c => buildAdCampaignHTML(c)).join('');
+}
+
+// Override the existing filterCampaigns function to use the new applyAdFilters
+const originalFilterCampaigns = window.filterCampaigns;
+window.filterCampaigns = function(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase().includes(filter === 'all' ? 'all' : filter));
+    });
+    applyAdFilters();
+};
+
+// Override the existing filterByStation function
+const originalFilterByStation = window.filterByStation;
+window.filterByStation = function(st) {
+    currentStationFilter = st;
+    // Update active state for station buttons
+    document.querySelectorAll('.station-filter').forEach(btn => {
+        const btnText = btn.textContent.replace(/\s/g, '');
+        const filterText = st.replace(/\s/g, '');
+        btn.classList.toggle('active', btnText === filterText || (st === 'all' && btnText === 'AllStations'));
+    });
+    applyAdFilters();
+};
+
+// Update manualRefresh to reset filters
+const originalManualRefresh = window.manualRefresh;
+window.manualRefresh = async function() { 
+    await loadAdData(); 
+    await loadCouponData();
+    // Reset filters after refresh
+    if (advNameFilterValue || productNameFilterValue) {
+        advNameFilterValue = '';
+        productNameFilterValue = '';
+        if (document.getElementById('advNameFilter')) document.getElementById('advNameFilter').value = '';
+        if (document.getElementById('productNameFilter')) document.getElementById('productNameFilter').value = '';
+        applyAdFilters();
+    }
+};
     
     window.manualRefresh = async function() { await loadAdData(); await loadCouponData(); };
 
