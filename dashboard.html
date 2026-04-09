@@ -539,9 +539,7 @@
     <div id="imagePreview" class="preview-grid"></div>
     <div id="fileWarning" style="color:#ffc107;font-size:12px;margin-top:8px;"></div>
 </div>
-                            <div id="imagePreview" class="preview-grid"></div>
-                            <div id="fileWarning" style="color:#ffc107;font-size:12px;margin-top:8px;"></div>
-                        </div>
+<button type="submit" class="btn-primary" id="submitBtn" style="width:100%;">
                         <button type="submit" class="btn-primary" id="submitBtn" style="width:100%;">
                             <span id="submitText">Add Campaign</span>
                             <span id="submitLoading" class="loading" style="display:none;"></span>
@@ -1814,7 +1812,11 @@ const imagesData = [{
         
         document.getElementById('uploadProgress').style.display = 'none';
         selectedImage = null;
-        renderImagePreviews();
+        renderImagePreview();
+        // Legacy compatibility function
+function renderImagePreviews() {
+    renderImagePreview();
+}
         document.getElementById('imageInput').value = '';
         document.getElementById('addCampaignForm').reset();
         setDefaultDates();
