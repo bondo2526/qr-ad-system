@@ -528,14 +528,17 @@
                                 <input type="datetime-local" id="endDateTime" required onchange="updateHashPreviews()">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label>Campaign Image (1 image per ad, auto-compressed)</label>
-                            <div class="file-upload-area" onclick="document.getElementById('imageInput').click()">
-                                <input type="file" id="imageInput" accept="image/*" multiple>
-                                <div class="file-upload-icon">📁</div>
-                                <div class="file-upload-text">Click to select images or drag &amp; drop</div>
-                                <div class="file-upload-hint">Supported: JPG, PNG (Auto-compressed)</div>
-                            </div>
+<div class="form-group">
+    <label>Campaign Image (1 image per campaign)</label>
+    <div class="file-upload-area" onclick="document.getElementById('imageInput').click()">
+        <input type="file" id="imageInput" accept="image/*" multiple="false">
+        <div class="file-upload-icon">📁</div>
+        <div class="file-upload-text">Click to select image (max 1)</div>
+        <div class="file-upload-hint">Supported: JPG, PNG (Auto-compressed) - Only 1 image allowed</div>
+    </div>
+    <div id="imagePreview" class="preview-grid"></div>
+    <div id="fileWarning" style="color:#ffc107;font-size:12px;margin-top:8px;"></div>
+</div>
                             <div id="imagePreview" class="preview-grid"></div>
                             <div id="fileWarning" style="color:#ffc107;font-size:12px;margin-top:8px;"></div>
                         </div>
@@ -1136,7 +1139,7 @@ async function updateLastLogin(advertiserName) {
     let currentFilter    = 'all';
     let currentStationFilter = 'all';
     let currentPDFCampaign   = null;
-    let selectedFiles    = [];
+    let selectedImage = null;
     let adChart          = null;
 
     async function loadAdData() {
@@ -1477,32 +1480,74 @@ function setDefaultDates() {
     };
 
     // Image handling
-    document.getElementById('imageInput')?.addEventListener('change', e => {
-        const files = Array.from(e.target.files);
-        if (selectedFiles.length + files.length > 5) {
-            document.getElementById('fileWarning').textContent = '⚠️ Max 5 images allowed.';
-            return;
-        }
-        document.getElementById('fileWarning').textContent = '';
-        files.forEach(f => selectedFiles.push(f));
-        renderImagePreviews();
-    });
+document.getElementById('imageInput')?.addEventListener('change', e => {
+    const files = Array.from(e.target.files);
     
-    function renderImagePreviews() {
-        const grid = document.getElementById('imagePreview'); if(!grid) return;
-        grid.innerHTML = '';
-        selectedFiles.forEach((f, i) => {
-            const url = URL.createObjectURL(f);
-            grid.innerHTML += `<div class="preview-item">
-                <img src="${url}">
-                <button class="remove-btn" onclick="removeFile(${i})">✕</button>
-                <div class="preview-info"><span class="preview-size">${(f.size/1024).toFixed(0)}KB</span><br>${f.name.substring(0,15)}</div>
-            </div>`;
-        });
+    // Check if trying to upload more than 1 file
+    if (files.length > 1) {
+        document.getElementById('fileWarning').innerHTML = '⚠️ Only 1 image allowed per campaign! Please select only one image.';
+        document.getElementById('fileWarning').style.color = '#dc3545';
+        document.getElementById('imageInput').value = ''; // Clear the input
+        return;
     }
     
-    window.removeFile = function(i) { selectedFiles.splice(i,1); renderImagePreviews(); };
-
+    if (files.length === 1) {
+        const file = files[0];
+        
+        // Check file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            document.getElementById('fileWarning').innerHTML = '⚠️ Image too large! Maximum size is 10MB.';
+            document.getElementById('fileWarning').style.color = '#dc3545';
+            document.getElementById('imageInput').value = '';
+            return;
+        }
+        
+        // Check file type
+        if (!file.type.match('image.*')) {
+            document.getElementById('fileWarning').innerHTML = '⚠️ Please select a valid image file (JPG, PNG).';
+            document.getElementById('fileWarning').style.color = '#dc3545';
+            document.getElementById('imageInput').value = '';
+            return;
+        }
+        
+        document.getElementById('fileWarning').innerHTML = '';
+        document.getElementById('fileWarning').style.color = '#ffc107';
+        selectedImage = file;
+        renderImagePreview();
+    } else {
+        // No file selected or user cancelled
+        selectedImage = null;
+        renderImagePreview();
+    }
+});
+    
+function renderImagePreview() {
+    const grid = document.getElementById('imagePreview');
+    if (!grid) return;
+    
+    if (selectedImage) {
+        const url = URL.createObjectURL(selectedImage);
+        grid.innerHTML = `
+            <div class="preview-item" style="max-width:200px;">
+                <img src="${url}" style="width:100%; height:auto; max-height:150px; object-fit:cover;">
+                <button class="remove-btn" onclick="removeImage()">✕</button>
+                <div class="preview-info">
+                    <span class="preview-size">${(selectedImage.size/1024).toFixed(0)}KB</span><br>
+                    ${selectedImage.name.substring(0,20)}
+                </div>
+            </div>
+        `;
+    } else {
+        grid.innerHTML = '';
+    }
+}
+    
+window.removeImage = function() {
+    selectedImage = null;
+    document.getElementById('imageInput').value = '';
+    renderImagePreview();
+    document.getElementById('fileWarning').innerHTML = '';
+};
 // Image compression function - Smart compression
 async function compressImage(file) {
     return new Promise((resolve, reject) => {
@@ -1651,8 +1696,8 @@ function validateCampaignForm() {
     }
     
     // Images
-    if (selectedFiles.length === 0) {
-        alert('❌ Please add ad image for the campaign');
+    if (!selectedImage) {
+        alert('❌ Please add 1 image for the campaign');
         return false;
     }
     
@@ -1695,21 +1740,18 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async fun
         if (endDT <= startDT) throw new Error('End date must be after start date');
         
         document.getElementById('uploadProgress').style.display = 'block';
-        const imagesData = [];
-        
-        for (let i = 0; i < selectedFiles.length; i++) {
-            document.getElementById('progressPercent').textContent = `${Math.round((i / selectedFiles.length) * 100)}%`;
-            document.getElementById('progressFill').style.width = `${Math.round((i / selectedFiles.length) * 100)}%`;
-            document.getElementById('progressCurrent').textContent = `Processing ${selectedFiles[i].name}`;
-            const compressedImage = await compressImage(selectedFiles[i]);
-            imagesData.push({
-                name: compressedImage.name,
-                data: compressedImage.data,
-                originalSize: compressedImage.originalSize,
-                compressedSize: compressedImage.compressedSize,
-                wasCompressed: compressedImage.wasCompressed || false
-            });
-        }
+// Process single image
+document.getElementById('progressPercent').textContent = '50%';
+document.getElementById('progressFill').style.width = '50%';
+document.getElementById('progressCurrent').textContent = `Processing ${selectedImage.name}`;
+const compressedImage = await compressImage(selectedImage);
+const imagesData = [{
+    name: compressedImage.name,
+    data: compressedImage.data,
+    originalSize: compressedImage.originalSize,
+    compressedSize: compressedImage.compressedSize,
+    wasCompressed: compressedImage.wasCompressed || false
+}];
         
         document.getElementById('progressPercent').textContent = '100%';
         document.getElementById('progressFill').style.width = '100%';
@@ -1771,8 +1813,9 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async fun
         });
         
         document.getElementById('uploadProgress').style.display = 'none';
-        selectedFiles = [];
+        selectedImage = null;
         renderImagePreviews();
+        document.getElementById('imageInput').value = '';
         document.getElementById('addCampaignForm').reset();
         setDefaultDates();
         showAlert('✅ Campaign added successfully!', 'success');
