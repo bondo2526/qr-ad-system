@@ -254,14 +254,31 @@
             background:#2a2f38; padding:22px; border-radius:12px;
             border:1px solid #3a4050; transition:all .3s;
         }
-    /* Campaign item border - wraps the entire card */
+/* Campaign item border - wraps the entire card */
 .campaign-item {
+    position: relative;
     border: 2px solid #3a4050;
     border-radius: 12px;
     padding: 22px;
     margin-bottom: 20px;
     background: #2a2f38;
     transition: all 0.3s ease;
+}
+
+/* AD number as a ribbon on the left */
+.campaign-item::before {
+    content: attr(data-ad-number);
+    position: absolute;
+    left: -10px;
+    top: 20px;
+    background: linear-gradient(135deg, #4a9eff, #6f42c1);
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(74,158,255,0.5);
+    z-index: 1;
 }
 
 /* Different border colors based on status */
@@ -1082,9 +1099,10 @@ function formatCompactDate(date) {
         applyAdFilters();
     }
 
-    function buildAdCampaignHTML(c) {
-        try {
+function buildAdCampaignHTML(c, adNumber) {
+    try {
             const status = getAdStatus(c);
+            var html = '<div class="campaign-item ' + status + '" data-ad-number="AD #' + adNumber + '">';
             const start = new Date(c.start_datetime);
             const end = new Date(c.end_datetime);
             const images = c.images || [];
@@ -1315,46 +1333,55 @@ function formatCompactDate(date) {
         applyAdFilters();
     };
 
-    function applyAdFilters() {
-        const list = document.getElementById('campaignsAdList');
-        if (!list) return;
-        
-        let campaigns = allAdCampaigns.filter(c => {
-            const st = getAdStatus(c);
-            if (currentFilter !== 'all' && st !== currentFilter) return false;
-            if (currentStationFilter !== 'all' && c.station !== currentStationFilter) return false;
-            if (advNameFilterValue) {
-                const advName = (c.name || '').toLowerCase();
-                if (!advName.includes(advNameFilterValue)) return false;
-            }
-            if (productNameFilterValue) {
-                const prodName = (c.product_name || '').toLowerCase();
-                if (!prodName.includes(productNameFilterValue)) return false;
-            }
-            return true;
-        });
-        
-        const filteredCount = campaigns.length;
-        const totalCount = allAdCampaigns.length;
-        const statsDiv = document.getElementById('filterStats');
-        const filteredCountSpan = document.getElementById('filteredCount');
-        const totalCountSpan = document.getElementById('totalCount');
-        
-        if (filteredCountSpan) filteredCountSpan.textContent = filteredCount;
-        if (totalCountSpan) totalCountSpan.textContent = totalCount;
-        
-        if (statsDiv) {
-            if (advNameFilterValue || productNameFilterValue || currentFilter !== 'all' || currentStationFilter !== 'all') {
-                statsDiv.style.display = 'block';
-            } else {
-                statsDiv.style.display = 'none';
-            }
+function applyAdFilters() {
+    const list = document.getElementById('campaignsAdList');
+    if (!list) return;
+    
+    let campaigns = allAdCampaigns.filter(c => {
+        const st = getAdStatus(c);
+        if (currentFilter !== 'all' && st !== currentFilter) return false;
+        if (currentStationFilter !== 'all' && c.station !== currentStationFilter) return false;
+        if (advNameFilterValue) {
+            const advName = (c.name || '').toLowerCase();
+            if (!advName.includes(advNameFilterValue)) return false;
         }
-        
-        if (campaigns.length === 0) {
-            list.innerHTML = '<div class="loading-block">No campaigns found matching your filters.</div>';
-            return;
+        if (productNameFilterValue) {
+            const prodName = (c.product_name || '').toLowerCase();
+            if (!prodName.includes(productNameFilterValue)) return false;
         }
+        return true;
+    });
+    
+    const filteredCount = campaigns.length;
+    const totalCount = allAdCampaigns.length;
+    const statsDiv = document.getElementById('filterStats');
+    const filteredCountSpan = document.getElementById('filteredCount');
+    const totalCountSpan = document.getElementById('totalCount');
+    
+    if (filteredCountSpan) filteredCountSpan.textContent = filteredCount;
+    if (totalCountSpan) totalCountSpan.textContent = totalCount;
+    
+    if (statsDiv) {
+        if (advNameFilterValue || productNameFilterValue || currentFilter !== 'all' || currentStationFilter !== 'all') {
+            statsDiv.style.display = 'block';
+        } else {
+            statsDiv.style.display = 'none';
+        }
+    }
+    
+    if (campaigns.length === 0) {
+        list.innerHTML = '<div class="loading-block">No campaigns found matching your filters.</div>';
+        return;
+    }
+    
+    // Generate HTML with AD numbers
+    let html = '';
+    campaigns.forEach((campaign, index) => {
+        const adNumber = index + 1;
+        html += buildAdCampaignHTML(campaign, adNumber);
+    });
+    list.innerHTML = html;
+}
         list.innerHTML = campaigns.map(c => buildAdCampaignHTML(c)).join('');
     }
 
