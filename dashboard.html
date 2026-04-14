@@ -2462,8 +2462,6 @@ window.downloadPDF = function() {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     
-    const start = c.start_date?.toDate ? c.start_date.toDate() : (c.start_datetime ? new Date(c.start_datetime) : new Date());
-    const end = c.end_date?.toDate ? c.end_date.toDate() : (c.end_datetime ? new Date(c.end_datetime) : new Date());
     const images = c.images || [];
     const updates = c.update_history || c.updates || [];
     const now = new Date();
@@ -2482,6 +2480,50 @@ window.downloadPDF = function() {
     } else if (planName === 'Professional') {
         planDescription = '6 days × 8 hrs display time weekly = 192 hrs monthly / $54';
     }
+    
+    // Find FIRST start/end dates (oldest from update history or original)
+    let firstStart = c.start_datetime ? new Date(c.start_datetime) : null;
+    let firstEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+    let firstStartStr = '';
+    let firstEndStr = '';
+    
+    // Get LAST start/end dates (current values from campaign)
+    let lastStart = c.start_datetime ? new Date(c.start_datetime) : null;
+    let lastEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+    let lastStartStr = lastStart ? lastStart.toLocaleString() : 'N/A';
+    let lastEndStr = lastEnd ? lastEnd.toLocaleString() : 'N/A';
+    
+    // Parse updates to find the earliest start/end dates
+    if (updates && updates.length > 0) {
+        for (const update of updates) {
+            if (update.changes && typeof update.changes === 'string') {
+                const changeStr = update.changes;
+                
+                // Extract Start Date old value
+                const startOldMatch = changeStr.match(/Start Date: "([^"]+)" →/);
+                if (startOldMatch && firstStart) {
+                    const oldStartDate = new Date(startOldMatch[1]);
+                    if (oldStartDate < firstStart) firstStart = oldStartDate;
+                }
+                
+                // Extract End Date old value
+                const endOldMatch = changeStr.match(/End Date: "([^"]+)" →/);
+                if (endOldMatch && firstEnd) {
+                    const oldEndDate = new Date(endOldMatch[1]);
+                    if (oldEndDate < firstEnd) firstEnd = oldEndDate;
+                }
+            }
+        }
+    }
+    
+    // Also check if there are no updates, use original dates as first
+    if (updates.length === 0) {
+        firstStart = c.start_datetime ? new Date(c.start_datetime) : null;
+        firstEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+    }
+    
+    firstStartStr = firstStart ? firstStart.toLocaleString() : 'N/A';
+    firstEndStr = firstEnd ? firstEnd.toLocaleString() : 'N/A';
     
     let yPos = 15;
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -2518,20 +2560,26 @@ window.downloadPDF = function() {
     pdf.text('Campaign Details', 20, yPos);
     yPos += 6;
     
-    // Determine status
+    // Determine current status
     let status = 'UPCOMING';
     let statusColor = [255, 193, 7];
-    if (now >= start && now <= end) {
-        status = 'ACTIVE';
-        statusColor = [40, 167, 69];
-    } else if (now > end) {
-        status = 'EXPIRED';
-        statusColor = [220, 53, 69];
+    const nowDate = new Date();
+    const currentStart = c.start_datetime ? new Date(c.start_datetime) : null;
+    const currentEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+    
+    if (currentStart && currentEnd) {
+        if (nowDate >= currentStart && nowDate <= currentEnd) {
+            status = 'ACTIVE';
+            statusColor = [40, 167, 69];
+        } else if (nowDate > currentEnd) {
+            status = 'EXPIRED';
+            statusColor = [220, 53, 69];
+        }
     }
     
-    // Campaign details box
+    // Campaign details box - increased height for more rows
     pdf.setFillColor(248, 249, 250);
-    pdf.rect(20, yPos, 170, 58, 'F');
+    pdf.rect(20, yPos, 170, 76, 'F');
     pdf.setFontSize(9);
     pdf.setTextColor(52, 73, 94);
     
@@ -2573,27 +2621,48 @@ window.downloadPDF = function() {
     pdf.setTextColor(52, 73, 94);
     rowY += 6;
     
+    // FIRST Start/End (Original)
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Start:', leftX, rowY);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Original Start:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(start.toLocaleString(), rightX, rowY);
-    rowY += 6;
+    pdf.text(firstStartStr, rightX, rowY);
+    rowY += 5;
     
     pdf.setFont('helvetica', 'bold');
-    pdf.text('End:', leftX, rowY);
+    pdf.text('Original End:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(end.toLocaleString(), rightX, rowY);
+    pdf.text(firstEndStr, rightX, rowY);
+    rowY += 5;
+    
+    // LAST Start/End (Current)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(52, 152, 219);
+    pdf.text('Current Start:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(52, 73, 94);
+    pdf.text(lastStartStr, rightX, rowY);
+    rowY += 5;
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(52, 152, 219);
+    pdf.text('Current End:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(52, 73, 94);
+    pdf.text(lastEndStr, rightX, rowY);
     rowY += 6;
     
+    // Created
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(100, 100, 100);
     pdf.text('Created:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
     const createdBy = (c.created_by || 'Unknown').substring(0, 11);
     const createdDate = c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : (c.created_at || 'Unknown');
     pdf.text(`${createdBy}... at ${createdDate}`, rightX, rowY);
     
-    yPos += 64;
+    yPos += 82;
     
     // Campaign Images
     if (images.length > 0) {
@@ -2640,7 +2709,7 @@ window.downloadPDF = function() {
         yPos += rowsUsed * (imgSize + 15) + 8;
     }
     
-    // Update History - Show FULL DATES (not just times)
+    // Update History
     if (updates && updates.length > 0) {
         if (yPos > pageHeight - 50) {
             pdf.addPage();
@@ -2653,13 +2722,13 @@ window.downloadPDF = function() {
         pdf.text(`Update History (${updates.length} entries)`, 20, yPos);
         yPos += 5;
         
-        // Table header - wider columns for full dates
+        // Table header
         pdf.setFillColor(243, 156, 18);
         pdf.rect(20, yPos, 170, 5, 'F');
         pdf.setFontSize(5.5);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Date/Time', 22, yPos + 3.5);
+        pdf.text('Date/Time Updates', 22, yPos + 3.5);
         pdf.text('Field', 50, yPos + 3.5);
         pdf.text('Old Value', 80, yPos + 3.5);
         pdf.text('New Value', 120, yPos + 3.5);
@@ -2695,16 +2764,13 @@ window.downloadPDF = function() {
             if (update.changes && typeof update.changes === 'string') {
                 const changeStr = update.changes;
                 
-                // Check if it contains both Start and End Date
                 if (changeStr.includes('Start Date') && changeStr.includes('End Date')) {
                     fieldName = 'Start & End Dates';
                     
-                    // Extract full date strings
                     const startMatch = changeStr.match(/Start Date: "([^"]+)" → "([^"]+)"/);
                     const endMatch = changeStr.match(/End Date: "([^"]+)" → "([^"]+)"/);
                     
                     if (startMatch && endMatch) {
-                        // Extract just the date part (MM/DD/YYYY)
                         const startOldDate = startMatch[1].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
                         const startNewDate = startMatch[2].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
                         const endOldDate = endMatch[1].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
@@ -2719,7 +2785,6 @@ window.downloadPDF = function() {
                         newVal = `Start: ${startNewDate ? startNewDate[0] : '?'} ${startNewTime ? startNewTime[0] : ''} | End: ${endNewDate ? endNewDate[0] : '?'} ${endNewTime ? endNewTime[0] : ''}`;
                     }
                 } else {
-                    // Single field change
                     const arrowIndex = changeStr.indexOf('→');
                     if (arrowIndex > -1) {
                         const beforeArrow = changeStr.substring(0, arrowIndex);
@@ -2750,16 +2815,13 @@ window.downloadPDF = function() {
                 newVal = update.changes || 'Campaign updated';
             }
             
-            // Shorten field name
             fieldName = fieldName.substring(0, 16);
             
-            // Calculate row height
             const oldLines = pdf.splitTextToSize(oldVal, 32);
             const newLines = pdf.splitTextToSize(newVal, 32);
             const maxLines = Math.max(1, oldLines.length, newLines.length);
             const rowHeight = Math.max(5, maxLines * 3);
             
-            // Check for new page
             if (yPos + rowHeight > pageHeight - 20) {
                 pdf.addPage();
                 yPos = 20;
@@ -2785,7 +2847,6 @@ window.downloadPDF = function() {
                 pdf.setFontSize(5);
             }
             
-            // Alternate row background
             if (u % 2 === 0) {
                 pdf.setFillColor(245, 245, 245);
                 pdf.rect(20, yPos - 1, 170, rowHeight, 'F');
