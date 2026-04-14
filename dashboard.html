@@ -1362,7 +1362,7 @@ html += '</div>';
         html += '</div>';
         
         html += '<div class="campaign-dates">';
-        html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + (isNaN(start) ? 'Invalid' : start.toLocaleString()) + '</span></div>';
+        html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + (isNaN(start) ? 'Invalid' : formatCompactDate(start)) + '</span></div>';
         html += '<div class="date-row"><span class="date-label">■ End</span><span class="date-value">' + (isNaN(end) ? 'Invalid' : end.toLocaleString()) + '</span></div>';
         html += '<div class="date-row"><span class="date-label">⏱️ Duration</span><span class="date-value">' + (isNaN(start) || isNaN(end) ? 'Unknown' : Math.round((end - start) / 3600000) + ' hours') + '</span></div>';
         html += '</div>';
@@ -1435,7 +1435,19 @@ html += '</div>';
             '</div>';
     }
 }
-
+    
+// Compact date formatter
+function formatCompactDate(date) {
+    if (!date || isNaN(date.getTime())) return 'Invalid';
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayName = days[date.getDay()];
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${dayName} ${day}/${month}/${year} ${hours}:${minutes}`;
+}
 // Helper function to escape HTML
 function escapeHtml(str) {
     if (!str) return '';
@@ -2242,8 +2254,8 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const changeDetails = changedFields.map(field => {
             if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
             if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
-            if (field === 'Start Date') return `${field}: "${oldStart.toLocaleString()}" → "${newStart2.toLocaleString()}"`;
-            if (field === 'End Date') return `${field}: "${oldEnd.toLocaleString()}" → "${newEnd2.toLocaleString()}"`;
+            if (field === 'Start Date') return `${field}: "${formatCompactDate(oldStart)}" → "${newStart2.toLocaleString()}"`;
+            if (field === 'End Date') return `${field}: "${formatCompactDate(oldEnd)}" → "${newEnd2.toLocaleString()}"`;
             return field;
         }).join(' | ');
         
@@ -2350,8 +2362,8 @@ document.getElementById('pdfTitle').textContent = `Campaign Proof Report - ${c.n
     // Get LAST start/end dates (current values from campaign)
     let lastStart = c.start_datetime ? new Date(c.start_datetime) : null;
     let lastEnd = c.end_datetime ? new Date(c.end_datetime) : null;
-    let lastStartStr = lastStart ? lastStart.toLocaleString() : 'N/A';
-    let lastEndStr = lastEnd ? lastEnd.toLocaleString() : 'N/A';
+    let lastStartStr = lastStart ? formatCompactDate(lastStart) : 'N/A';
+    let lastEndStr = lastEnd ? formatCompactDate(lastEnd) : 'N/A';
     
     // Parse updates to find the earliest start/end dates
     if (updates && updates.length > 0) {
@@ -2379,8 +2391,8 @@ document.getElementById('pdfTitle').textContent = `Campaign Proof Report - ${c.n
         firstEnd = c.end_datetime ? new Date(c.end_datetime) : null;
     }
     
-    const firstStartStr = firstStart ? firstStart.toLocaleString() : 'N/A';
-    const firstEndStr = firstEnd ? firstEnd.toLocaleString() : 'N/A';
+    const firstStartStr = firstStart ? formatCompactDate(firstStart) : 'N/A';
+    const firstEndStr = firstEnd ? formatCompactDate(firstEnd) : 'N/A';
     
     // Determine current status
     let status = 'UPCOMING';
@@ -2615,8 +2627,8 @@ window.downloadPDF = function() {
     // Get LAST start/end dates (current values from campaign)
     let lastStart = c.start_datetime ? new Date(c.start_datetime) : null;
     let lastEnd = c.end_datetime ? new Date(c.end_datetime) : null;
-    let lastStartStr = lastStart ? lastStart.toLocaleString() : 'N/A';
-    let lastEndStr = lastEnd ? lastEnd.toLocaleString() : 'N/A';
+    let lastStartStr = lastStart ? formatCompactDate(lastStart) : 'N/A';
+    let lastEndStr = lastEnd ? formatCompactDate(lastEnd) : 'N/A';
     
     // Parse updates to find the earliest start/end dates
     if (updates && updates.length > 0) {
@@ -2647,8 +2659,8 @@ window.downloadPDF = function() {
         firstEnd = c.end_datetime ? new Date(c.end_datetime) : null;
     }
     
-    firstStartStr = firstStart ? firstStart.toLocaleString() : 'N/A';
-    firstEndStr = firstEnd ? firstEnd.toLocaleString() : 'N/A';
+    firstStartStr = firstStart ? formatCompactDate(firstStart) : 'N/A';
+    firstEndStr = firstEnd ? formatCompactDate(firstEnd) : 'N/A';
     
     let yPos = 15;
     const pageWidth = pdf.internal.pageSize.getWidth();
