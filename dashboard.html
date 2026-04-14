@@ -254,10 +254,11 @@
             background:#2a2f38; padding:22px; border-radius:12px;
             border:1px solid #3a4050; transition:all .3s;
         }
-        /* Campaign item border - wraps the entire card */
+    /* Campaign item border - wraps the entire card */
 .campaign-item {
     border: 2px solid #3a4050;
     border-radius: 12px;
+    padding: 22px;
     margin-bottom: 20px;
     background: #2a2f38;
     transition: all 0.3s ease;
@@ -285,6 +286,13 @@
     transform: translateY(-3px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     border-color: #4a9eff;
+}
+
+/* Remove existing border-left if any */
+.campaign-item.active,
+.campaign-item.upcoming,
+.campaign-item.expired {
+    border-left: 2px solid;
 }
         .campaign-item:hover { transform:translateY(-2px); box-shadow:0 10px 20px rgba(0,0,0,.2); }
         .campaign-item.active { border-left:4px solid #28a745; }
