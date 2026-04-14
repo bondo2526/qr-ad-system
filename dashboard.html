@@ -250,12 +250,6 @@
         .date-input:focus { outline:none; border-color:#4a9eff; }
 
         .campaigns-list { display:grid; gap:18px; }
-       /* 
-        .campaign-item {
-            background:#2a2f38; padding:22px; border-radius:12px;
-            border:1px solid #3a4050; transition:all .3s;
-        }
-        */
 /* Campaign item border - wraps the entire card */
 .campaign-item {
     position: relative;
@@ -266,26 +260,6 @@
     background: #2a2f38;
     transition: all 0.3s ease;
 }
-
-/* AD number as a ribbon on the left side */
-.campaign-item::before {
-    content: attr(data-ad-number);
-    position: absolute;
-    left: -12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: linear-gradient(135deg, #4a9eff, #6f42c1);
-    color: white;
-    font-weight: bold;
-    font-size: 13px;
-    padding: 8px 10px;
-    border-radius: 8px 0 0 8px;
-    box-shadow: -2px 2px 8px rgba(0,0,0,0.3);
-    z-index: 1;
-    writing-mode: horizontal-tb;
-    letter-spacing: 1px;
-}
-
 /* Different border colors based on status */
 .campaign-item.active {
     border: 2px solid #28a745;
@@ -316,10 +290,6 @@
 .campaign-item.expired {
     border-left: 2px solid;
 }
-       /* .campaign-item:hover { transform:translateY(-2px); box-shadow:0 10px 20px rgba(0,0,0,.2); }
-        .campaign-item.active { border-left:4px solid #28a745; }
-        .campaign-item.upcoming { border-left:4px solid #ffc107; }
-        .campaign-item.expired  { border-left:4px solid #dc3545; } */
         .campaign-header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
         .campaign-name { font-size:18px; font-weight:bold; color:white; }
         .campaign-id { font-family:monospace; color:#4a9eff; font-size:11px; background:#1a1e24; padding:3px 7px; border-radius:4px; }
@@ -1136,17 +1106,21 @@ function buildAdCampaignHTML(c, adNumber) {
         var savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
         
         // START building the HTML - DO NOT redeclare var html again
-        html += '<div class="campaign-header-row">';
-        html += '<div style="display:flex;flex-direction:column;gap:4px;">';
-        html += '<span class="campaign-name" style="font-size:24px;">' + (c.name || 'Unknown') + '</span>';
-        html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
-        html += '<div style="margin-top: 5px;">';
-        html += '<span style="font-size:14px;color:#28a745;">📋 Plan: ' + (c.pricing_plan || 'light').toUpperCase() + '</span>';
-        html += '<span style="font-size:12px;color:#a0a0a0;margin-left:10px;">⏱️ ' + (c.plan_hours || 32) + ' hours | 💰 $' + (c.plan_price || 35) + '</span>';
-        html += '</div>';
-        html += '</div>';
-        html += '<span class="campaign-id">' + c.id + '</span>';
-        html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
+html += '<div class="campaign-header-row">';
+html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+// ADD AD NUMBER BADGE HERE
+html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">';
+html += '<span style="background: linear-gradient(135deg, #4a9eff, #6f42c1); color: white; font-weight: bold; font-size: 14px; padding: 4px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">AD #' + adNumber + '</span>';
+html += '<span class="campaign-name" style="font-size:24px;">' + (c.name || 'Unknown') + '</span>';
+html += '</div>';
+html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
+html += '<div style="margin-top: 5px;">';
+html += '<span style="font-size:14px;color:#28a745;">📋 Plan: ' + (c.pricing_plan || 'light').toUpperCase() + '</span>';
+html += '<span style="font-size:12px;color:#a0a0a0;margin-left:10px;">⏱️ ' + (c.plan_hours || 32) + ' hours | 💰 $' + (c.plan_price || 35) + '</span>';
+html += '</div>';
+html += '</div>';
+html += '<span class="campaign-id">' + c.id + '</span>';
+html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
         if (updates.length) {
             html += '<span class="update-badge">↑' + updates.length + ' updates</span>';
         }
