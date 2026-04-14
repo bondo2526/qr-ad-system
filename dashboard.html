@@ -2331,6 +2331,11 @@ window.showPDFPreview = function(id) {
     const updates = c.update_history || c.updates || [];
     const now = new Date();
     
+    // Get plan info from campaign data
+    const planName = c.plan_name || 'Light';
+    const planHours = c.plan_hours || 32;
+    const planPrice = c.plan_price || 35;
+    
     let status = 'UPCOMING';
     let statusColor = '#ffc107';
     if (now >= start && now <= end) {
@@ -2346,20 +2351,19 @@ window.showPDFPreview = function(id) {
     const remainingHours = Math.abs(durationHours % 24);
     const durationText = durationDays > 0 ? `${durationDays} days ${remainingHours} hours` : `${Math.abs(durationHours)} hours`;
     
-let imagesHTML = '';
-if (images.length > 0) {
-    imagesHTML = `<div style="margin:30px 0; text-align:center;">
-        <h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px;text-align:center;">Campaign Images (${images.length})</h3>
-        <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;align-items:center;">`;
-    images.forEach((img, idx) => {
-        const imageData = (img && img.data) ? img.data : img;
-        imagesHTML += `<div style="text-align:center;background:white;padding:15px;border-radius:8px;width:200px;margin:0 auto;">
-            <img src="${imageData}" style="width:100%;height:auto;max-height:180px;object-fit:contain;border-radius:5px;border:2px solid #3498db;">
-            <div style="font-size:11px;color:#7f8c8d;margin-top:8px;">${(img && img.name) ? img.name : `Image ${idx + 1}`}</div>
-        </div>`;
-    });
-    imagesHTML += `</div></div>`;
-}
+    let imagesHTML = '';
+    if (images.length > 0) {
+        imagesHTML = `<div style="margin:30px 0; text-align:center;">
+            <h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px;text-align:center;">Campaign Images (${images.length})</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;align-items:center;">`;
+        images.forEach((img, idx) => {
+            const imageData = (img && img.data) ? img.data : img;
+imagesHTML += `<div style="text-align:center;background:white;padding:15px;border-radius:8px;width:200px;margin:0 auto;">
+    <img src="${imageData}" style="width:100%;height:auto;max-height:180px;object-fit:contain;border-radius:5px;border:2px solid #3498db;">
+</div>`;
+        });
+        imagesHTML += `</div></div>`;
+    }
     
     let updateHistoryHTML = '';
     if (updates && updates.length > 0) {
@@ -2401,14 +2405,13 @@ if (images.length > 0) {
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;width:140px;">Station:</td><td style="padding:10px 0;"><strong>${c.station || 'N/A'}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Customer:</td><td style="padding:10px 0;"><strong>${c.name}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Product:</td><td style="padding:10px 0;"><strong>${c.product_name || 'Not specified'}</strong></td></tr>
-                html += '<tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Pricing Plan:</td><td style="padding:10px 0;"><strong>' + (c.pricing_plan || 'light').toUpperCase() + '</strong> (' + (c.plan_hours || 32) + ' hours - $' + (c.plan_price || 35) + ')</td></tr>';
-html += '<tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Break Even:</td><td style="padding:10px 0;"><strong>'</td></tr>';
+                <tr style="border-bottom:1px solid #e9ecef; background:#f0f8ff;"><td style="padding:10px 0;">Pricing Plan:</td><td style="padding:10px 0;"><strong>${planName}</strong> (${planHours} hours - $${planPrice})</td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Status:</td><td style="padding:10px 0;"><span style="background:${statusColor};color:white;padding:5px 15px;border-radius:20px;font-size:12px;">${status}</span></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Start Date:</td><td style="padding:10px 0;">${isNaN(start) ? 'Invalid' : start.toLocaleString()}</td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">End Date:</td><td style="padding:10px 0;">${isNaN(end) ? 'Invalid' : end.toLocaleString()}</td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Duration:</td><td style="padding:10px 0;"><strong>${durationText}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Images:</td><td style="padding:10px 0;">${images.length} images</td></tr>
-                <tr><td style="padding:10px 0;">Created:</td><td style="padding:10px 0;font-size:11px;">${(c.created_by || 'Unknown').substring(0,15)}... at ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Created:</td><td style="padding:10px 0;font-size:11px;">${(c.created_by || 'Unknown').substring(0,15)}... at ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}</td></tr>
             </table>
         </div>
         ${imagesHTML}
@@ -2437,7 +2440,7 @@ html += '<tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;
     
     document.getElementById('pdfContent').innerHTML = reportHTML;
     document.getElementById('pdfPreview').classList.add('active');
-};;
+};
     
     window.closePDFPreview = function() { 
         document.getElementById('pdfPreview').classList.remove('active'); 
@@ -2554,19 +2557,7 @@ rowY += 6;
     pdf.setFont('helvetica', 'normal');
     pdf.text(end.toLocaleString(), rightX, rowY);
     rowY += 6;
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Duration:', leftX, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(durationText, rightX, rowY);
-    rowY += 6;
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Images:', leftX, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`${images.length} image(s)`, rightX, rowY);
-    rowY += 6;
-    
+     
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Created:', leftX, rowY);
