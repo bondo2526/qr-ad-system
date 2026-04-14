@@ -1764,7 +1764,7 @@ window.updatePlanDetails = function() {
             document.getElementById('submitLoading').style.display = 'none';
         }
     });
-        // Validate daily display hours based on selected plan
+// Validate daily display hours based on selected plan
 function validateDailyHours() {
     const startDateTime = document.getElementById('startDateTime').value;
     const endDateTime = document.getElementById('endDateTime').value;
@@ -1776,43 +1776,149 @@ function validateDailyHours() {
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
     
-    // Calculate total hours between start and end
-    const totalHours = (endDate - startDate) / (1000 * 60 * 60);
-    
-    // Calculate number of days (ceiling to handle partial days)
-    const days = Math.ceil(totalHours / 24);
-    
-    // Calculate average hours per day
-    const avgHoursPerDay = totalHours / days;
-    
-    let maxAllowedHoursPerDay = 0;
+    let maxHoursPerDay = 0;
     let planName = '';
     
     if (selectedPlan === 'light') {
-        maxAllowedHoursPerDay = 4;
+        maxHoursPerDay = 4;
         planName = 'Light';
     } else if (selectedPlan === 'standard') {
-        maxAllowedHoursPerDay = 6;
+        maxHoursPerDay = 6;
         planName = 'Standard';
     } else if (selectedPlan === 'professional') {
-        maxAllowedHoursPerDay = 8;
+        maxHoursPerDay = 8;
         planName = 'Professional';
     } else {
-        return true; // No plan selected, skip validation
+        return true;
     }
     
-    // Check if average hours per day exceeds plan limit
-    if (avgHoursPerDay > maxAllowedHoursPerDay) {
-        const warning = `⚠️ ${planName} Plan allows maximum ${maxAllowedHoursPerDay} hours per day.\n`;
-        const warning2 = `Current campaign averages ${avgHoursPerDay.toFixed(1)} hours/day over ${days} day(s).\n`;
-        const warning3 = `Total: ${totalHours.toFixed(1)} hours over ${days} days.\n\n`;
-        const warning4 = `Do you want to continue anyway?`;
+    // Calculate hours for each day
+    const currentDate = new Date(startDate);
+    let exceededDays = [];
+    
+    while (currentDate <= endDate) {
+        // Get start of day (midnight)
+        const dayStart = new Date(currentDate);
+        dayStart.setHours(0, 0, 0, 0);
         
-        return confirm(warning + warning2 + warning3 + warning4);
+        // Get end of day
+        const dayEnd = new Date(currentDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        
+        // Calculate overlap between campaign and this day
+        const overlapStart = new Date(Math.max(startDate, dayStart));
+        const overlapEnd = new Date(Math.min(endDate, dayEnd));
+        
+        if (overlapStart < overlapEnd) {
+            const hoursThisDay = (overlapEnd - overlapStart) / (1000 * 60 * 60);
+            
+            if (hoursThisDay > maxHoursPerDay) {
+                exceededDays.push({
+                    date: formatCompactDate(currentDate),
+                    hours: hoursThisDay.toFixed(1)
+                });
+            }
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    if (exceededDays.length > 0) {
+        let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
+        message += `The following days exceed this limit:\n`;
+        exceededDays.forEach(day => {
+            message += `   • ${day.date}: ${day.hours} hours\n`;
+        });
+        message += `\nPlease adjust your start/end times to ${maxHoursPerDay} hours per day.`;
+        
+        alert(message);
+        document.getElementById('endDateTime').focus();
+        return false;
     }
     
     return true;
 }
+
+     // Validate daily display hours for EDIT MODAL based on selected plan
+function validateEditDailyHours() {
+    const startDateTime = document.getElementById('editStartDateTime').value;
+    const endDateTime = document.getElementById('editEndDateTime').value;
+    
+    // Get plan from the campaign being edited
+    const campaignId = document.getElementById('editCampaignId').value;
+    const campaign = allAdCampaigns.find(x => x.id === campaignId);
+    
+    if (!campaign) return true;
+    
+    const selectedPlan = campaign.pricing_plan || 'light';
+    
+    if (!startDateTime || !endDateTime) return true;
+    
+    const startDate = new Date(startDateTime);
+    const endDate = new Date(endDateTime);
+    
+    let maxHoursPerDay = 0;
+    let planName = '';
+    
+    if (selectedPlan === 'light' || selectedPlan === 'Light') {
+        maxHoursPerDay = 4;
+        planName = 'Light';
+    } else if (selectedPlan === 'standard' || selectedPlan === 'Standard') {
+        maxHoursPerDay = 6;
+        planName = 'Standard';
+    } else if (selectedPlan === 'professional' || selectedPlan === 'Professional') {
+        maxHoursPerDay = 8;
+        planName = 'Professional';
+    } else {
+        return true;
+    }
+    
+    // Calculate hours for each day
+    const currentDate = new Date(startDate);
+    let exceededDays = [];
+    
+    while (currentDate <= endDate) {
+        // Get start of day (midnight)
+        const dayStart = new Date(currentDate);
+        dayStart.setHours(0, 0, 0, 0);
+        
+        // Get end of day
+        const dayEnd = new Date(currentDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        
+        // Calculate overlap between campaign and this day
+        const overlapStart = new Date(Math.max(startDate, dayStart));
+        const overlapEnd = new Date(Math.min(endDate, dayEnd));
+        
+        if (overlapStart < overlapEnd) {
+            const hoursThisDay = (overlapEnd - overlapStart) / (1000 * 60 * 60);
+            
+            if (hoursThisDay > maxHoursPerDay) {
+                exceededDays.push({
+                    date: formatCompactDate(currentDate),
+                    hours: hoursThisDay.toFixed(1)
+                });
+            }
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    if (exceededDays.length > 0) {
+        let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
+        message += `The following days exceed this limit:\n`;
+        exceededDays.forEach(day => {
+            message += `   • ${day.date}: ${day.hours} hours\n`;
+        });
+        message += `\nPlease adjust your start/end times to ${maxHoursPerDay} hours per day.`;
+        
+        alert(message);
+        document.getElementById('editEndDateTime').focus();
+        return false;
+    }
+    
+    return true;
+}   
 
     function renderImagePreviews() {
         renderImagePreview();
@@ -1842,127 +1948,171 @@ function validateDailyHours() {
     
     window.closeEditModal = function() { document.getElementById('editModal').classList.remove('active'); };
     
-    document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const newStartRaw = document.getElementById('editStartDateTime').value;
-        const newEndRaw = document.getElementById('editEndDateTime').value;
-        const newStart = new Date(newStartRaw);
-        const newEnd = new Date(newEndRaw);
-        if (newEnd <= newStart) {
-            const a = document.getElementById('editAlert');
-            a.className = 'alert error';
-            a.textContent = '❌ End Date & Time must be after Start Date & Time';
-            a.style.display = 'block';
-            setTimeout(() => a.style.display = 'none', 3000);
-            document.getElementById('editEndDateTime').focus();
-            return;
+document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    
+    // DATE VALIDATION - Check if end date is after start date
+    const newStartRaw = document.getElementById('editStartDateTime').value;
+    const newEndRaw = document.getElementById('editEndDateTime').value;
+    const newStart = new Date(newStartRaw);
+    const newEnd = new Date(newEndRaw);
+    
+    if (newEnd <= newStart) {
+        const a = document.getElementById('editAlert');
+        a.className = 'alert error';
+        a.textContent = '❌ End Date & Time must be after Start Date & Time';
+        a.style.display = 'block';
+        setTimeout(() => a.style.display = 'none', 3000);
+        document.getElementById('editEndDateTime').focus();
+        return;
+    }
+    
+    // VALIDATE DAILY HOURS BASED ON PLAN
+    if (!validateEditDailyHours()) {
+        return;
+    }
+    
+    const id = document.getElementById('editCampaignId').value;
+    const btn = document.getElementById('editSaveBtn');
+    btn.disabled = true;
+    document.getElementById('editSaveText').style.display = 'none';
+    document.getElementById('editSaveLoading').style.display = 'inline-block';
+    
+    try {
+        const old = allAdCampaigns.find(x => x.id === id) || {};
+        const updates = old.update_history || old.updates || [];
+        
+        // Get form values
+        const newName = document.getElementById('editCustomerName').value.trim();
+        const newStation = document.getElementById('editStationName').value;
+        const newStartRaw2 = document.getElementById('editStartDateTime').value;
+        const newEndRaw2 = document.getElementById('editEndDateTime').value;
+        
+        // Create datetime strings
+        const newStartDateTimeString = newStartRaw2 + ':00';
+        const newEndDateTimeString = newEndRaw2 + ':00';
+        
+        const newStart2 = new Date(newStartRaw2);
+        const newEnd2 = new Date(newEndRaw2);
+        
+        // Get old values
+        const oldName = old.name || '';
+        const oldStation = old.station || '';
+        const oldStart = new Date(old.start_datetime);
+        const oldEnd = new Date(old.end_datetime);
+        
+        // Track ONLY changed fields
+        const changedFields = [];
+        const updateData = {};
+        
+        // Check Customer Name
+        if (oldName !== newName) {
+            changedFields.push('Customer Name');
+            updateData.name = newName;
         }
-        const id = document.getElementById('editCampaignId').value;
-        const btn = document.getElementById('editSaveBtn');
-        btn.disabled = true;
-        document.getElementById('editSaveText').style.display = 'none';
-        document.getElementById('editSaveLoading').style.display = 'inline-block';
-        try {
-            const old = allAdCampaigns.find(x => x.id === id) || {};
-            const updates = old.update_history || old.updates || [];
-            const newName = document.getElementById('editCustomerName').value.trim();
-            const newStation = document.getElementById('editStationName').value;
-            const newStartRaw2 = document.getElementById('editStartDateTime').value;
-            const newEndRaw2 = document.getElementById('editEndDateTime').value;
-            const newStartDateTimeString = newStartRaw2 + ':00';
-            const newEndDateTimeString = newEndRaw2 + ':00';
-            const newStart2 = new Date(newStartRaw2);
-            const newEnd2 = new Date(newEndRaw2);
-            const oldName = old.name || '';
-            const oldStation = old.station || '';
-            const oldStart = new Date(old.start_datetime);
-            const oldEnd = new Date(old.end_datetime);
-            const changedFields = [];
-            const updateData = {};
-            if (oldName !== newName) {
-                changedFields.push('Customer Name');
-                updateData.name = newName;
+        
+        // Check Station
+        if (oldStation !== newStation) {
+            changedFields.push('Station');
+            updateData.station = newStation;
+        }
+        
+        // Check Start Date
+        if (oldStart.getTime() !== newStart2.getTime()) {
+            changedFields.push('Start Date');
+            updateData.start_datetime = newStartDateTimeString;
+            // Update hash timestamp too
+            if (old.hashes?.start) {
+                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
+                updateData.hashes.start = {
+                    ...old.hashes.start,
+                    timestamp: newStartDateTimeString
+                };
             }
-            if (oldStation !== newStation) {
-                changedFields.push('Station');
-                updateData.station = newStation;
+        }
+        
+        // Check End Date
+        if (oldEnd.getTime() !== newEnd2.getTime()) {
+            changedFields.push('End Date');
+            updateData.end_datetime = newEndDateTimeString;
+            // Update hash timestamp too
+            if (old.hashes?.end) {
+                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
+                updateData.hashes.end = {
+                    ...old.hashes.end,
+                    timestamp: newEndDateTimeString
+                };
             }
-            if (oldStart.getTime() !== newStart2.getTime()) {
-                changedFields.push('Start Date');
-                updateData.start_datetime = newStartDateTimeString;
-                if (old.hashes?.start) {
-                    if (!updateData.hashes) updateData.hashes = { ...old.hashes };
-                    updateData.hashes.start = {
-                        ...old.hashes.start,
-                        timestamp: newStartDateTimeString
-                    };
-                }
-            }
-            if (oldEnd.getTime() !== newEnd2.getTime()) {
-                changedFields.push('End Date');
-                updateData.end_datetime = newEndDateTimeString;
-                if (old.hashes?.end) {
-                    if (!updateData.hashes) updateData.hashes = { ...old.hashes };
-                    updateData.hashes.end = {
-                        ...old.hashes.end,
-                        timestamp: newEndDateTimeString
-                    };
-                }
-            }
-            if (changedFields.length === 0) {
-                const a = document.getElementById('editAlert');
-                a.className = 'alert warning';
-                a.textContent = '⚠️ No changes detected. Nothing was updated.';
-                a.style.display = 'block';
-                setTimeout(() => a.style.display = 'none', 3000);
-                btn.disabled = false;
-                document.getElementById('editSaveText').style.display = 'inline';
-                document.getElementById('editSaveLoading').style.display = 'none';
-                return;
-            }
-            const now = new Date();
-            let newStatus = 'upcoming';
-            if (now >= newStart2 && now <= newEnd2) newStatus = 'active';
-            if (now > newEnd2) newStatus = 'expired';
-            updateData.status = newStatus;
-            updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
-            updateData.updated_by = currentUser?.uid || 'anonymous';
-            const changeDetails = changedFields.map(field => {
-                if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
-                if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
-                if (field === 'Start Date') return `${field}: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`;
-                if (field === 'End Date') return `${field}: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`;
-                return field;
-            }).join(' | ');
-            const updateRecord = {
-                changes: changeDetails,
-                changed_fields: changedFields,
-                timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous'
-            };
-            updates.push(updateRecord);
-            updateData.update_history = updates;
-            await db.collection('customers').doc(id).update(updateData);
-            closeEditModal();
-            await loadAdData();
+        }
+        
+        // If nothing changed, show message and exit
+        if (changedFields.length === 0) {
             const a = document.getElementById('editAlert');
-            a.className = 'alert success';
-            a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
-            a.style.display = 'block';
-            setTimeout(() => a.style.display = 'none', 4000);
-        } catch (err) {
-            console.error('Edit error:', err);
-            const a = document.getElementById('editAlert');
-            a.className = 'alert error';
-            a.textContent = '❌ ' + err.message;
+            a.className = 'alert warning';
+            a.textContent = '⚠️ No changes detected. Nothing was updated.';
             a.style.display = 'block';
             setTimeout(() => a.style.display = 'none', 3000);
-        } finally {
             btn.disabled = false;
             document.getElementById('editSaveText').style.display = 'inline';
             document.getElementById('editSaveLoading').style.display = 'none';
+            return;
         }
-    });
+        
+        // Update status based on new dates
+        const now = new Date();
+        let newStatus = 'upcoming';
+        if (now >= newStart2 && now <= newEnd2) newStatus = 'active';
+        if (now > newEnd2) newStatus = 'expired';
+        updateData.status = newStatus;
+        
+        // Add common update fields
+        updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
+        updateData.updated_by = currentUser?.uid || 'anonymous';
+        
+        // Create update record with ONLY the changed fields
+        const changeDetails = changedFields.map(field => {
+            if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
+            if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
+            if (field === 'Start Date') return `${field}: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`;
+            if (field === 'End Date') return `${field}: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`;
+            return field;
+        }).join(' | ');
+        
+        const updateRecord = {
+            changes: changeDetails,
+            changed_fields: changedFields,
+            timestamp: new Date().toISOString(),
+            updated_by: currentUser?.uid || 'anonymous'
+        };
+        
+        updates.push(updateRecord);
+        updateData.update_history = updates;
+        
+        // Apply ONLY the changed fields to Firestore
+        await db.collection('customers').doc(id).update(updateData);
+        
+        closeEditModal();
+        await loadAdData();
+        
+        const a = document.getElementById('editAlert');
+        a.className = 'alert success';
+        a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
+        a.style.display = 'block';
+        setTimeout(() => a.style.display = 'none', 4000);
+        
+    } catch (err) {
+        console.error('Edit error:', err);
+        const a = document.getElementById('editAlert');
+        a.className = 'alert error';
+        a.textContent = '❌ ' + err.message;
+        a.style.display = 'block';
+        setTimeout(() => a.style.display = 'none', 3000);
+    } finally {
+        btn.disabled = false;
+        document.getElementById('editSaveText').style.display = 'inline';
+        document.getElementById('editSaveLoading').style.display = 'none';
+    }
+});
 
     window.deleteCampaign = async function(id) {
         if (!confirm('Delete this campaign? This cannot be undone.')) return;
