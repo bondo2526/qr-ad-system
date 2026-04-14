@@ -2664,54 +2664,62 @@ window.downloadPDF = function() {
     
     yPos += 82;
     
-    // Campaign Images
-    if (images.length > 0) {
-        pdf.setFontSize(12);
-        pdf.setTextColor(44, 62, 80);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Campaign Images', 105, yPos, { align: 'center' });
-        yPos += 6;
-        
-        const imgSize = 40;
-        const imagesPerRow = Math.min(3, Math.min(images.length, 6));
-        const totalWidth = imagesPerRow * imgSize + (imagesPerRow - 1) * 10;
-        const startX = (pageWidth - totalWidth) / 2;
-        
-        for (let i = 0; i < Math.min(images.length, 6); i++) {
-            try {
-                const img = images[i];
-                let imageData = null;
-                
-                if (typeof img === 'string') {
-                    imageData = img;
-                } else if (img && img.data) {
-                    imageData = img.data;
-                } else if (img && img.imgData) {
-                    imageData = img.imgData;
-                }
-                
-                if (imageData && (imageData.indexOf('base64') > -1 || imageData.indexOf('data:image') === 0)) {
-                    const base64Data = imageData.split(',')[1];
-                    if (base64Data) {
-                        const col = i % imagesPerRow;
-                        const row = Math.floor(i / imagesPerRow);
-                        const x = startX + (col * (imgSize + 10));
-                        const y = yPos + (row * (imgSize + 15));
-                        pdf.addImage(base64Data, 'JPEG', x, y, imgSize, imgSize);
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to add image to PDF:', e);
+// Campaign Images
+if (images.length > 0) {
+    pdf.setFontSize(12);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Campaign Image', 105, yPos, { align: 'center' });
+    yPos += 5;
+    
+    const imgSize = 40;
+    const imagesPerRow = Math.min(3, Math.min(images.length, 6));
+    const totalWidth = imagesPerRow * imgSize + (imagesPerRow - 1) * 10;
+    const startX = (pageWidth - totalWidth) / 2;
+    
+    for (let i = 0; i < Math.min(images.length, 6); i++) {
+        try {
+            const img = images[i];
+            let imageData = null;
+            
+            if (typeof img === 'string') {
+                imageData = img;
+            } else if (img && img.data) {
+                imageData = img.data;
+            } else if (img && img.imgData) {
+                imageData = img.imgData;
             }
+            
+            if (imageData && (imageData.indexOf('base64') > -1 || imageData.indexOf('data:image') === 0)) {
+                const base64Data = imageData.split(',')[1];
+                if (base64Data) {
+                    const col = i % imagesPerRow;
+                    const row = Math.floor(i / imagesPerRow);
+                    const x = startX + (col * (imgSize + 10));
+                    const y = yPos + (row * (imgSize + 12));
+                    
+                    // Draw black border around image
+                    pdf.setDrawColor(0, 0, 0);  // Black color
+                    pdf.setLineWidth(0.5);       // Border thickness
+                    pdf.rect(x, y, imgSize, imgSize);
+                    
+                    // Add image
+                    pdf.addImage(base64Data, 'JPEG', x, y, imgSize, imgSize);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to add image to PDF:', e);
         }
-        
-        const rowsUsed = Math.ceil(Math.min(images.length, 6) / imagesPerRow);
-        yPos += rowsUsed * (imgSize + 15) + 8;
     }
+    
+    const rowsUsed = Math.ceil(Math.min(images.length, 6) / imagesPerRow);
+    yPos += rowsUsed * (imgSize + 12) + 2;
+}
     
     // Update History
     if (updates && updates.length > 0) {
-        if (yPos > pageHeight - 50) {
+        // Reduced threshold to fit more on page
+        if (yPos > pageHeight - 35) {
             pdf.addPage();
             yPos = 20;
         }
@@ -2720,20 +2728,20 @@ window.downloadPDF = function() {
         pdf.setTextColor(243, 156, 18);
         pdf.setFont('helvetica', 'bold');
         pdf.text(`Update History (${updates.length} entries)`, 20, yPos);
-        yPos += 5;
+        yPos += 3;  // Reduced spacing
         
         // Table header
         pdf.setFillColor(243, 156, 18);
-        pdf.rect(20, yPos, 170, 5, 'F');
+        pdf.rect(20, yPos, 170, 4.5, 'F');  // Slightly shorter header
         pdf.setFontSize(5.5);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Date/Time Updates', 22, yPos + 3.5);
-        pdf.text('Field', 50, yPos + 3.5);
-        pdf.text('Old Value', 80, yPos + 3.5);
-        pdf.text('New Value', 120, yPos + 3.5);
-        pdf.text('By', 160, yPos + 3.5);
-        yPos += 6;
+        pdf.text('Date/Time', 22, yPos + 3);
+        pdf.text('Field', 50, yPos + 3);
+        pdf.text('Old Value', 80, yPos + 3);
+        pdf.text('New Value', 120, yPos + 3);
+        pdf.text('By', 160, yPos + 3);
+        yPos += 5;  // Reduced from 6 to 5
         
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
