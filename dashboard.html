@@ -2364,7 +2364,7 @@ window.showPDFPreview = function(id) {
     let imagesHTML = '';
     if (images.length > 0) {
         imagesHTML = `<div style="margin:30px 0; text-align:center;">
-            <h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px;text-align:center;">Campaign Images</h3>
+            <h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px;text-align:center;">Campaign Image</h3>
             <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;align-items:center;">`;
         images.forEach((img, idx) => {
             const imageData = (img && img.data) ? img.data : img;
@@ -2604,7 +2604,7 @@ window.downloadPDF = function() {
         pdf.setFontSize(12);
         pdf.setTextColor(44, 62, 80);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Campaign Images', 105, yPos, { align: 'center' });
+        pdf.text('Campaign Image', 105, yPos, { align: 'center' });
         yPos += 6;
         
         const imgSize = 40;
