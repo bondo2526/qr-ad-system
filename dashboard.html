@@ -1442,6 +1442,9 @@ window.updatePlanDetails = function() {
         planDetails.style.display = 'block';
         planHoursSpan.innerHTML = '⏱️ 6 days (8 hrs) display/week';
         planPriceSpan.innerHTML = '💰 $54/month';
+    } else {
+        planDetails.style.display = 'none';
+        return;
     }
     
     window.selectedPlanData = {
@@ -1451,7 +1454,7 @@ window.updatePlanDetails = function() {
         maxDailyHours: maxDailyHours
     };
     
-    //Check existing dates and show warning
+    // Check existing dates and show warning
     const startDateTime = document.getElementById('startDateTime').value;
     const endDateTime = document.getElementById('endDateTime').value;
     if (startDateTime && endDateTime) {
@@ -1461,21 +1464,18 @@ window.updatePlanDetails = function() {
         const days = Math.ceil(totalHours / 24);
         const avgHoursPerDay = totalHours / days;
         
+        // Remove existing warning if any
+        const existingWarning = document.getElementById('planWarning');
+        if (existingWarning) {
+            existingWarning.remove();
+        }
+        
         if (avgHoursPerDay > maxDailyHours) {
-            const warningDiv = document.getElementById('planWarning');
-            if (!warningDiv) {
-                const warning = document.createElement('div');
-                warning.id = 'planWarning';
-                warning.style.cssText = 'margin-top: 8px; padding: 8px; background: #2a1e1e; border-left: 3px solid #dc3545; border-radius: 6px; font-size: 12px; color: #dc3545;';
-                warning.innerHTML = `⚠️ Warning: ${planName} plan allows max ${maxDailyHours} hours/day. Current schedule averages ${avgHoursPerDay.toFixed(1)} hours/day.`;
-                planDetails.parentNode.insertBefore(warning, planDetails.nextSibling);
-            } else {
-                warningDiv.innerHTML = `⚠️ Warning: ${planName} plan allows max ${maxDailyHours} hours/day. Current schedule averages ${avgHoursPerDay.toFixed(1)} hours/day.`;
-                warningDiv.style.display = 'block';
-            }
-        } else {
-            const warningDiv = document.getElementById('planWarning');
-            if (warningDiv) warningDiv.style.display = 'none';
+            const warning = document.createElement('div');
+            warning.id = 'planWarning';
+            warning.style.cssText = 'margin-top: 8px; padding: 8px; background: #2a1e1e; border-left: 3px solid #dc3545; border-radius: 6px; font-size: 12px; color: #dc3545;';
+            warning.innerHTML = `⚠️ Warning: ${planName} plan allows max ${maxDailyHours} hours/day. Current schedule averages ${avgHoursPerDay.toFixed(1)} hours/day.`;
+            planDetails.parentNode.insertBefore(warning, planDetails.nextSibling);
         }
     }
 };
@@ -1632,7 +1632,8 @@ window.updatePlanDetails = function() {
         if (!validateCampaignForm()) {
             return;
         }
-        Validate daily hours based on plan
+        
+    //Validate daily hours based on plan
     if (!validateDailyHours()) {
         return;
     }
