@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ad & Coupon Dashboard V 7.0</title>
+    <title>Ad & Coupon Dashboard V 8.0</title>
 
     <!-- Firebase v9 compat for Ad Display System -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -94,6 +94,28 @@
             background: #2a2f38; padding: 7px 14px; border-radius: 8px;
             font-size: 13px; color: #4a9eff; border: 1px solid #3a4050;
         }
+        /* Pricing Plan Dropdown Styles */
+#pricingPlan {
+    background: #2a2f38;
+    border: 2px solid #4a9eff;
+    color: white;
+    cursor: pointer;
+}
+
+#pricingPlan option {
+    background: #1a1e24;
+    color: white;
+}
+
+#planDetails {
+    background: #1a1e24;
+    border-left: 3px solid #4a9eff;
+    animation: fadeIn 0.3s ease;
+}
+
+#planDetails span {
+    margin-right: 15px;
+}
 
         /* ─── TABS ───────────────────────────────────────────── */
         .tabs {
@@ -467,7 +489,7 @@
     <div id="loginScreen">
         <div class="login-box">
             <h2>🔐 Unified Dashboard</h2>
-            <p>Ad Display &amp; Coupon System · V 7.0</p>
+            <p>Ad Display &amp; Coupon System · V 8.0</p>
             <input type="password" id="passwordInput" placeholder="Enter dashboard password" onkeypress="if(event.key==='Enter')handleLogin()">
             <button class="login-btn-main" id="loginBtn" onclick="handleLogin()">
                 <span id="loginText">🔓 Login to Dashboard</span>
@@ -543,6 +565,18 @@
                             <label>Product Name</label>
                             <input type="text" id="prodname" placeholder="Product Name Goes Here" required oninput="updateHashPreviews()">
                         </div>
+                        <div class="form-group">
+    <label>📋 Pricing Plan</label>
+    <select id="pricingPlan" required onchange="updatePlanDetails()">
+        <option value="" disabled selected>Select a plan</option>
+        <option value="light">Light Plan - $35 (32 hours/month)</option>
+        <option value="standard">Standard Plan - $48 (96 hours/month)</option>
+        <option value="professional">Professional Plan - $54 (192 hours/month)</option>
+    </select>
+    <div id="planDetails" style="margin-top: 8px; padding: 8px; background: #1a1e24; border-radius: 6px; font-size: 12px; display: none;">
+        <span id="planHours"></span> | <span id="planPrice"></span> | 💰 <span id="planBreakeven"></span>
+    </div>
+</div>
                         <div class="datetime-row">
                             <div class="form-group">
                                 <label>Start Date &amp; Time</label>
@@ -1313,6 +1347,10 @@ function buildAdCampaignHTML(c) {
         html += '<div style="display:flex;flex-direction:column;gap:4px;">';
         html += '<span class="campaign-name" style="font-size:24px;">' + (c.name || 'Unknown') + '</span>';
         html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
+        html += '<div style="margin-top: 5px;">';
+html += '<span style="font-size:14px;color:#28a745;">📋 Plan: ' + (c.pricing_plan || 'light').toUpperCase() + '</span>';
+html += '<span style="font-size:12px;color:#a0a0a0;margin-left:10px;">⏱️ ' + (c.plan_hours || 32) + ' hours | 💰 $' + (c.plan_price || 35) + '</span>';
+html += '</div>';
         html += '</div>';
         html += '<span class="campaign-id">' + c.id + '</span>';
         html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
@@ -1661,6 +1699,50 @@ document.getElementById('imageInput')?.addEventListener('change', e => {
         renderImagePreview();
     }
 });
+
+    // Update plan details and auto-set dates based on selected plan
+window.updatePlanDetails = function() {
+    const plan = document.getElementById('pricingPlan').value;
+    const planDetails = document.getElementById('planDetails');
+    const planHoursSpan = document.getElementById('planHours');
+    const planPriceSpan = document.getElementById('planPrice');
+    
+    let hours = 0;
+    let price = 0;
+    let planName = '';
+    
+    if (plan === 'light') {
+        hours = 32;
+        price = 35;
+        planName = 'Light';
+        planDetails.style.display = 'block';
+        planHoursSpan.innerHTML = '⏱️ 32 hours/month';
+        planPriceSpan.innerHTML = '💰 $35/month';
+        
+    } else if (plan === 'standard') {
+        hours = 96;
+        price = 48;
+        planName = 'Standard';
+        planDetails.style.display = 'block';
+        planHoursSpan.innerHTML = '⏱️ 96 hours/month';
+        planPriceSpan.innerHTML = '💰 $48/month';
+        
+    } else if (plan === 'professional') {
+        hours = 192;
+        price = 54;
+        planName = 'Professional';
+        planDetails.style.display = 'block';
+        planHoursSpan.innerHTML = '⏱️ 192 hours/month';
+        planPriceSpan.innerHTML = '💰 $54/month';
+    }
+    
+    // Store globally for later use
+    window.selectedPlanData = {
+        name: planName,
+        hours: hours,
+        price: price
+    };
+};
     
 function renderImagePreview() {
     const grid = document.getElementById('imagePreview');
@@ -1933,6 +2015,10 @@ const imagesData = [{
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
             status: status,
             update_history: []
+            pricing_plan: window.selectedPlan ? window.selectedPlan.name : 'light',
+            plan_hours: window.selectedPlan ? window.selectedPlan.hours : 32,
+            plan_price: window.selectedPlan ? window.selectedPlan.price : 35,
+            
         });
         
         await db.collection('blockchain').add({ 
@@ -2288,6 +2374,8 @@ if (images.length > 0) {
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;width:140px;">Station:</td><td style="padding:10px 0;"><strong>${c.station || 'N/A'}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Customer:</td><td style="padding:10px 0;"><strong>${c.name}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Product:</td><td style="padding:10px 0;"><strong>${c.product_name || 'Not specified'}</strong></td></tr>
+                html += '<tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Pricing Plan:</td><td style="padding:10px 0;"><strong>' + (c.pricing_plan || 'light').toUpperCase() + '</strong> (' + (c.plan_hours || 32) + ' hours - $' + (c.plan_price || 35) + ')</td></tr>';
+html += '<tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Break Even:</td><td style="padding:10px 0;"><strong>'</td></tr>';
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Status:</td><td style="padding:10px 0;"><span style="background:${statusColor};color:white;padding:5px 15px;border-radius:20px;font-size:12px;">${status}</span></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Start Date:</td><td style="padding:10px 0;">${isNaN(start) ? 'Invalid' : start.toLocaleString()}</td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">End Date:</td><td style="padding:10px 0;">${isNaN(end) ? 'Invalid' : end.toLocaleString()}</td></tr>
@@ -2412,6 +2500,12 @@ pdf.setFont('helvetica', 'bold');
 pdf.text('Product:', leftX, rowY);
 pdf.setFont('helvetica', 'normal');
 pdf.text(c.product_name || 'Not specified', rightX, rowY);
+rowY += 6;
+
+    pdf.setFont('helvetica', 'bold');
+pdf.text('Plan:', leftX, rowY);
+pdf.setFont('helvetica', 'normal');
+pdf.text(`${c.plan_name || 'Light'} (${c.plan_hours || 32} hours)`, rightX, rowY);
 rowY += 6;
     
     pdf.setFont('helvetica', 'bold');
