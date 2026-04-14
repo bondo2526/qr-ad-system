@@ -2564,8 +2564,10 @@ window.downloadPDF = function() {
     pdf.setFont('helvetica', 'bold');
     pdf.text('Monthly Pricing Plan:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`${planName} (${planDescription})`, rightX, rowY);
-    rowY += 6;
+    const planText = `${planName} (${planDescription})`;
+    const planLines = pdf.splitTextToSize(planText, 90);
+    pdf.text(planLines, rightX, rowY);
+    rowY += (planLines.length * 4);
     
     // Status
     pdf.setFont('helvetica', 'bold');
@@ -2635,7 +2637,6 @@ window.downloadPDF = function() {
                         const x = startX + (col * (imgSize + 10));
                         const y = yPos + (row * (imgSize + 15));
                         pdf.addImage(base64Data, 'JPEG', x, y, imgSize, imgSize);
-                        // NO caption text
                     }
                 }
             } catch (e) {
@@ -2647,9 +2648,60 @@ window.downloadPDF = function() {
         yPos += rowsUsed * (imgSize + 15) + 8;
     }
     
-    // Update History - SHOW ALL UPDATES
-    if (updates && updates.length > 0) {
-        // Check if we need a new page
+    // GROUP UPDATES BY TIMESTAMP
+    const groupedUpdates = {};
+    
+    for (const update of updates) {
+        let timestamp = update.timestamp;
+        if (!timestamp) continue;
+        
+        // Use timestamp as key (round to nearest minute to group same-time edits)
+        const date = new Date(timestamp);
+        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
+        
+        if (!groupedUpdates[key]) {
+            groupedUpdates[key] = {
+                timestamp: timestamp,
+                changes: {}
+            };
+        }
+        
+        // Parse the change
+        let fieldName = '';
+        let oldVal = '';
+        let newVal = '';
+        
+        if (update.changes && typeof update.changes === 'string') {
+            const changeStr = update.changes;
+            const arrowIndex = changeStr.indexOf('→');
+            if (arrowIndex > -1) {
+                const beforeArrow = changeStr.substring(0, arrowIndex);
+                const afterArrow = changeStr.substring(arrowIndex + 1);
+                const colonIndex = beforeArrow.indexOf(':');
+                if (colonIndex > -1) {
+                    fieldName = beforeArrow.substring(0, colonIndex).trim();
+                    oldVal = beforeArrow.substring(colonIndex + 1).trim();
+                    newVal = afterArrow.trim();
+                }
+            }
+        } else if (update.field) {
+            fieldName = update.field;
+            oldVal = update.old_value || '-';
+            newVal = update.new_value || '-';
+        }
+        
+        if (fieldName) {
+            groupedUpdates[key].changes[fieldName] = { oldVal, newVal };
+        }
+    }
+    
+    // Convert grouped updates to array and sort by timestamp (oldest first)
+    const groupedUpdatesArray = Object.values(groupedUpdates).sort((a, b) => 
+        new Date(a.timestamp) - new Date(b.timestamp)
+    );
+    
+    // Update History - SHOW GROUPED UPDATES
+    if (groupedUpdatesArray.length > 0) {
         if (yPos > pageHeight - 50) {
             pdf.addPage();
             yPos = 20;
@@ -2658,7 +2710,7 @@ window.downloadPDF = function() {
         pdf.setFontSize(12);
         pdf.setTextColor(243, 156, 18);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(`Update History (${updates.length} updates)`, 20, yPos);
+        pdf.text(`Update History (${groupedUpdatesArray.length} entries)`, 20, yPos);
         yPos += 5;
         
         // Table header
@@ -2668,109 +2720,86 @@ window.downloadPDF = function() {
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
         pdf.text('Date/Time', 22, yPos + 3.5);
-        pdf.text('Field', 55, yPos + 3.5);
-        pdf.text('Old Value', 80, yPos + 3.5);
-        pdf.text('New Value', 115, yPos + 3.5);
-        pdf.text('Updated By', 150, yPos + 3.5);
+        pdf.text('Changes', 55, yPos + 3.5);
+        pdf.text('From', 100, yPos + 3.5);
+        pdf.text('To', 135, yPos + 3.5);
         yPos += 6;
         
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(5.5);
         
-        // Show ALL updates in chronological order (oldest first)
-        const allUpdates = [...updates].reverse();
-        
-        for (let u = 0; u < allUpdates.length; u++) {
-            const update = allUpdates[u];
+        for (let u = 0; u < groupedUpdatesArray.length; u++) {
+            const group = groupedUpdatesArray[u];
             
-            // Format date - shorter format to fit
-            let updateDate = '';
-            if (update.timestamp) {
-                const d = new Date(update.timestamp);
-                updateDate = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+            // Format date
+            const d = new Date(group.timestamp);
+            const updateDate = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+            
+            // Get the changes
+            const changes = group.changes;
+            const hasStart = changes['Start Date'] || changes['Start'];
+            const hasEnd = changes['End Date'] || changes['End'];
+            
+            let changeText = '';
+            let fromText = '';
+            let toText = '';
+            
+            if (hasStart && hasEnd) {
+                changeText = 'Start & End Dates';
+                fromText = `${hasStart.oldVal || '-'} → ${hasEnd.oldVal || '-'}`;
+                toText = `${hasStart.newVal || '-'} → ${hasEnd.newVal || '-'}`;
+            } else if (hasStart) {
+                changeText = 'Start Date';
+                fromText = hasStart.oldVal || '-';
+                toText = hasStart.newVal || '-';
+            } else if (hasEnd) {
+                changeText = 'End Date';
+                fromText = hasEnd.oldVal || '-';
+                toText = hasEnd.newVal || '-';
             } else {
-                updateDate = 'Unknown';
-            }
-            
-            const updatedBy = (update.updated_by || 'Unknown').substring(0, 8);
-            
-            let fieldName = '';
-            let oldVal = '';
-            let newVal = '';
-            
-            // Parse the change details
-            if (update.changes && typeof update.changes === 'string') {
-                const changeStr = update.changes;
-                const arrowIndex = changeStr.indexOf('→');
-                if (arrowIndex > -1) {
-                    const beforeArrow = changeStr.substring(0, arrowIndex);
-                    const afterArrow = changeStr.substring(arrowIndex + 1);
-                    const colonIndex = beforeArrow.indexOf(':');
-                    if (colonIndex > -1) {
-                        fieldName = beforeArrow.substring(0, colonIndex).trim();
-                        oldVal = beforeArrow.substring(colonIndex + 1).trim();
-                        newVal = afterArrow.trim();
-                    } else {
-                        fieldName = 'Changes';
-                        oldVal = beforeArrow.trim();
-                        newVal = afterArrow.trim();
-                    }
-                } else {
-                    fieldName = 'Changes';
-                    newVal = changeStr;
-                    oldVal = '-';
+                // Other changes
+                const firstChange = Object.entries(changes)[0];
+                if (firstChange) {
+                    changeText = firstChange[0];
+                    fromText = firstChange[1].oldVal || '-';
+                    toText = firstChange[1].newVal || '-';
                 }
-            } else if (update.field) {
-                fieldName = update.field;
-                oldVal = update.old_value || '-';
-                newVal = update.new_value || '-';
-            } else {
-                fieldName = 'Changes';
-                oldVal = '-';
-                newVal = update.changes || 'Campaign updated';
             }
             
-            // Clean up values
-            fieldName = fieldName.substring(0, 12);
+            // Extract just time from date strings
+            const extractTime = (dateStr) => {
+                if (!dateStr || dateStr === '-') return '-';
+                const timeMatch = String(dateStr).match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
+                if (timeMatch) return timeMatch[0];
+                if (String(dateStr).includes('→')) {
+                    const parts = String(dateStr).split('→');
+                    const leftTime = extractTime(parts[0]);
+                    const rightTime = extractTime(parts[1]);
+                    return `${leftTime} → ${rightTime}`;
+                }
+                return String(dateStr).substring(0, 12);
+            };
             
-            // Extract just the time from oldVal and newVal if they're dates
-            let oldValShort = String(oldVal);
-            let newValShort = String(newVal);
-            
-            // If it looks like a date, extract time only
-            if (oldValShort.includes('2026') || oldValShort.includes('2025')) {
-                const timeMatch = oldValShort.match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
-                if (timeMatch) oldValShort = timeMatch[0];
-                else oldValShort = oldValShort.substring(0, 15);
-            } else {
-                oldValShort = oldValShort.substring(0, 18);
-            }
-            
-            if (newValShort.includes('2026') || newValShort.includes('2025')) {
-                const timeMatch = newValShort.match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
-                if (timeMatch) newValShort = timeMatch[0];
-                else newValShort = newValShort.substring(0, 15);
-            } else {
-                newValShort = newValShort.substring(0, 18);
-            }
+            const fromTextShort = extractTime(fromText);
+            const toTextShort = extractTime(toText);
             
             // Calculate row height
-            const oldLines = pdf.splitTextToSize(oldValShort, 28);
-            const newLines = pdf.splitTextToSize(newValShort, 28);
-            const maxLines = Math.max(1, oldLines.length, newLines.length);
+            const changeLines = pdf.splitTextToSize(changeText, 35);
+            const fromLines = pdf.splitTextToSize(fromTextShort, 30);
+            const toLines = pdf.splitTextToSize(toTextShort, 30);
+            const maxLines = Math.max(changeLines.length, fromLines.length, toLines.length, 1);
             const rowHeight = Math.max(5, maxLines * 3);
             
-            // Check if we need a new page
+            // Check for new page
             if (yPos + rowHeight > pageHeight - 20) {
                 pdf.addPage();
                 yPos = 20;
                 
-                // Redraw header on new page
                 pdf.setFontSize(12);
                 pdf.setTextColor(243, 156, 18);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text(`Update History (${updates.length} updates) - Continued`, 20, yPos);
+                pdf.text(`Update History (${groupedUpdatesArray.length} entries) - Continued`, 20, yPos);
                 yPos += 5;
                 
                 pdf.setFillColor(243, 156, 18);
@@ -2779,10 +2808,9 @@ window.downloadPDF = function() {
                 pdf.setTextColor(255, 255, 255);
                 pdf.setFont('helvetica', 'bold');
                 pdf.text('Date/Time', 22, yPos + 3.5);
-                pdf.text('Field', 55, yPos + 3.5);
-                pdf.text('Old Value', 80, yPos + 3.5);
-                pdf.text('New Value', 115, yPos + 3.5);
-                pdf.text('Updated By', 150, yPos + 3.5);
+                pdf.text('Changes', 55, yPos + 3.5);
+                pdf.text('From', 100, yPos + 3.5);
+                pdf.text('To', 135, yPos + 3.5);
                 yPos += 6;
                 pdf.setTextColor(0, 0, 0);
                 pdf.setFontSize(5.5);
@@ -2796,10 +2824,9 @@ window.downloadPDF = function() {
             
             // Write cell content
             pdf.text(updateDate, 22, yPos + 3);
-            pdf.text(fieldName, 55, yPos + 3);
-            pdf.text(oldLines, 80, yPos + 3);
-            pdf.text(newLines, 115, yPos + 3);
-            pdf.text(updatedBy, 150, yPos + 3);
+            pdf.text(changeLines, 55, yPos + 3);
+            pdf.text(fromLines, 100, yPos + 3);
+            pdf.text(toLines, 135, yPos + 3);
             
             yPos += rowHeight + 1;
         }
