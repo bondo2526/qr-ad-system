@@ -2484,6 +2484,8 @@ window.downloadPDF = function() {
     }
     
     let yPos = 15;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
     
     // Title
     pdf.setFontSize(20);
@@ -2527,7 +2529,7 @@ window.downloadPDF = function() {
         statusColor = [220, 53, 69];
     }
     
-    // Campaign details box - increased height for more rows
+    // Campaign details box
     pdf.setFillColor(248, 249, 250);
     pdf.rect(20, yPos, 170, 58, 'F');
     pdf.setFontSize(9);
@@ -2558,7 +2560,7 @@ window.downloadPDF = function() {
     pdf.text(c.product_name || 'Not specified', rightX, rowY);
     rowY += 6;
     
-    // Monthly Pricing Plan (with full description)
+    // Monthly Pricing Plan
     pdf.setFont('helvetica', 'bold');
     pdf.text('Monthly Pricing Plan:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
@@ -2604,12 +2606,10 @@ window.downloadPDF = function() {
         pdf.setFontSize(12);
         pdf.setTextColor(44, 62, 80);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Campaign Image', 105, yPos, { align: 'center' });
+        pdf.text('Campaign Images', 105, yPos, { align: 'center' });
         yPos += 6;
         
         const imgSize = 40;
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        
         const imagesPerRow = Math.min(3, Math.min(images.length, 6));
         const totalWidth = imagesPerRow * imgSize + (imagesPerRow - 1) * 10;
         const startX = (pageWidth - totalWidth) / 2;
@@ -2635,7 +2635,7 @@ window.downloadPDF = function() {
                         const x = startX + (col * (imgSize + 10));
                         const y = yPos + (row * (imgSize + 15));
                         pdf.addImage(base64Data, 'JPEG', x, y, imgSize, imgSize);
-                        // NO CAPTION TEXT - removed the pdf.text line
+                        // NO caption text
                     }
                 }
             } catch (e) {
@@ -2647,17 +2647,24 @@ window.downloadPDF = function() {
         yPos += rowsUsed * (imgSize + 15) + 8;
     }
     
-    // Update History
+    // Update History - SHOW ALL UPDATES
     if (updates && updates.length > 0) {
+        // Check if we need a new page
+        if (yPos > pageHeight - 50) {
+            pdf.addPage();
+            yPos = 20;
+        }
+        
         pdf.setFontSize(12);
         pdf.setTextColor(243, 156, 18);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Update History', 20, yPos);
+        pdf.text(`Update History (${updates.length} updates)`, 20, yPos);
         yPos += 5;
         
+        // Table header
         pdf.setFillColor(243, 156, 18);
         pdf.rect(20, yPos, 170, 5, 'F');
-        pdf.setFontSize(6.5);
+        pdf.setFontSize(6);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
         pdf.text('Date/Time', 22, yPos + 3.5);
@@ -2669,58 +2676,31 @@ window.downloadPDF = function() {
         
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(6);
+        pdf.setFontSize(5.5);
         
-        const recentUpdates = updates.slice(-5).reverse();
+        // Show ALL updates in chronological order (oldest first)
+        const allUpdates = [...updates].reverse();
         
-        for (let u = 0; u < recentUpdates.length; u++) {
-            const update = recentUpdates[u];
-            const updateDate = update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown';
-            const updatedBy = (update.updated_by || 'Unknown').substring(0, 10);
+        for (let u = 0; u < allUpdates.length; u++) {
+            const update = allUpdates[u];
+            
+            // Format date - shorter format to fit
+            let updateDate = '';
+            if (update.timestamp) {
+                const d = new Date(update.timestamp);
+                updateDate = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+            } else {
+                updateDate = 'Unknown';
+            }
+            
+            const updatedBy = (update.updated_by || 'Unknown').substring(0, 8);
             
             let fieldName = '';
             let oldVal = '';
             let newVal = '';
             
-            if (update.details && update.details.length > 0) {
-                const detail = update.details[0];
-                if (detail.field) {
-                    fieldName = detail.field;
-                    oldVal = detail.old_value || '-';
-                    newVal = detail.new_value || '-';
-                } else if (typeof detail === 'string' && detail.includes('→')) {
-                    const parts = detail.split('→');
-                    if (parts.length === 2) {
-                        const fieldPart = parts[0].split(':')[0] || 'Changes';
-                        fieldName = fieldPart.trim();
-                        oldVal = parts[0].split(':')[1] || parts[0];
-                        newVal = parts[1];
-                    }
-                }
-            }
-            
-            if (!fieldName && update.changed_fields && update.changed_fields.length > 0) {
-                fieldName = update.changed_fields.join(', ');
-                if (update.changes && typeof update.changes === 'string') {
-                    const changeParts = update.changes.split('|');
-                    if (changeParts.length > 0) {
-                        const firstChange = changeParts[0];
-                        if (firstChange.includes('→')) {
-                            const arrowParts = firstChange.split('→');
-                            if (arrowParts.length === 2) {
-                                const colonParts = arrowParts[0].split(':');
-                                if (colonParts.length >= 2) {
-                                    fieldName = colonParts[0].trim();
-                                    oldVal = colonParts.slice(1).join(':').trim();
-                                    newVal = arrowParts[1].trim();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (!fieldName && update.changes && typeof update.changes === 'string') {
+            // Parse the change details
+            if (update.changes && typeof update.changes === 'string') {
                 const changeStr = update.changes;
                 const arrowIndex = changeStr.indexOf('→');
                 if (arrowIndex > -1) {
@@ -2741,52 +2721,97 @@ window.downloadPDF = function() {
                     newVal = changeStr;
                     oldVal = '-';
                 }
-            }
-            
-            if (!fieldName && update.field) {
+            } else if (update.field) {
                 fieldName = update.field;
                 oldVal = update.old_value || '-';
                 newVal = update.new_value || '-';
-            }
-            
-            if (!fieldName) {
+            } else {
                 fieldName = 'Changes';
                 oldVal = '-';
                 newVal = update.changes || 'Campaign updated';
             }
             
-            fieldName = fieldName.replace(/[^\x20-\x7E]/g, '').substring(0, 20);
-            oldVal = String(oldVal).replace(/[^\x20-\x7E]/g, '').substring(0, 30);
-            newVal = String(newVal).replace(/[^\x20-\x7E]/g, '').substring(0, 30);
+            // Clean up values
+            fieldName = fieldName.substring(0, 12);
             
-            const oldLines = pdf.splitTextToSize(oldVal, 30);
-            const newLines = pdf.splitTextToSize(newVal, 30);
+            // Extract just the time from oldVal and newVal if they're dates
+            let oldValShort = String(oldVal);
+            let newValShort = String(newVal);
+            
+            // If it looks like a date, extract time only
+            if (oldValShort.includes('2026') || oldValShort.includes('2025')) {
+                const timeMatch = oldValShort.match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
+                if (timeMatch) oldValShort = timeMatch[0];
+                else oldValShort = oldValShort.substring(0, 15);
+            } else {
+                oldValShort = oldValShort.substring(0, 18);
+            }
+            
+            if (newValShort.includes('2026') || newValShort.includes('2025')) {
+                const timeMatch = newValShort.match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
+                if (timeMatch) newValShort = timeMatch[0];
+                else newValShort = newValShort.substring(0, 15);
+            } else {
+                newValShort = newValShort.substring(0, 18);
+            }
+            
+            // Calculate row height
+            const oldLines = pdf.splitTextToSize(oldValShort, 28);
+            const newLines = pdf.splitTextToSize(newValShort, 28);
             const maxLines = Math.max(1, oldLines.length, newLines.length);
-            const rowHeight = Math.max(5, maxLines * 3.5);
+            const rowHeight = Math.max(5, maxLines * 3);
             
+            // Check if we need a new page
+            if (yPos + rowHeight > pageHeight - 20) {
+                pdf.addPage();
+                yPos = 20;
+                
+                // Redraw header on new page
+                pdf.setFontSize(12);
+                pdf.setTextColor(243, 156, 18);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(`Update History (${updates.length} updates) - Continued`, 20, yPos);
+                yPos += 5;
+                
+                pdf.setFillColor(243, 156, 18);
+                pdf.rect(20, yPos, 170, 5, 'F');
+                pdf.setFontSize(6);
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('Date/Time', 22, yPos + 3.5);
+                pdf.text('Field', 55, yPos + 3.5);
+                pdf.text('Old Value', 80, yPos + 3.5);
+                pdf.text('New Value', 115, yPos + 3.5);
+                pdf.text('Updated By', 150, yPos + 3.5);
+                yPos += 6;
+                pdf.setTextColor(0, 0, 0);
+                pdf.setFontSize(5.5);
+            }
+            
+            // Alternate row background
             if (u % 2 === 0) {
                 pdf.setFillColor(245, 245, 245);
                 pdf.rect(20, yPos - 1, 170, rowHeight, 'F');
             }
             
-            let shortDate = updateDate;
-            if (updateDate.length > 18) {
-                shortDate = updateDate.substring(0, 15) + '...';
-            }
-            
-            pdf.text(shortDate, 22, yPos + 3);
+            // Write cell content
+            pdf.text(updateDate, 22, yPos + 3);
             pdf.text(fieldName, 55, yPos + 3);
             pdf.text(oldLines, 80, yPos + 3);
             pdf.text(newLines, 115, yPos + 3);
             pdf.text(updatedBy, 150, yPos + 3);
             
             yPos += rowHeight + 1;
-            if (yPos > 240) break;
         }
-        yPos += 3;
+        yPos += 5;
     }
     
     // Cryptographic Hashes
+    if (yPos > pageHeight - 40) {
+        pdf.addPage();
+        yPos = 20;
+    }
+    
     pdf.setFontSize(12);
     pdf.setTextColor(44, 62, 80);
     pdf.setFont('helvetica', 'bold');
@@ -2824,14 +2849,6 @@ window.downloadPDF = function() {
     yPos += endBoxHeight + 5;
     
     // FOOTER
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    
-    if (yPos > pageHeight - 25) {
-        pdf.addPage();
-        yPos = 20;
-    }
-    
     const footerY = pageHeight - 18;
     
     pdf.setDrawColor(200, 200, 200);
