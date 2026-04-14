@@ -1010,7 +1010,6 @@ function formatCompactDate(date) {
     let allProofs = [];
     let currentFilter = 'all';
     let currentStationFilter = 'all';
-    let currentPDFCampaign = null;
     let selectedImage = null;
     let adChart = null;
 
@@ -1087,7 +1086,6 @@ function buildAdCampaignHTML(c, adNumber) {
         let imgsHTML = '';
         if (images && images.length > 0) {
             imgsHTML = images.slice(0, 5).map(function(img, idx) {
-                // ... keep your existing image code ...
             }).join('');
         } else {
             imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 No images uploaded</div>';
@@ -1252,15 +1250,7 @@ html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>'
             });
         }
     }
-
-    window.filterCampaigns = function(filter) {
-        currentFilter = filter;
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.textContent.toLowerCase().includes(filter === 'all' ? 'all' : filter));
-        });
-        displayAdCampaigns();
-    };
-    
+  
     window.filterByStation = function(st) {
         currentStationFilter = st;
         document.querySelectorAll('.filter-bar:nth-of-type(2) .filter-btn, #tab-campaigns .filter-bar:last-of-type .filter-btn').forEach(btn => {
@@ -1343,16 +1333,6 @@ function applyAdFilters() {
         currentFilter = filter;
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.textContent.toLowerCase().includes(filter === 'all' ? 'all' : filter));
-        });
-        applyAdFilters();
-    };
-
-    window.filterByStation = function(st) {
-        currentStationFilter = st;
-        document.querySelectorAll('.station-filter').forEach(btn => {
-            const btnText = btn.textContent.replace(/\s/g, '');
-            const filterText = st.replace(/\s/g, '');
-            btn.classList.toggle('active', btnText === filterText || (st === 'all' && btnText === 'AllStations'));
         });
         applyAdFilters();
     };
