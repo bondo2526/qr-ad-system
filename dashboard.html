@@ -574,7 +574,7 @@
         <option value="professional">Professional Plan - $54 (192 hours/month)</option>
     </select>
     <div id="planDetails" style="margin-top: 8px; padding: 8px; background: #1a1e24; border-radius: 6px; font-size: 12px; display: none;">
-        <span id="planHours"></span> | <span id="planPrice"></span> | 💰 <span id="planBreakeven"></span>
+        <span id="planHours"></span> | <span id="planPrice"></span>
     </div>
 </div>
                         <div class="datetime-row">
@@ -1716,7 +1716,7 @@ window.updatePlanDetails = function() {
         price = 35;
         planName = 'Light';
         planDetails.style.display = 'block';
-        planHoursSpan.innerHTML = '⏱️ 32 hours/month';
+        planHoursSpan.innerHTML = '⏱️ 2 days (4 hrs) display/week';
         planPriceSpan.innerHTML = '💰 $35/month';
         
     } else if (plan === 'standard') {
@@ -1724,7 +1724,7 @@ window.updatePlanDetails = function() {
         price = 48;
         planName = 'Standard';
         planDetails.style.display = 'block';
-        planHoursSpan.innerHTML = '⏱️ 96 hours/month';
+        planHoursSpan.innerHTML = '⏱️ 4 days (6 hrs) display/week';
         planPriceSpan.innerHTML = '💰 $48/month';
         
     } else if (plan === 'professional') {
@@ -1732,7 +1732,7 @@ window.updatePlanDetails = function() {
         price = 54;
         planName = 'Professional';
         planDetails.style.display = 'block';
-        planHoursSpan.innerHTML = '⏱️ 192 hours/month';
+        planHoursSpan.innerHTML = '⏱️ 6 days (8 hrs) display/week';
         planPriceSpan.innerHTML = '💰 $54/month';
     }
     
@@ -2492,13 +2492,7 @@ window.downloadPDF = function() {
     pdf.setFont('helvetica', 'bold');
     pdf.text('Campaign Details', 20, yPos);
     yPos += 6;
-    
-    // Calculate duration
-    const durationHours = Math.round((end - start) / 3600000);
-    const durationDays = Math.floor(Math.abs(durationHours) / 24);
-    const remainingHours = Math.abs(durationHours) % 24;
-    const durationText = durationDays > 0 ? `${durationDays}d ${remainingHours}h` : `${Math.abs(durationHours)}h`;
-    
+      
     // Determine status
     let status = 'UPCOMING';
     let statusColor = [255, 193, 7];
