@@ -1927,6 +1927,7 @@ function validateCampaignForm() {
     return true;
 }
 // ADD CAMPAIGN FORM SUBMIT HANDLER
+// ADD CAMPAIGN FORM SUBMIT HANDLER
 document.getElementById('addCampaignForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -1963,18 +1964,19 @@ document.getElementById('addCampaignForm')?.addEventListener('submit', async fun
         if (endDT <= startDT) throw new Error('End date must be after start date');
         
         document.getElementById('uploadProgress').style.display = 'block';
-// Process single image
-document.getElementById('progressPercent').textContent = '50%';
-document.getElementById('progressFill').style.width = '50%';
-document.getElementById('progressCurrent').textContent = `Processing ${selectedImage.name}`;
-const compressedImage = await compressImage(selectedImage);
-const imagesData = [{
-    name: compressedImage.name,
-    data: compressedImage.data,
-    originalSize: compressedImage.originalSize,
-    compressedSize: compressedImage.compressedSize,
-    wasCompressed: compressedImage.wasCompressed || false
-}];
+        
+        // Process single image
+        document.getElementById('progressPercent').textContent = '50%';
+        document.getElementById('progressFill').style.width = '50%';
+        document.getElementById('progressCurrent').textContent = `Processing ${selectedImage.name}`;
+        const compressedImage = await compressImage(selectedImage);
+        const imagesData = [{
+            name: compressedImage.name,
+            data: compressedImage.data,
+            originalSize: compressedImage.originalSize,
+            compressedSize: compressedImage.compressedSize,
+            wasCompressed: compressedImage.wasCompressed || false
+        }];
         
         document.getElementById('progressPercent').textContent = '100%';
         document.getElementById('progressFill').style.width = '100%';
@@ -1993,6 +1995,25 @@ const imagesData = [{
         const totalCompressedSize = imagesData.reduce((sum, img) => sum + (img.compressedSize || 0), 0);
         const savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : "0.0";
         const productName = document.getElementById('prodname').value.trim();
+        
+        // Get selected plan data
+        const planSelect = document.getElementById('pricingPlan');
+        const selectedPlan = planSelect ? planSelect.value : 'light';
+        let planName = 'Light', planHours = 32, planPrice = 35;
+        
+        if (selectedPlan === 'light') {
+            planName = 'Light';
+            planHours = 32;
+            planPrice = 35;
+        } else if (selectedPlan === 'standard') {
+            planName = 'Standard';
+            planHours = 96;
+            planPrice = 48;
+        } else if (selectedPlan === 'professional') {
+            planName = 'Professional';
+            planHours = 192;
+            planPrice = 54;
+        }
         
         const docRef = await db.collection('customers').add({
             name: name,
@@ -2014,11 +2035,10 @@ const imagesData = [{
             created_by: uid,
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
             status: status,
-            update_history: []
-            pricing_plan: window.selectedPlan ? window.selectedPlan.name : 'light',
-            plan_hours: window.selectedPlan ? window.selectedPlan.hours : 32,
-            plan_price: window.selectedPlan ? window.selectedPlan.price : 35,
-            
+            update_history: [],
+            plan_name: planName,
+            plan_hours: planHours,
+            plan_price: planPrice
         });
         
         await db.collection('blockchain').add({ 
@@ -2042,13 +2062,15 @@ const imagesData = [{
         document.getElementById('uploadProgress').style.display = 'none';
         selectedImage = null;
         renderImagePreview();
-        // Legacy compatibility function
-function renderImagePreviews() {
-    renderImagePreview();
-}
         document.getElementById('imageInput').value = '';
         document.getElementById('addCampaignForm').reset();
         setDefaultDates();
+        
+        // Reset plan dropdown to default
+        if (planSelect) planSelect.value = '';
+        const planDetails = document.getElementById('planDetails');
+        if (planDetails) planDetails.style.display = 'none';
+        
         showAlert('✅ Campaign added successfully!', 'success');
         await loadAdData();
         
@@ -2062,6 +2084,11 @@ function renderImagePreviews() {
         document.getElementById('submitLoading').style.display = 'none';
     }
 });
+
+    // Legacy compatibility function
+function renderImagePreviews() {
+    renderImagePreview();
+}
     // EDIT MODAL
 window.openEditModal = function(id) {
     const c = allAdCampaigns.find(x => x.id === id);
