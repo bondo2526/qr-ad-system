@@ -2640,7 +2640,7 @@ window.downloadPDF = function() {
         yPos += rowsUsed * (imgSize + 15) + 8;
     }
     
-    // Update History - Parse the changes field properly
+    // Update History - Show FULL DATES (not just times)
     if (updates && updates.length > 0) {
         if (yPos > pageHeight - 50) {
             pdf.addPage();
@@ -2653,22 +2653,22 @@ window.downloadPDF = function() {
         pdf.text(`Update History (${updates.length} entries)`, 20, yPos);
         yPos += 5;
         
-        // Table header
+        // Table header - wider columns for full dates
         pdf.setFillColor(243, 156, 18);
         pdf.rect(20, yPos, 170, 5, 'F');
-        pdf.setFontSize(6);
+        pdf.setFontSize(5.5);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
         pdf.text('Date/Time', 22, yPos + 3.5);
-        pdf.text('Field', 55, yPos + 3.5);
-        pdf.text('Old Value', 85, yPos + 3.5);
+        pdf.text('Field', 50, yPos + 3.5);
+        pdf.text('Old Value', 80, yPos + 3.5);
         pdf.text('New Value', 120, yPos + 3.5);
         pdf.text('By', 160, yPos + 3.5);
         yPos += 6;
         
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(5.5);
+        pdf.setFontSize(5);
         
         // Show ALL updates in chronological order (oldest first)
         const allUpdates = [...updates].reverse();
@@ -2691,7 +2691,7 @@ window.downloadPDF = function() {
             let oldVal = '';
             let newVal = '';
             
-            // Parse the changes field (format: "Start Date: old → new | End Date: old → new")
+            // Parse the changes field
             if (update.changes && typeof update.changes === 'string') {
                 const changeStr = update.changes;
                 
@@ -2699,20 +2699,24 @@ window.downloadPDF = function() {
                 if (changeStr.includes('Start Date') && changeStr.includes('End Date')) {
                     fieldName = 'Start & End Dates';
                     
-                    // Extract Start Date change
+                    // Extract full date strings
                     const startMatch = changeStr.match(/Start Date: "([^"]+)" → "([^"]+)"/);
-                    // Extract End Date change
                     const endMatch = changeStr.match(/End Date: "([^"]+)" → "([^"]+)"/);
                     
                     if (startMatch && endMatch) {
-                        // Extract just the time from both
+                        // Extract just the date part (MM/DD/YYYY)
+                        const startOldDate = startMatch[1].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                        const startNewDate = startMatch[2].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                        const endOldDate = endMatch[1].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                        const endNewDate = endMatch[2].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                        
                         const startOldTime = startMatch[1].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
                         const startNewTime = startMatch[2].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
                         const endOldTime = endMatch[1].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
                         const endNewTime = endMatch[2].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
                         
-                        oldVal = `Start: ${startOldTime ? startOldTime[0] : '?'} | End: ${endOldTime ? endOldTime[0] : '?'}`;
-                        newVal = `Start: ${startNewTime ? startNewTime[0] : '?'} | End: ${endNewTime ? endNewTime[0] : '?'}`;
+                        oldVal = `Start: ${startOldDate ? startOldDate[0] : '?'} ${startOldTime ? startOldTime[0] : ''} | End: ${endOldDate ? endOldDate[0] : '?'} ${endOldTime ? endOldTime[0] : ''}`;
+                        newVal = `Start: ${startNewDate ? startNewDate[0] : '?'} ${startNewTime ? startNewTime[0] : ''} | End: ${endNewDate ? endNewDate[0] : '?'} ${endNewTime ? endNewTime[0] : ''}`;
                     }
                 } else {
                     // Single field change
@@ -2725,12 +2729,6 @@ window.downloadPDF = function() {
                             fieldName = beforeArrow.substring(0, colonIndex).trim();
                             oldVal = beforeArrow.substring(colonIndex + 1).trim();
                             newVal = afterArrow.trim();
-                            
-                            // Extract just time
-                            const oldTime = oldVal.match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
-                            const newTime = newVal.match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
-                            if (oldTime) oldVal = oldTime[0];
-                            if (newTime) newVal = newTime[0];
                         } else {
                             fieldName = 'Changes';
                             oldVal = beforeArrow.trim();
@@ -2752,12 +2750,12 @@ window.downloadPDF = function() {
                 newVal = update.changes || 'Campaign updated';
             }
             
-            // Shorten field name if needed
-            fieldName = fieldName.substring(0, 18);
+            // Shorten field name
+            fieldName = fieldName.substring(0, 16);
             
             // Calculate row height
-            const oldLines = pdf.splitTextToSize(oldVal, 28);
-            const newLines = pdf.splitTextToSize(newVal, 28);
+            const oldLines = pdf.splitTextToSize(oldVal, 32);
+            const newLines = pdf.splitTextToSize(newVal, 32);
             const maxLines = Math.max(1, oldLines.length, newLines.length);
             const rowHeight = Math.max(5, maxLines * 3);
             
@@ -2774,17 +2772,17 @@ window.downloadPDF = function() {
                 
                 pdf.setFillColor(243, 156, 18);
                 pdf.rect(20, yPos, 170, 5, 'F');
-                pdf.setFontSize(6);
+                pdf.setFontSize(5.5);
                 pdf.setTextColor(255, 255, 255);
                 pdf.setFont('helvetica', 'bold');
                 pdf.text('Date/Time', 22, yPos + 3.5);
-                pdf.text('Field', 55, yPos + 3.5);
-                pdf.text('Old Value', 85, yPos + 3.5);
+                pdf.text('Field', 50, yPos + 3.5);
+                pdf.text('Old Value', 80, yPos + 3.5);
                 pdf.text('New Value', 120, yPos + 3.5);
                 pdf.text('By', 160, yPos + 3.5);
                 yPos += 6;
                 pdf.setTextColor(0, 0, 0);
-                pdf.setFontSize(5.5);
+                pdf.setFontSize(5);
             }
             
             // Alternate row background
@@ -2794,8 +2792,8 @@ window.downloadPDF = function() {
             }
             
             pdf.text(updateDate, 22, yPos + 3);
-            pdf.text(fieldName, 55, yPos + 3);
-            pdf.text(oldLines, 85, yPos + 3);
+            pdf.text(fieldName, 50, yPos + 3);
+            pdf.text(oldLines, 80, yPos + 3);
             pdf.text(newLines, 120, yPos + 3);
             pdf.text(updatedBy, 160, yPos + 3);
             
