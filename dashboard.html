@@ -1382,9 +1382,6 @@ function applyAdFilters() {
     });
     list.innerHTML = html;
 }
-        list.innerHTML = campaigns.map(c => buildAdCampaignHTML(c)).join('');
-    }
-
     window.filterCampaigns = function(filter) {
         currentFilter = filter;
         document.querySelectorAll('.filter-btn').forEach(btn => {
