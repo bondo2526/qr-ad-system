@@ -1799,9 +1799,6 @@ function validateDailyHours() {
     // If total hours exceeds daily limit, reject immediately
     if (totalHours > maxHoursPerDay) {
         let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
-        message += `Your campaign duration is ${totalHours.toFixed(1)} hours.\n`;
-        message += `\nPlease reduce the duration to ${maxHoursPerDay} hours or less.`;
-        
         alert(message);
         document.getElementById('endDateTime').focus();
         return false;
@@ -1846,9 +1843,6 @@ function validateDailyHours() {
     
     if (totalHours > maxHoursPerDay) {
         let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
-        message += `Your campaign duration is ${totalHours.toFixed(1)} hours.\n`;
-        message += `\nPlease reduce the duration to ${maxHoursPerDay} hours or less.`;
-        
         alert(message);
         document.getElementById('editEndDateTime').focus();
         return false;
