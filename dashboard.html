@@ -1765,7 +1765,7 @@ window.updatePlanDetails = function() {
             document.getElementById('submitLoading').style.display = 'none';
         }
     });
-// Validate daily display hours based on selected plan
+// Validate daily display hours - REJECT if ANY hours exceed the daily limit
 function validateDailyHours() {
     const startDateTime = document.getElementById('startDateTime').value;
     const endDateTime = document.getElementById('endDateTime').value;
@@ -1776,6 +1776,9 @@ function validateDailyHours() {
     
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
+    
+    // Calculate total hours
+    const totalHours = (endDate - startDate) / (1000 * 60 * 60);
     
     let maxHoursPerDay = 0;
     let planName = '';
@@ -1793,44 +1796,11 @@ function validateDailyHours() {
         return true;
     }
     
-    // Calculate hours for each day
-    const currentDate = new Date(startDate);
-    let exceededDays = [];
-    
-    while (currentDate <= endDate) {
-        // Get start of day (midnight)
-        const dayStart = new Date(currentDate);
-        dayStart.setHours(0, 0, 0, 0);
-        
-        // Get end of day
-        const dayEnd = new Date(currentDate);
-        dayEnd.setHours(23, 59, 59, 999);
-        
-        // Calculate overlap between campaign and this day
-        const overlapStart = new Date(Math.max(startDate, dayStart));
-        const overlapEnd = new Date(Math.min(endDate, dayEnd));
-        
-        if (overlapStart < overlapEnd) {
-            const hoursThisDay = (overlapEnd - overlapStart) / (1000 * 60 * 60);
-            
-            if (hoursThisDay > maxHoursPerDay) {
-                exceededDays.push({
-                    date: formatCompactDate(currentDate),
-                    hours: hoursThisDay.toFixed(1)
-                });
-            }
-        }
-        
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    if (exceededDays.length > 0) {
+    // If total hours exceeds daily limit, reject immediately
+    if (totalHours > maxHoursPerDay) {
         let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
-        message += `The following days exceed this limit:\n`;
-        exceededDays.forEach(day => {
-            message += `   • ${day.date}: ${day.hours} hours\n`;
-        });
-        message += `\nPlease adjust your start/end times to ${maxHoursPerDay} hours per day.`;
+        message += `Your campaign duration is ${totalHours.toFixed(1)} hours.\n`;
+        message += `\nPlease reduce the duration to ${maxHoursPerDay} hours or less.`;
         
         alert(message);
         document.getElementById('endDateTime').focus();
@@ -1840,12 +1810,10 @@ function validateDailyHours() {
     return true;
 }
 
-     // Validate daily display hours for EDIT MODAL based on selected plan
-function validateEditDailyHours() {
+  function validateEditDailyHours() {
     const startDateTime = document.getElementById('editStartDateTime').value;
     const endDateTime = document.getElementById('editEndDateTime').value;
     
-    // Get plan from the campaign being edited
     const campaignId = document.getElementById('editCampaignId').value;
     const campaign = allAdCampaigns.find(x => x.id === campaignId);
     
@@ -1857,6 +1825,8 @@ function validateEditDailyHours() {
     
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
+    
+    const totalHours = (endDate - startDate) / (1000 * 60 * 60);
     
     let maxHoursPerDay = 0;
     let planName = '';
@@ -1874,44 +1844,10 @@ function validateEditDailyHours() {
         return true;
     }
     
-    // Calculate hours for each day
-    const currentDate = new Date(startDate);
-    let exceededDays = [];
-    
-    while (currentDate <= endDate) {
-        // Get start of day (midnight)
-        const dayStart = new Date(currentDate);
-        dayStart.setHours(0, 0, 0, 0);
-        
-        // Get end of day
-        const dayEnd = new Date(currentDate);
-        dayEnd.setHours(23, 59, 59, 999);
-        
-        // Calculate overlap between campaign and this day
-        const overlapStart = new Date(Math.max(startDate, dayStart));
-        const overlapEnd = new Date(Math.min(endDate, dayEnd));
-        
-        if (overlapStart < overlapEnd) {
-            const hoursThisDay = (overlapEnd - overlapStart) / (1000 * 60 * 60);
-            
-            if (hoursThisDay > maxHoursPerDay) {
-                exceededDays.push({
-                    date: formatCompactDate(currentDate),
-                    hours: hoursThisDay.toFixed(1)
-                });
-            }
-        }
-        
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    if (exceededDays.length > 0) {
+    if (totalHours > maxHoursPerDay) {
         let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
-        message += `The following days exceed this limit:\n`;
-        exceededDays.forEach(day => {
-            message += `   • ${day.date}: ${day.hours} hours\n`;
-        });
-        message += `\nPlease adjust your start/end times to ${maxHoursPerDay} hours per day.`;
+        message += `Your campaign duration is ${totalHours.toFixed(1)} hours.\n`;
+        message += `\nPlease reduce the duration to ${maxHoursPerDay} hours or less.`;
         
         alert(message);
         document.getElementById('editEndDateTime').focus();
@@ -1919,8 +1855,7 @@ function validateEditDailyHours() {
     }
     
     return true;
-}   
-
+}
     function renderImagePreviews() {
         renderImagePreview();
     }
