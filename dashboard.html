@@ -2329,7 +2329,7 @@ document.getElementById('pdfTitle').textContent = `Campaign Proof Report - ${c.n
     const now = new Date();
     
     // Get plan info
-    const planName = c.plan_name || 'Light';
+    const planName = c.pricing_plan || 'Light';
     const planHours = c.plan_hours || 32;
     const planPrice = c.plan_price || 35;
     
@@ -2592,7 +2592,7 @@ window.downloadPDF = function() {
     const now = new Date();
     
     // Get plan info
-    const planName = c.plan_name || 'Light';
+    const planName = c.pricing_plan || 'Light';
     const planHours = c.plan_hours || 32;
     const planPrice = c.plan_price || 35;
     
