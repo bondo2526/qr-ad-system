@@ -254,6 +254,38 @@
             background:#2a2f38; padding:22px; border-radius:12px;
             border:1px solid #3a4050; transition:all .3s;
         }
+        /* Campaign item border - wraps the entire card */
+.campaign-item {
+    border: 2px solid #3a4050;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    background: #2a2f38;
+    transition: all 0.3s ease;
+}
+
+/* Different border colors based on status */
+.campaign-item.active {
+    border: 2px solid #28a745;
+    background: linear-gradient(135deg, #2a2f38 0%, #1e2a1e 100%);
+}
+
+.campaign-item.upcoming {
+    border: 2px solid #ffc107;
+    background: linear-gradient(135deg, #2a2f38 0%, #2a2a1a 100%);
+}
+
+.campaign-item.expired {
+    border: 2px solid #6c757d;
+    background: linear-gradient(135deg, #2a2f38 0%, #2a2a2a 100%);
+    opacity: 0.8;
+}
+
+/* Hover effect */
+.campaign-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    border-color: #4a9eff;
+}
         .campaign-item:hover { transform:translateY(-2px); box-shadow:0 10px 20px rgba(0,0,0,.2); }
         .campaign-item.active { border-left:4px solid #28a745; }
         .campaign-item.upcoming { border-left:4px solid #ffc107; }
