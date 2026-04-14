@@ -2323,8 +2323,7 @@ window.showPDFPreview = function(id) {
     const c = allAdCampaigns.find(x => x.id === id);
     if (!c) return;
     pdfCampaignId = id;
-    document.getElementById('pdfTitle').textContent = `Campaign Proof Report - ${c.name}`;
-    
+document.getElementById('pdfTitle').textContent = `Campaign Proof Report - ${c.name} (ID: ${c.id.substring(0,8)})`;    
     const images = c.images || [];
     const updates = c.update_history || c.updates || [];
     const now = new Date();
@@ -2683,7 +2682,7 @@ yPos += 8;  // Changed from 12 to 8
     pdf.setFontSize(12);
     pdf.setTextColor(44, 62, 80);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Campaign Details', 20, yPos);
+    pdf.text('Campaign Details', 25, yPos);
     yPos += 6;
     
     // Determine current status
@@ -3074,17 +3073,18 @@ if (images.length > 0) {
     pdf.setTextColor(100, 100, 100);
     pdf.text('Blockchain Verified Proof', pageWidth / 2, footerY + 10, { align: 'center' });
     
-    // Save PDF
-    const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
-    const prodname = c.product_name || 'product';
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-    const fileName = `${safeName}_${prodname}__${dateStr}_Proof.pdf`;
+// Save PDF
+const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+const prodname = c.product_name || 'product';
+const campaignIdShort = c.id ? c.id.substring(0, 8) : 'unknown';
+const year = now.getFullYear();
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+const hours = String(now.getHours()).padStart(2, '0');
+const minutes = String(now.getMinutes()).padStart(2, '0');
+const seconds = String(now.getSeconds()).padStart(2, '0');
+const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+const fileName = `${safeName}_${prodname}__${dateStr}_${campaignIdShort}_proof_report.pdf`;
     
     pdf.save(fileName);
     closePDFPreview();
