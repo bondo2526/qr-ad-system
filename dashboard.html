@@ -2325,8 +2325,6 @@ window.showPDFPreview = function(id) {
     pdfCampaignId = id;
     document.getElementById('pdfTitle').textContent = `Campaign Proof Report - ${c.name}`;
     
-    const start = new Date(c.start_datetime);
-    const end = new Date(c.end_datetime);
     const images = c.images || [];
     const updates = c.update_history || c.updates || [];
     const now = new Date();
@@ -2336,7 +2334,7 @@ window.showPDFPreview = function(id) {
     const planHours = c.plan_hours || 32;
     const planPrice = c.plan_price || 35;
     
-    // Build plan description based on plan type
+    // Build plan description
     let planDescription = '';
     if (planName === 'Light') {
         planDescription = '2 days × 4 hrs display time weekly = 32 hrs monthly / $35';
@@ -2346,21 +2344,63 @@ window.showPDFPreview = function(id) {
         planDescription = '6 days × 8 hrs display time weekly = 192 hrs monthly / $54';
     }
     
-    let status = 'UPCOMING';
-    let statusColor = '#ffc107';
-    if (now >= start && now <= end) {
-        status = 'ACTIVE';
-        statusColor = '#28a745';
-    } else if (now > end) {
-        status = 'EXPIRED';
-        statusColor = '#dc3545';
+    // Find FIRST start/end dates (oldest from update history or original)
+    let firstStart = c.start_datetime ? new Date(c.start_datetime) : null;
+    let firstEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+    
+    // Get LAST start/end dates (current values from campaign)
+    let lastStart = c.start_datetime ? new Date(c.start_datetime) : null;
+    let lastEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+    let lastStartStr = lastStart ? lastStart.toLocaleString() : 'N/A';
+    let lastEndStr = lastEnd ? lastEnd.toLocaleString() : 'N/A';
+    
+    // Parse updates to find the earliest start/end dates
+    if (updates && updates.length > 0) {
+        for (const update of updates) {
+            if (update.changes && typeof update.changes === 'string') {
+                const changeStr = update.changes;
+                
+                const startOldMatch = changeStr.match(/Start Date: "([^"]+)" →/);
+                if (startOldMatch && firstStart) {
+                    const oldStartDate = new Date(startOldMatch[1]);
+                    if (oldStartDate < firstStart) firstStart = oldStartDate;
+                }
+                
+                const endOldMatch = changeStr.match(/End Date: "([^"]+)" →/);
+                if (endOldMatch && firstEnd) {
+                    const oldEndDate = new Date(endOldMatch[1]);
+                    if (oldEndDate < firstEnd) firstEnd = oldEndDate;
+                }
+            }
+        }
     }
     
-    const durationHours = Math.round((end - start) / 3600000);
-    const durationDays = Math.floor(durationHours / 24);
-    const remainingHours = Math.abs(durationHours % 24);
-    const durationText = durationDays > 0 ? `${durationDays} days ${remainingHours} hours` : `${Math.abs(durationHours)} hours`;
+    if (updates.length === 0) {
+        firstStart = c.start_datetime ? new Date(c.start_datetime) : null;
+        firstEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+    }
     
+    const firstStartStr = firstStart ? firstStart.toLocaleString() : 'N/A';
+    const firstEndStr = firstEnd ? firstEnd.toLocaleString() : 'N/A';
+    
+    // Determine current status
+    let status = 'UPCOMING';
+    let statusColor = '#ffc107';
+    const nowDate = new Date();
+    const currentStart = c.start_datetime ? new Date(c.start_datetime) : null;
+    const currentEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+    
+    if (currentStart && currentEnd) {
+        if (nowDate >= currentStart && nowDate <= currentEnd) {
+            status = 'ACTIVE';
+            statusColor = '#28a745';
+        } else if (nowDate > currentEnd) {
+            status = 'EXPIRED';
+            statusColor = '#dc3545';
+        }
+    }
+    
+    // Build images HTML with black borders
     let imagesHTML = '';
     if (images.length > 0) {
         imagesHTML = `<div style="margin:30px 0; text-align:center;">
@@ -2368,80 +2408,166 @@ window.showPDFPreview = function(id) {
             <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;align-items:center;">`;
         images.forEach((img, idx) => {
             const imageData = (img && img.data) ? img.data : img;
-            imagesHTML += `<div style="text-align:center;background:white;padding:15px;border-radius:8px;width:200px;margin:0 auto;">
-                <img src="${imageData}" style="width:100%;height:auto;max-height:180px;object-fit:contain;border-radius:5px;border:2px solid #3498db;">
+            imagesHTML += `<div style="text-align:center;background:white;padding:15px;border-radius:8px;width:200px;margin:0 auto;border:2px solid #000000;">
+                <img src="${imageData}" style="width:100%;height:auto;max-height:180px;object-fit:contain;border-radius:5px;">
             </div>`;
         });
         imagesHTML += `</div></div>`;
     }
     
+    // Build update history HTML
     let updateHistoryHTML = '';
     if (updates && updates.length > 0) {
         updateHistoryHTML = `<div style="background:#fff3e0;border-left:5px solid #f39c12;padding:20px;border-radius:8px;margin:30px 0;">
-            <h3 style="color:#e67e22;margin-bottom:15px;">Update History (${updates.length} updates)</h3>`;
+            <h3 style="color:#e67e22;margin-bottom:15px;">Update History (${updates.length} entries)</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                    <tr style="background:#f39c12;color:white;">
+                        <th style="padding:8px;text-align:left;">Date/Time</th>
+                        <th style="padding:8px;text-align:left;">Field</th>
+                        <th style="padding:8px;text-align:left;">Old Value</th>
+                        <th style="padding:8px;text-align:left;">New Value</th>
+                        <th style="padding:8px;text-align:left;">By</th>
+                    </tr>
+                </thead>
+                <tbody>`;
         
-        updates.slice(-3).reverse().forEach(update => {
-            const updateDate = update.timestamp ? new Date(update.timestamp).toLocaleString() : 'Unknown date';
-            const updatedBy = update.updated_by || 'Unknown';
-            let changeDetails = update.changes || 'Campaign updated';
+        const allUpdates = [...updates].reverse();
+        
+        for (let u = 0; u < allUpdates.length; u++) {
+            const update = allUpdates[u];
             
-            if (update.details && update.details.length > 0) {
-                changeDetails = update.details.join(' | ');
-            } else if (update.field && update.old_value && update.new_value) {
-                changeDetails = `${update.field}: ${update.old_value} → ${update.new_value}`;
+            let updateDate = '';
+            if (update.timestamp) {
+                const d = new Date(update.timestamp);
+                updateDate = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+            } else {
+                updateDate = 'Unknown';
             }
             
-            updateHistoryHTML += `<div style="margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #f39c12;">
-                <div style="color:#e67e22;font-size:12px;font-weight:bold;">📅 ${updateDate}</div>
-                <div style="font-size:12px;margin:8px 0;background:#2c3e50;padding:10px;border-radius:5px;color:#ecf0f1;">${changeDetails}</div>
-                <div style="font-size:10px;color:#7f8c8d;">👤 Updated by: ${updatedBy.substring(0,15)}...</div>
-            </div>`;
-        });
-        updateHistoryHTML += `</div>`;
+            const updatedBy = (update.updated_by || 'Unknown').substring(0, 6);
+            
+            let fieldName = '';
+            let oldVal = '';
+            let newVal = '';
+            
+            if (update.changes && typeof update.changes === 'string') {
+                const changeStr = update.changes;
+                
+                if (changeStr.includes('Start Date') && changeStr.includes('End Date')) {
+                    fieldName = 'Start & End Dates';
+                    
+                    const startMatch = changeStr.match(/Start Date: "([^"]+)" → "([^"]+)"/);
+                    const endMatch = changeStr.match(/End Date: "([^"]+)" → "([^"]+)"/);
+                    
+                    if (startMatch && endMatch) {
+                        const startOldDate = startMatch[1].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                        const startNewDate = startMatch[2].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                        const endOldDate = endMatch[1].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                        const endNewDate = endMatch[2].match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                        
+                        const startOldTime = startMatch[1].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
+                        const startNewTime = startMatch[2].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
+                        const endOldTime = endMatch[1].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
+                        const endNewTime = endMatch[2].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
+                        
+                        oldVal = `Start: ${startOldDate ? startOldDate[0] : '?'} ${startOldTime ? startOldTime[0] : ''} | End: ${endOldDate ? endOldDate[0] : '?'} ${endOldTime ? endOldTime[0] : ''}`;
+                        newVal = `Start: ${startNewDate ? startNewDate[0] : '?'} ${startNewTime ? startNewTime[0] : ''} | End: ${endNewDate ? endNewDate[0] : '?'} ${endNewTime ? endNewTime[0] : ''}`;
+                    }
+                } else {
+                    const arrowIndex = changeStr.indexOf('→');
+                    if (arrowIndex > -1) {
+                        const beforeArrow = changeStr.substring(0, arrowIndex);
+                        const afterArrow = changeStr.substring(arrowIndex + 1);
+                        const colonIndex = beforeArrow.indexOf(':');
+                        if (colonIndex > -1) {
+                            fieldName = beforeArrow.substring(0, colonIndex).trim();
+                            oldVal = beforeArrow.substring(colonIndex + 1).trim();
+                            newVal = afterArrow.trim();
+                        } else {
+                            fieldName = 'Changes';
+                            oldVal = beforeArrow.trim();
+                            newVal = afterArrow.trim();
+                        }
+                    } else {
+                        fieldName = 'Changes';
+                        newVal = changeStr;
+                        oldVal = '-';
+                    }
+                }
+            } else if (update.field) {
+                fieldName = update.field;
+                oldVal = update.old_value || '-';
+                newVal = update.new_value || '-';
+            } else {
+                fieldName = 'Changes';
+                oldVal = '-';
+                newVal = update.changes || 'Campaign updated';
+            }
+            
+            const bgColor = u % 2 === 0 ? '#f9f9f9' : 'white';
+            updateHistoryHTML += `
+                <tr style="border-bottom:1px solid #e9ecef;background:${bgColor};">
+                    <td style="padding:8px;">${updateDate}</td>
+                    <td style="padding:8px;">${fieldName.substring(0, 16)}</td>
+                    <td style="padding:8px;font-size:10px;">${oldVal}</td>
+                    <td style="padding:8px;font-size:10px;">${newVal}</td>
+                    <td style="padding:8px;">${updatedBy}</td>
+                </tr>`;
+        }
+        
+        updateHistoryHTML += `</tbody></table></div>`;
     }
     
     const reportHTML = `<div style="font-family:'Helvetica',Arial,sans-serif;max-width:800px;margin:0 auto;background:white;padding:40px;box-shadow:0 0 20px rgba(0,0,0,0.1);">
-        <div style="text-align:center;margin-bottom:40px;padding-bottom:20px;border-bottom:3px solid #3498db;">
+        <div style="text-align:center;margin-bottom:20px;padding-bottom:15px;border-bottom:3px solid #3498db;">
             <h1 style="color:#2c3e50;font-size:28px;">Cryptographic Proof Report</h1>
-            <p style="color:#7f8c8d;">Generated: ${new Date().toLocaleString()}</p>
+            <p style="color:#7f8c8d;">Generated: ${now.toLocaleString()}</p>
         </div>
-        <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:30px;text-align:center;border:1px solid #e9ecef;">
+        
+        <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:20px;text-align:center;border:1px solid #e9ecef;">
             <span style="color:#6c757d;">Campaign ID: </span>
-            <span style="font-family:monospace;color:#3498db;font-weight:bold;font-size:14px;">${c.id}</span>
+            <span style="font-family:monospace;color:#3498db;font-weight:bold;font-size:12px;">${c.id}</span>
         </div>
-        <div style="background:#f8f9fa;border-radius:10px;padding:25px;margin-bottom:30px;border-left:5px solid #3498db;">
+        
+        <div style="background:#f8f9fa;border-radius:10px;padding:20px;margin-bottom:25px;border-left:5px solid #3498db;">
             <h2 style="color:#2c3e50;margin-top:0;">Campaign Details</h2>
             <table style="width:100%;border-collapse:collapse;">
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;width:180px;">Station:</td><td style="padding:10px 0;"><strong>${c.station || 'N/A'}</strong></td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Customer:</td><td style="padding:10px 0;"><strong>${c.name}</strong></td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Product:</td><td style="padding:10px 0;"><strong>${c.product_name || 'Not specified'}</strong></td></tr>
-                <tr style="border-bottom:1px solid #e9ecef; background:#f0f8ff;"><td style="padding:10px 0;">Monthly Pricing Plan:</td><td style="padding:10px 0;"><strong>${planName}</strong> (${planDescription})</td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Status:</td><td style="padding:10px 0;"><span style="background:${statusColor};color:white;padding:5px 15px;border-radius:20px;font-size:12px;">${status}</span></td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Start:</td><td style="padding:10px 0;">${isNaN(start) ? 'Invalid' : start.toLocaleString()}</td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">End:</td><td style="padding:10px 0;">${isNaN(end) ? 'Invalid' : end.toLocaleString()}</td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Created:</td><td style="padding:10px 0;font-size:11px;">${(c.created_by || 'Unknown').substring(0,11)}... at ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;width:140px;">Station:</td><td style="padding:8px 0;"><strong>${c.station || 'N/A'}</strong></td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;">Customer:</td><td style="padding:8px 0;"><strong>${c.name}</strong></td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;">Product:</td><td style="padding:8px 0;"><strong>${c.product_name || 'Not specified'}</strong></td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;">Monthly Pricing Plan:</td><td style="padding:8px 0;"><strong>${planName}</strong> (${planDescription})</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;">Status:</td><td style="padding:8px 0;"><span style="background:${statusColor};color:white;padding:4px 12px;border-radius:20px;font-size:12px;">${status}</span></td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;color:#7f8c8d;">Original Start:</td><td style="padding:8px 0;">${firstStartStr}</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;color:#7f8c8d;">Original End:</td><td style="padding:8px 0;">${firstEndStr}</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;color:#3498db;">Current Start:</td><td style="padding:8px 0;"><strong>${lastStartStr}</strong></td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;color:#3498db;">Current End:</td><td style="padding:8px 0;"><strong>${lastEndStr}</strong></td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:8px 0;">Created:</td><td style="padding:8px 0;font-size:11px;">${(c.created_by || 'Unknown').substring(0,11)}... at ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}</td></tr>
             </table>
         </div>
+        
         ${imagesHTML}
         ${updateHistoryHTML}
-        <div style="background:#f8f9fa;border-radius:10px;padding:25px;margin:30px 0;">
-            <h2 style="color:#2c3e50;margin-bottom:20px;">Cryptographic Hashes (SHA-256)</h2>
-            <div style="margin-bottom:25px;">
-                <div style="background:#27ae60;color:white;display:inline-block;padding:3px 10px;border-radius:15px;margin-bottom:10px;">START HASH</div>
-                <div style="background:#2c3e50;color:#00ff00;padding:15px;border-radius:8px;font-family:monospace;font-size:11px;word-break:break-all;">${c.hashes?.start?.hash || 'PENDING'}</div>
+        
+        <div style="background:#f8f9fa;border-radius:10px;padding:20px;margin:25px 0;">
+            <h2 style="color:#2c3e50;margin-bottom:15px;">Cryptographic Hashes (SHA-256)</h2>
+            <div style="margin-bottom:20px;">
+                <div style="background:#27ae60;color:white;display:inline-block;padding:3px 10px;border-radius:15px;margin-bottom:8px;font-size:12px;">START HASH</div>
+                <div style="background:#2c3e50;color:#00ff00;padding:12px;border-radius:8px;font-family:monospace;font-size:10px;word-break:break-all;">${c.hashes?.start?.hash || 'PENDING'}</div>
                 ${c.hashes?.start?.timestamp ? `<div style="font-size:10px;color:#7f8c8d;margin-top:5px;">Generated: ${new Date(c.hashes.start.timestamp).toLocaleString()}</div>` : ''}
             </div>
             <div>
-                <div style="background:#e74c3c;color:white;display:inline-block;padding:3px 10px;border-radius:15px;margin-bottom:10px;">END HASH</div>
-                <div style="background:#2c3e50;color:#00ff00;padding:15px;border-radius:8px;font-family:monospace;font-size:11px;word-break:break-all;">${c.hashes?.end?.hash || 'PENDING'}</div>
+                <div style="background:#e74c3c;color:white;display:inline-block;padding:3px 10px;border-radius:15px;margin-bottom:8px;font-size:12px;">END HASH</div>
+                <div style="background:#2c3e50;color:#00ff00;padding:12px;border-radius:8px;font-family:monospace;font-size:10px;word-break:break-all;">${c.hashes?.end?.hash || 'PENDING'}</div>
                 ${c.hashes?.end?.timestamp ? `<div style="font-size:10px;color:#7f8c8d;margin-top:5px;">Generated: ${new Date(c.hashes.end.timestamp).toLocaleString()}</div>` : ''}
             </div>
         </div>
-        <div style="margin-top:40px;padding-top:20px;border-top:2px solid #e9ecef;font-size:10px;color:#95a5a6;">
+        
+        <div style="margin-top:30px;padding-top:15px;border-top:2px solid #e9ecef;font-size:9px;color:#95a5a6;">
             <table style="width:100%;">
-                <tr><td>Report Generated: ${new Date().toLocaleString()}</td><td style="text-align:right;">Generated by: ${(currentUser?.uid || 'Anonymous').substring(0,8)}...</td></tr>
+                <tr><td>Report Generated: ${now.toLocaleString()}</td><td style="text-align:right;">Generated by: ${(currentUser?.uid || 'Anonymous').substring(0,8)}...</td></tr>
                 <tr><td>Verification ID: ${Math.random().toString(36).substring(2,15).toUpperCase()}</td><td style="text-align:right;">Campaign ID: ${c.id.substring(0,8)}...</td></tr>
-                <tr><td colspan="2" style="text-align:center;padding-top:10px;"><span style="background:#ecf0f1;padding:4px 12px;border-radius:20px;font-size:9px;">Blockchain Verified Proof</span></td></tr>
+                <tr><td colspan="2" style="text-align:center;padding-top:8px;"><span style="background:#ecf0f1;padding:3px 10px;border-radius:20px;font-size:8px;">Blockchain Verified Proof</span></td></tr>
             </table>
         </div>
     </div>`;
@@ -2736,7 +2862,7 @@ if (images.length > 0) {
         pdf.setFontSize(5.5);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Date/Time', 22, yPos + 3);
+        pdf.text('Date/Time Update', 22, yPos + 3);
         pdf.text('Field', 50, yPos + 3);
         pdf.text('Old Value', 80, yPos + 3);
         pdf.text('New Value', 120, yPos + 3);
