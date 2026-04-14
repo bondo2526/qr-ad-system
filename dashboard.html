@@ -2331,10 +2331,20 @@ window.showPDFPreview = function(id) {
     const updates = c.update_history || c.updates || [];
     const now = new Date();
     
-    // Get plan info from campaign data
+    // Get plan info
     const planName = c.plan_name || 'Light';
     const planHours = c.plan_hours || 32;
     const planPrice = c.plan_price || 35;
+    
+    // Build plan description based on plan type
+    let planDescription = '';
+    if (planName === 'Light') {
+        planDescription = '2 days × 4 hrs display time weekly = 32 hrs monthly / $35';
+    } else if (planName === 'Standard') {
+        planDescription = '4 days × 6 hrs display time weekly = 96 hrs monthly / $48';
+    } else if (planName === 'Professional') {
+        planDescription = '6 days × 8 hrs display time weekly = 192 hrs monthly / $54';
+    }
     
     let status = 'UPCOMING';
     let statusColor = '#ffc107';
@@ -2354,13 +2364,13 @@ window.showPDFPreview = function(id) {
     let imagesHTML = '';
     if (images.length > 0) {
         imagesHTML = `<div style="margin:30px 0; text-align:center;">
-            <h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px;text-align:center;">Campaign Images (${images.length})</h3>
+            <h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px;text-align:center;">Campaign Images</h3>
             <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;align-items:center;">`;
         images.forEach((img, idx) => {
             const imageData = (img && img.data) ? img.data : img;
-imagesHTML += `<div style="text-align:center;background:white;padding:15px;border-radius:8px;width:200px;margin:0 auto;">
-    <img src="${imageData}" style="width:100%;height:auto;max-height:180px;object-fit:contain;border-radius:5px;border:2px solid #3498db;">
-</div>`;
+            imagesHTML += `<div style="text-align:center;background:white;padding:15px;border-radius:8px;width:200px;margin:0 auto;">
+                <img src="${imageData}" style="width:100%;height:auto;max-height:180px;object-fit:contain;border-radius:5px;border:2px solid #3498db;">
+            </div>`;
         });
         imagesHTML += `</div></div>`;
     }
@@ -2402,16 +2412,14 @@ imagesHTML += `<div style="text-align:center;background:white;padding:15px;borde
         <div style="background:#f8f9fa;border-radius:10px;padding:25px;margin-bottom:30px;border-left:5px solid #3498db;">
             <h2 style="color:#2c3e50;margin-top:0;">Campaign Details</h2>
             <table style="width:100%;border-collapse:collapse;">
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;width:140px;">Station:</td><td style="padding:10px 0;"><strong>${c.station || 'N/A'}</strong></td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;width:180px;">Station:</td><td style="padding:10px 0;"><strong>${c.station || 'N/A'}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Customer:</td><td style="padding:10px 0;"><strong>${c.name}</strong></td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Product:</td><td style="padding:10px 0;"><strong>${c.product_name || 'Not specified'}</strong></td></tr>
-                <tr style="border-bottom:1px solid #e9ecef; background:#f0f8ff;"><td style="padding:10px 0;">Pricing Plan:</td><td style="padding:10px 0;"><strong>${planName}</strong> (${planHours} hours - $${planPrice})</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef; background:#f0f8ff;"><td style="padding:10px 0;">Monthly Pricing Plan:</td><td style="padding:10px 0;"><strong>${planName}</strong> (${planDescription})</td></tr>
                 <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Status:</td><td style="padding:10px 0;"><span style="background:${statusColor};color:white;padding:5px 15px;border-radius:20px;font-size:12px;">${status}</span></td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Start Date:</td><td style="padding:10px 0;">${isNaN(start) ? 'Invalid' : start.toLocaleString()}</td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">End Date:</td><td style="padding:10px 0;">${isNaN(end) ? 'Invalid' : end.toLocaleString()}</td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Duration:</td><td style="padding:10px 0;"><strong>${durationText}</strong></td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Images:</td><td style="padding:10px 0;">${images.length} images</td></tr>
-                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Created:</td><td style="padding:10px 0;font-size:11px;">${(c.created_by || 'Unknown').substring(0,15)}... at ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Start:</td><td style="padding:10px 0;">${isNaN(start) ? 'Invalid' : start.toLocaleString()}</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">End:</td><td style="padding:10px 0;">${isNaN(end) ? 'Invalid' : end.toLocaleString()}</td></tr>
+                <tr style="border-bottom:1px solid #e9ecef;"><td style="padding:10px 0;">Created:</td><td style="padding:10px 0;font-size:11px;">${(c.created_by || 'Unknown').substring(0,11)}... at ${c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : 'Unknown'}</td></tr>
             </table>
         </div>
         ${imagesHTML}
@@ -2460,6 +2468,21 @@ window.downloadPDF = function() {
     const updates = c.update_history || c.updates || [];
     const now = new Date();
     
+    // Get plan info
+    const planName = c.plan_name || 'Light';
+    const planHours = c.plan_hours || 32;
+    const planPrice = c.plan_price || 35;
+    
+    // Build plan description
+    let planDescription = '';
+    if (planName === 'Light') {
+        planDescription = '2 days × 4 hrs display time weekly = 32 hrs monthly / $35';
+    } else if (planName === 'Standard') {
+        planDescription = '4 days × 6 hrs display time weekly = 96 hrs monthly / $48';
+    } else if (planName === 'Professional') {
+        planDescription = '6 days × 8 hrs display time weekly = 192 hrs monthly / $54';
+    }
+    
     let yPos = 15;
     
     // Title
@@ -2492,7 +2515,7 @@ window.downloadPDF = function() {
     pdf.setFont('helvetica', 'bold');
     pdf.text('Campaign Details', 20, yPos);
     yPos += 6;
-      
+    
     // Determine status
     let status = 'UPCOMING';
     let statusColor = [255, 193, 7];
@@ -2504,9 +2527,9 @@ window.downloadPDF = function() {
         statusColor = [220, 53, 69];
     }
     
-    // Campaign details box
+    // Campaign details box - increased height for more rows
     pdf.setFillColor(248, 249, 250);
-    pdf.rect(20, yPos, 170, 45, 'F');
+    pdf.rect(20, yPos, 170, 58, 'F');
     pdf.setFontSize(9);
     pdf.setTextColor(52, 73, 94);
     
@@ -2514,24 +2537,35 @@ window.downloadPDF = function() {
     const rightX = 75;
     let rowY = yPos + 6;
     
-pdf.setFont('helvetica', 'bold');
-pdf.text('Customer:', leftX, rowY);
-pdf.setFont('helvetica', 'normal');
-pdf.text(c.name || 'Unknown', rightX, rowY);
-rowY += 6;
-
-pdf.setFont('helvetica', 'bold');
-pdf.text('Product:', leftX, rowY);
-pdf.setFont('helvetica', 'normal');
-pdf.text(c.product_name || 'Not specified', rightX, rowY);
-rowY += 6;
-
+    // Station
     pdf.setFont('helvetica', 'bold');
-pdf.text('Plan:', leftX, rowY);
-pdf.setFont('helvetica', 'normal');
-pdf.text(`${c.plan_name || 'Light'} (${c.plan_hours || 32} hours)`, rightX, rowY);
-rowY += 6;
+    pdf.text('Station:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.station || 'N/A', rightX, rowY);
+    rowY += 6;
     
+    // Customer
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Customer:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.name || 'Unknown', rightX, rowY);
+    rowY += 6;
+    
+    // Product
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Product:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.product_name || 'Not specified', rightX, rowY);
+    rowY += 6;
+    
+    // Monthly Pricing Plan (with full description)
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Monthly Pricing Plan:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${planName} (${planDescription})`, rightX, rowY);
+    rowY += 6;
+    
+    // Status
     pdf.setFont('helvetica', 'bold');
     pdf.text('Status:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
@@ -2540,81 +2574,80 @@ rowY += 6;
     pdf.setTextColor(52, 73, 94);
     rowY += 6;
     
+    // Start
     pdf.setFont('helvetica', 'bold');
     pdf.text('Start:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
     pdf.text(start.toLocaleString(), rightX, rowY);
     rowY += 6;
     
+    // End
     pdf.setFont('helvetica', 'bold');
     pdf.text('End:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
     pdf.text(end.toLocaleString(), rightX, rowY);
     rowY += 6;
-     
+    
+    // Created
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Created:', leftX, rowY);
     pdf.setFont('helvetica', 'normal');
-    const createdBy = (c.created_by || 'Unknown').substring(0, 12);
+    const createdBy = (c.created_by || 'Unknown').substring(0, 11);
     const createdDate = c.created_at?.toDate ? new Date(c.created_at.toDate()).toLocaleString() : (c.created_at || 'Unknown');
-    pdf.text(`${createdBy} at ${createdDate}`, rightX, rowY);
+    pdf.text(`${createdBy}... at ${createdDate}`, rightX, rowY);
     
-    yPos += 52;
+    yPos += 64;
     
-    // Campaign Images
-if (images.length > 0) {
-    pdf.setFontSize(12);
-    pdf.setTextColor(44, 62, 80);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Campaign Images', 105, yPos, { align: 'center' });  // Center the title
-    yPos += 6;
-    
-    const imgSize = 40;
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    
-    // Calculate how many images per row (max 3 for better centering)
-    const imagesPerRow = Math.min(3, Math.min(images.length, 6));
-    const totalWidth = imagesPerRow * imgSize + (imagesPerRow - 1) * 10;
-    const startX = (pageWidth - totalWidth) / 2;  // This centers the row
-    
-    for (let i = 0; i < Math.min(images.length, 6); i++) {
-        try {
-            const img = images[i];
-            let imageData = null;
-            
-            if (typeof img === 'string') {
-                imageData = img;
-            } else if (img && img.data) {
-                imageData = img.data;
-            } else if (img && img.imgData) {
-                imageData = img.imgData;
-            }
-            
-            if (imageData && (imageData.indexOf('base64') > -1 || imageData.indexOf('data:image') === 0)) {
-                const base64Data = imageData.split(',')[1];
-                if (base64Data) {
-                    const col = i % imagesPerRow;
-                    const row = Math.floor(i / imagesPerRow);
-                    const x = startX + (col * (imgSize + 10));
-                    const y = yPos + (row * (imgSize + 15));
-                    pdf.addImage(base64Data, 'JPEG', x, y, imgSize, imgSize);
-                    pdf.setFontSize(6);
-                    pdf.setTextColor(127, 140, 141);
-                    const imgName = (img.name || `Image ${i + 1}`).substring(0, 15);
-                    pdf.text(imgName, x + imgSize/2, y + imgSize + 3, { align: 'center' });
+    // Campaign Images (without captions)
+    if (images.length > 0) {
+        pdf.setFontSize(12);
+        pdf.setTextColor(44, 62, 80);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Campaign Images', 105, yPos, { align: 'center' });
+        yPos += 6;
+        
+        const imgSize = 40;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        
+        const imagesPerRow = Math.min(3, Math.min(images.length, 6));
+        const totalWidth = imagesPerRow * imgSize + (imagesPerRow - 1) * 10;
+        const startX = (pageWidth - totalWidth) / 2;
+        
+        for (let i = 0; i < Math.min(images.length, 6); i++) {
+            try {
+                const img = images[i];
+                let imageData = null;
+                
+                if (typeof img === 'string') {
+                    imageData = img;
+                } else if (img && img.data) {
+                    imageData = img.data;
+                } else if (img && img.imgData) {
+                    imageData = img.imgData;
                 }
+                
+                if (imageData && (imageData.indexOf('base64') > -1 || imageData.indexOf('data:image') === 0)) {
+                    const base64Data = imageData.split(',')[1];
+                    if (base64Data) {
+                        const col = i % imagesPerRow;
+                        const row = Math.floor(i / imagesPerRow);
+                        const x = startX + (col * (imgSize + 10));
+                        const y = yPos + (row * (imgSize + 15));
+                        pdf.addImage(base64Data, 'JPEG', x, y, imgSize, imgSize);
+                        // NO CAPTION TEXT - removed the pdf.text line
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to add image to PDF:', e);
             }
-        } catch (e) {
-            console.error('Failed to add image to PDF:', e);
         }
+        
+        const rowsUsed = Math.ceil(Math.min(images.length, 6) / imagesPerRow);
+        yPos += rowsUsed * (imgSize + 15) + 8;
     }
     
-    const rowsUsed = Math.ceil(Math.min(images.length, 6) / imagesPerRow);
-    yPos += rowsUsed * (imgSize + 15) + 8;
-}
-    
-    // Update History as TABLE - PROPERLY PARSED
+    // Update History
     if (updates && updates.length > 0) {
         pdf.setFontSize(12);
         pdf.setTextColor(243, 156, 18);
@@ -2622,7 +2655,6 @@ if (images.length > 0) {
         pdf.text('Update History', 20, yPos);
         yPos += 5;
         
-        // Table header
         pdf.setFillColor(243, 156, 18);
         pdf.rect(20, yPos, 170, 5, 'F');
         pdf.setFontSize(6.5);
@@ -2650,9 +2682,7 @@ if (images.length > 0) {
             let oldVal = '';
             let newVal = '';
             
-            // Method 1: Check if we have details array (new format)
             if (update.details && update.details.length > 0) {
-                // Get the first detail
                 const detail = update.details[0];
                 if (detail.field) {
                     fieldName = detail.field;
@@ -2669,7 +2699,6 @@ if (images.length > 0) {
                 }
             }
             
-            // Method 2: Check if we have changed_fields array
             if (!fieldName && update.changed_fields && update.changed_fields.length > 0) {
                 fieldName = update.changed_fields.join(', ');
                 if (update.changes && typeof update.changes === 'string') {
@@ -2691,7 +2720,6 @@ if (images.length > 0) {
                 }
             }
             
-            // Method 3: Parse from changes string (format: "Field: old → new")
             if (!fieldName && update.changes && typeof update.changes === 'string') {
                 const changeStr = update.changes;
                 const arrowIndex = changeStr.indexOf('→');
@@ -2715,44 +2743,37 @@ if (images.length > 0) {
                 }
             }
             
-            // Method 4: Direct field/old_value/new_value
             if (!fieldName && update.field) {
                 fieldName = update.field;
                 oldVal = update.old_value || '-';
                 newVal = update.new_value || '-';
             }
             
-            // Fallback
             if (!fieldName) {
                 fieldName = 'Changes';
                 oldVal = '-';
                 newVal = update.changes || 'Campaign updated';
             }
             
-            // Clean up values
             fieldName = fieldName.replace(/[^\x20-\x7E]/g, '').substring(0, 20);
             oldVal = String(oldVal).replace(/[^\x20-\x7E]/g, '').substring(0, 30);
             newVal = String(newVal).replace(/[^\x20-\x7E]/g, '').substring(0, 30);
             
-            // Calculate row height
             const oldLines = pdf.splitTextToSize(oldVal, 30);
             const newLines = pdf.splitTextToSize(newVal, 30);
             const maxLines = Math.max(1, oldLines.length, newLines.length);
             const rowHeight = Math.max(5, maxLines * 3.5);
             
-            // Alternate row background
             if (u % 2 === 0) {
                 pdf.setFillColor(245, 245, 245);
                 pdf.rect(20, yPos - 1, 170, rowHeight, 'F');
             }
             
-            // Shorten date if needed
             let shortDate = updateDate;
             if (updateDate.length > 18) {
                 shortDate = updateDate.substring(0, 15) + '...';
             }
             
-            // Write cell content
             pdf.text(shortDate, 22, yPos + 3);
             pdf.text(fieldName, 55, yPos + 3);
             pdf.text(oldLines, 80, yPos + 3);
@@ -2760,7 +2781,6 @@ if (images.length > 0) {
             pdf.text(updatedBy, 150, yPos + 3);
             
             yPos += rowHeight + 1;
-            
             if (yPos > 240) break;
         }
         yPos += 3;
@@ -2790,7 +2810,7 @@ if (images.length > 0) {
     
     // End Hash
     pdf.setFillColor(255, 240, 240);
-    const endHash = c.hashes?.end?.hash || 'PENDING (will be generated when campaign ends)';
+    const endHash = c.hashes?.end?.hash || 'PENDING';
     const endHashLines = pdf.splitTextToSize(endHash, 160);
     const endBoxHeight = Math.max(8, endHashLines.length * 4 + 4);
     pdf.rect(20, yPos, 170, endBoxHeight, 'F');
@@ -2848,7 +2868,7 @@ if (images.length > 0) {
     
     // Save PDF
     const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
-    const prodname =c.product_name;
+    const prodname = c.product_name || 'product';
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
