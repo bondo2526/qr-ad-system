@@ -2699,22 +2699,25 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         closePDFPreview();
     };
     
-    window.exportAdToExcel = function() {
-        if (!allAdCampaigns.length) { alert('No data to export'); return; }
-        const data = allAdCampaigns.map(c => ({
-            ID: c.id, Name: c.name, Station: c.station||'N/A',
-            Start: c.start_date?.toDate ? formatCompactDate(c.start_date.toDate()) : (c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A'),
-            End: c.end_date?.toDate ? formatCompactDate(c.end_date.toDate()) : (c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A'),
-            Status: getAdStatus(c),
-            Images: (c.images||[]).length,
-            'Start Hash': c.hashes?.start?.hash||'PENDING',
-            'End Hash': c.hashes?.end?.hash||'PENDING'
-        }));
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Ad Campaigns');
-        XLSX.writeFile(wb, `ad_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
-    };
+window.exportAdToExcel = function() {
+    if (!allAdCampaigns.length) { alert('No data to export'); return; }
+    const data = allAdCampaigns.map(c => ({
+        'Campaign ID': c.id,
+        'Station Name': c.station || 'N/A',
+        'Customer Name': c.name || 'Unknown',
+        'Product Name': c.product_name || 'Not specified',
+        'Pricing Plan': (c.pricing_plan || c.plan_name || 'Light').toUpperCase(),
+        'Start Date/Time': c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
+        'End Date/Time': c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
+        'Status': getAdStatus(c).toUpperCase(),
+        'Start Hash': c.hashes?.start?.hash || 'PENDING',
+        'End Hash': c.hashes?.end?.hash || 'PENDING'
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ad Campaigns');
+    XLSX.writeFile(wb, `ad_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
 
     // COUPON SYSTEM (keep existing coupon functions - they don't use date formatting that needs changing)
     let allClaims = [];
