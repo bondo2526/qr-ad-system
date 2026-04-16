@@ -3173,7 +3173,7 @@ window.exportClaimsToPDF = function() {
     }
     
     doc.setFontSize(18); doc.setTextColor(74,158,255); doc.text('Coupon Claims Report', 14, 15);
-    doc.setFontSize(10); doc.setTextColor(150); doc.text(`Generated At: ${formatCompactDate(new Date())}  |  Total: ${filteredClaims.length}`, 14, 22);
+    doc.setFontSize(10); doc.setTextColor(150); doc.text(`Generated At: ${formatCompactDate(new Date())}  |  Total Records: ${filteredClaims.length}`, 14, 22);
     doc.autoTable({
         head:[['Date','Advertiser','Product','Location','Coupon','Status','Redeemed','Redeemed At','Expires At']],
         body: rows, startY:30, theme:'grid',
