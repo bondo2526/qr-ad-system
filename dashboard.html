@@ -3128,29 +3128,62 @@ window.exportAdToExcel = function() {
         XLSX.writeFile(wb, `claims_${new Date().toISOString().slice(0,10)}.xlsx`);
     };
 
-    window.exportClaimsToPDF = function() {
-        if (!filteredClaims.length) { alert('No data to export!'); return; }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-        const rows = filteredClaims.map(c => {
-            const now=new Date(), exp=c.expiresAt<now;
-            let st='Claimed'; if(c.redeemed) st='Redeemed'; else if(exp) st='Expired';
-            return [fmtDate(c.claimedAt), c.advertiserName||'Unknown', c.productName||'Unknown',
-                    c.hostName||'Unknown', c.couponCode||'N/A', st, c.redeemed?'Yes':'No',
-                    c.redeemedAt?fmtDate(c.redeemedAt):'-', fmtDate(c.expiresAt)];
-        });
-        doc.setFontSize(18); doc.setTextColor(74,158,255); doc.text('Coupon Claims Report', 14, 15);
-        doc.setFontSize(10); doc.setTextColor(150); doc.text(`Generated: ${new Date().toLocaleString()}  |  Total: ${filteredClaims.length}`, 14, 22);
-        doc.autoTable({
-            head:[['Date','Advertiser','Product','Location','Coupon','Status','Redeemed','Redeemed At','Expires At']],
-            body: rows, startY:30, theme:'grid',
-            headStyles:{ fillColor:[74,158,255], textColor:255, fontStyle:'bold', halign:'center' },
-            bodyStyles:{ fontSize:8, cellPadding:3 },
-            alternateRowStyles:{ fillColor:[240,242,248] },
-            margin:{ left:14, right:14 }
-        });
-        doc.save(`claims_report_${new Date().toISOString().slice(0,10)}.pdf`);
-    };
+window.exportClaimsToPDF = function() {
+    if (!filteredClaims.length) { alert('No data to export!'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    const rows = filteredClaims.map(c => {
+        const now=new Date(), exp=c.expiresAt<now;
+        let st='Claimed'; if(c.redeemed) st='Redeemed'; else if(exp) st='Expired';
+        return [fmtDate(c.claimedAt), c.advertiserName||'Unknown', c.productName||'Unknown',
+                c.hostName||'Unknown', c.couponCode||'N/A', st, c.redeemed?'Yes':'No',
+                c.redeemedAt?fmtDate(c.redeemedAt):'-', fmtDate(c.expiresAt)];
+    });
+    
+    // Generate filename based on filters
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+    
+    // Get unique advertisers and products from filtered claims
+    const uniqueAdvertisers = [...new Set(filteredClaims.map(c => c.advertiserName).filter(Boolean))];
+    const uniqueProducts = [...new Set(filteredClaims.map(c => c.productName).filter(Boolean))];
+    
+    let fileName = '';
+    
+    // If only ONE advertiser and ONE product
+    if (uniqueAdvertisers.length === 1 && uniqueProducts.length === 1) {
+        const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const productName = uniqueProducts[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        fileName = `${customerName}_${productName}_claimscouponsreport_${dateStr}.pdf`;
+    } 
+    // If only ONE advertiser but multiple products
+    else if (uniqueAdvertisers.length === 1 && uniqueProducts.length > 1) {
+        const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        fileName = `${customerName}_all_products_claimscouponsreport_${dateStr}.pdf`;
+    }
+    // If multiple advertisers
+    else {
+        fileName = `all_customers_claimscouponsreport_${dateStr}.pdf`;
+    }
+    
+    doc.setFontSize(18); doc.setTextColor(74,158,255); doc.text('Coupon Claims Report', 14, 15);
+    doc.setFontSize(10); doc.setTextColor(150); doc.text(`Generated: ${new Date().toLocaleString()}  |  Total: ${filteredClaims.length}`, 14, 22);
+    doc.autoTable({
+        head:[['Date','Advertiser','Product','Location','Coupon','Status','Redeemed','Redeemed At','Expires At']],
+        body: rows, startY:30, theme:'grid',
+        headStyles:{ fillColor:[74,158,255], textColor:255, fontStyle:'bold', halign:'center' },
+        bodyStyles:{ fontSize:8, cellPadding:3 },
+        alternateRowStyles:{ fillColor:[240,242,248] },
+        margin:{ left:14, right:14 }
+    });
+    doc.save(fileName);
+};
 
     function fmtDate(date) {
         if (!date) return 'Unknown';
