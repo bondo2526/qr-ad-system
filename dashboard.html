@@ -3117,7 +3117,7 @@ window.exportAdToExcel = function() {
         const data = filteredClaims.map(c => {
             const now=new Date(), exp=c.expiresAt<now;
             let status='Claimed'; if(c.redeemed) status='Redeemed'; else if(exp) status='Expired';
-            return { Date:fmtDate(c.claimedAt), Advertiser:c.advertiserName||'Unknown', Product:c.productName||'Unknown',
+            return { Date:fmtDate(c.claimedAt), Customer:c.advertiserName||'Unknown', Product:c.productName||'Unknown',
                 Location:c.hostName||'Unknown', 'Coupon Code':c.couponCode||'N/A', Status:status,
                 Redeemed:c.redeemed?'Yes':'No', 'Redeemed At':c.redeemedAt?fmtDate(c.redeemedAt):'',
                 'Expires At':fmtDate(c.expiresAt) };
@@ -3175,7 +3175,7 @@ window.exportClaimsToPDF = function() {
     doc.setFontSize(18); doc.setTextColor(74,158,255); doc.text('Coupon Claims Report', 14, 15);
     doc.setFontSize(10); doc.setTextColor(150); doc.text(`Generated At: ${formatCompactDate(new Date())}  |  Total Records: ${filteredClaims.length}`, 14, 22);
     doc.autoTable({
-        head:[['Date','Advertiser','Product','Location','Coupon','Status','Redeemed','Redeemed At','Expires At']],
+        head:[['Date','Customer','Product','Location','Coupon','Status','Redeemed','Redeemed At','Expires At']],
         body: rows, startY:30, theme:'grid',
         headStyles:{ fillColor:[74,158,255], textColor:255, fontStyle:'bold', halign:'center' },
         bodyStyles:{ fontSize:8, cellPadding:3 },
