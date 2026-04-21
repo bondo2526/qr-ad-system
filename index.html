@@ -298,79 +298,81 @@
             }
         });
         
-        async function checkIfAlreadyClaimed() {
-            try {
-                const twentyFourHoursAgo = new Date();
-                twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - CONFIG.BLOCK_HOURS);
-                
-                // Check if campaign exists and product has stock
-                const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
-                
-                if (!campaign.exists) {
-                    showError(`Campaign "${currentAd}" not found`);
-                    return;
-                }
-                
-                const campaignData = campaign.data();
-                if (campaignData.isActive === false) {
-                    showError(`Campaign "${currentAd}" is inactive`);
-                    return;
-                }
-                
-                const products = campaignData.products || [];
-                const product = products.find(p => p.productName === currentProduct);
-                
-                if (!product) {
-                    showError(`Product "${currentProduct}" not found`);
-                    return;
-                }
-                
-                const redeemedCount = product.redeemedCount || 0;
-                const totalProducts = product.totalProducts || 0;
-                const remaining = totalProducts - redeemedCount;
-                
-                if (remaining <= 0) {
-                    showSoldOutPage();
-                    return;
-                }
-                
-                // CHECK IF USER ALREADY CLAIMED THIS PRODUCT FROM THIS ADVERTISER (ANY LOCATION)
-                const claimsSnapshot = await db.collection('claims')
-                    .where('userFingerprint', '==', userFingerprint)
-                    .get();
-                
-                let existingClaim = null;
-                let claimedLocation = null;
-                
-                claimsSnapshot.forEach(doc => {
-                    const claim = doc.data();
-                    const claimTime = claim.claimedAt?.toDate();
-                    const isWithin24h = claimTime >= twentyFourHoursAgo;
-                    
-                    // Check if same advertiser AND same product (ignore location)
-                    if (isWithin24h && 
-                        claim.adName === decodeURIComponent(currentAd).replace(/_/g, ' ') && 
-                        claim.productName === decodeURIComponent(currentProduct).replace(/_/g, ' ')) {
-                        existingClaim = claim;
-                        existingCouponCode = claim.couponCode;
-                        claimedLocation = claim.hostName;
-                    }
-                });
-                
-                if (existingClaim) {
-                    // Show blocked page with location where they claimed it
-                    showBlockedPage(existingClaim, claimedLocation);
-                    return;
-                }
-                
-                // Generate new coupon
-                await generateNewCoupon();
-                
-            } catch (error) {
-                console.error(error);
-                showError('Error: ' + error.message);
-            }
+async function checkIfAlreadyClaimed() {
+    try {
+        const twentyFourHoursAgo = new Date();
+        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - CONFIG.BLOCK_HOURS);
+        
+        // Check if campaign exists and product has stock
+        const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
+        
+        if (!campaign.exists) {
+            showError(`Campaign "${currentAd}" not found`);
+            return;
         }
+        
+        const campaignData = campaign.data();
+        if (campaignData.isActive === false) {
+            showError(`Campaign "${currentAd}" is inactive`);
+            return;
+        }
+        
+        const products = campaignData.products || [];
+        const product = products.find(p => p.productName === currentProduct);
+        
+        if (!product) {
+            showError(`Product "${currentProduct}" not found`);
+            return;
+        }
+        
+        const redeemedCount = product.redeemedCount || 0;
+        const totalProducts = product.totalProducts || 0;
+        const remaining = totalProducts - redeemedCount;
+        
+        if (remaining <= 0) {
+            showSoldOutPage();
+            return;
+        }
+        
+        // ========== KEY CHANGE: Block by advertiser + product only ==========
+        const currentAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
+        const currentProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
+        
+        const claimsSnapshot = await db.collection('claims')
+            .where('userFingerprint', '==', userFingerprint)
+            .get();
+        
+        let existingClaim = null;
+        let claimedLocation = null;
+        
+        claimsSnapshot.forEach(doc => {
+            const claim = doc.data();
+            const claimTime = claim.claimedAt?.toDate();
+            const isWithin24h = claimTime >= twentyFourHoursAgo;
+            
+            // BLOCK if same advertiser AND same product (location doesn't matter)
+            if (isWithin24h && 
+                claim.adName === currentAdName && 
+                claim.productName === currentProductName) {
+                existingClaim = claim;
+                existingCouponCode = claim.couponCode;
+                claimedLocation = claim.hostName;
+            }
+        });
+        
+        if (existingClaim) {
+            showBlockedPage(existingClaim, claimedLocation);
+            return;
+        }
+        
+        // Generate new coupon
+        await generateNewCoupon();
+        
+    } catch (error) {
+        console.error(error);
+        showError('Error: ' + error.message);
+    }
+}
         
         async function generateNewCoupon() {
             try {
