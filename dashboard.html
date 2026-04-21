@@ -2787,7 +2787,7 @@ window.exportAdToExcel = function() {
         try {
             const advDoc = await db.collection('advertisers').doc(name).get();
             if (!advDoc.exists) {
-                alert(`❌ Advertiser "${name}" not found!\n\nPlease ask the advertiser to:\n1. Go to the Scanner App\n2. Login with "${name}" and create a password\n3. Then come back to create campaign`);
+                alert(`❌ Advertiser "${name}" not found!\n Please create new advertiser account before.`);
                 return;
             }
             const existing = await db.collection('ad_campaigns').doc(name).get();
