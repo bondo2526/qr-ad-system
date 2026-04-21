@@ -303,7 +303,12 @@ async function checkIfAlreadyClaimed() {
         const twentyFourHoursAgo = new Date();
         twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - CONFIG.BLOCK_HOURS);
         
-        // Get the campaign document to get official advertiser name
+        console.log("=== CHECKING CLAIM ===");
+        console.log("User Fingerprint:", userFingerprint);
+        console.log("Current Ad:", currentAd);
+        console.log("Current Product:", currentProduct);
+        
+        // Get the campaign document
         const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
         
         if (!campaign.exists) {
@@ -312,21 +317,18 @@ async function checkIfAlreadyClaimed() {
         }
         
         const campaignData = campaign.data();
-        if (campaignData.isActive === false) {
-            showError(`Campaign "${currentAd}" is inactive`);
-            return;
-        }
-        
-        // Get the OFFICIAL advertiser name from the campaign
         const advertiserName = campaignData.advertiserName || decodeURIComponent(currentAd).replace(/_/g, ' ');
         const currentProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
+        
+        console.log("Advertiser Name:", advertiserName);
+        console.log("Product Name:", currentProductName);
         
         // Check product stock
         const products = campaignData.products || [];
         const product = products.find(p => p.productName === currentProductName);
         
         if (!product) {
-            showError(`Product "${currentProductName}" not found in campaign`);
+            showError(`Product "${currentProductName}" not found`);
             return;
         }
         
@@ -339,11 +341,12 @@ async function checkIfAlreadyClaimed() {
             return;
         }
         
-        // ========== CHECK FOR EXISTING CLAIM ==========
-        // Query claims by user fingerprint
+        // Query ALL claims for this user fingerprint
         const claimsSnapshot = await db.collection('claims')
             .where('userFingerprint', '==', userFingerprint)
             .get();
+        
+        console.log("Total claims found for this fingerprint:", claimsSnapshot.size);
         
         let existingClaim = null;
         let claimedLocation = null;
@@ -353,15 +356,20 @@ async function checkIfAlreadyClaimed() {
             const claimTime = claim.claimedAt?.toDate();
             const isWithin24h = claimTime >= twentyFourHoursAgo;
             
-            // IMPORTANT: Compare by advertiserName AND productName (NOT location)
-            // This matches your dashboard.html structure where claims store advertiserName
+            console.log("Claim found:", {
+                advertiserName: claim.advertiserName,
+                productName: claim.productName,
+                isWithin24h: isWithin24h,
+                location: claim.hostName
+            });
+            
             if (isWithin24h && 
                 claim.advertiserName === advertiserName && 
                 claim.productName === currentProductName) {
                 existingClaim = claim;
                 existingCouponCode = claim.couponCode;
                 claimedLocation = claim.hostName;
-                console.log("Found existing claim:", claim);
+                console.log("✅ MATCH FOUND!");
             }
         });
         
@@ -370,7 +378,7 @@ async function checkIfAlreadyClaimed() {
             return;
         }
         
-        // Generate new coupon
+        console.log("No existing claim found - generating new coupon");
         await generateNewCoupon();
         
     } catch (error) {
@@ -415,14 +423,18 @@ async function generateNewCoupon() {
     }
 }
         
-        async function generateUserFingerprint() {
-            let deviceId = sessionStorage.getItem('device_id');
-            if (!deviceId) {
-                deviceId = 'dev_' + Math.random().toString(36).substring(2, 15);
-                sessionStorage.setItem('device_id', deviceId);
-            }
-            return deviceId;
-        }
+async function generateUserFingerprint() {
+    // Use localStorage instead of sessionStorage - this persists across ALL tabs
+    let deviceId = localStorage.getItem('device_id');
+    if (!deviceId) {
+        deviceId = 'dev_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now().toString(36);
+        localStorage.setItem('device_id', deviceId);
+        console.log("🆕 New device created:", deviceId);
+    } else {
+        console.log("♻️ Existing device:", deviceId);
+    }
+    return deviceId;
+}
         
         function showSuccessPage(data) {
             document.body.className = 'success-bg';
