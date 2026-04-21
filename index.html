@@ -303,7 +303,7 @@ async function checkIfAlreadyClaimed() {
         const twentyFourHoursAgo = new Date();
         twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - CONFIG.BLOCK_HOURS);
         
-        // Check if campaign exists and product has stock
+        // Get the campaign document to get official advertiser name
         const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
         
         if (!campaign.exists) {
@@ -317,11 +317,16 @@ async function checkIfAlreadyClaimed() {
             return;
         }
         
+        // Get the OFFICIAL advertiser name from the campaign
+        const advertiserName = campaignData.advertiserName || decodeURIComponent(currentAd).replace(/_/g, ' ');
+        const currentProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
+        
+        // Check product stock
         const products = campaignData.products || [];
-        const product = products.find(p => p.productName === currentProduct);
+        const product = products.find(p => p.productName === currentProductName);
         
         if (!product) {
-            showError(`Product "${currentProduct}" not found`);
+            showError(`Product "${currentProductName}" not found in campaign`);
             return;
         }
         
@@ -334,10 +339,8 @@ async function checkIfAlreadyClaimed() {
             return;
         }
         
-        // ========== KEY CHANGE: Block by advertiser + product only ==========
-        const currentAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
-        const currentProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
-        
+        // ========== CHECK FOR EXISTING CLAIM ==========
+        // Query claims by user fingerprint
         const claimsSnapshot = await db.collection('claims')
             .where('userFingerprint', '==', userFingerprint)
             .get();
@@ -350,13 +353,15 @@ async function checkIfAlreadyClaimed() {
             const claimTime = claim.claimedAt?.toDate();
             const isWithin24h = claimTime >= twentyFourHoursAgo;
             
-            // BLOCK if same advertiser AND same product (location doesn't matter)
+            // IMPORTANT: Compare by advertiserName AND productName (NOT location)
+            // This matches your dashboard.html structure where claims store advertiserName
             if (isWithin24h && 
-                claim.adName === currentAdName && 
+                claim.advertiserName === advertiserName && 
                 claim.productName === currentProductName) {
                 existingClaim = claim;
                 existingCouponCode = claim.couponCode;
                 claimedLocation = claim.hostName;
+                console.log("Found existing claim:", claim);
             }
         });
         
@@ -374,36 +379,41 @@ async function checkIfAlreadyClaimed() {
     }
 }
         
-        async function generateNewCoupon() {
-            try {
-                const randomNum = Math.floor(Math.random() * 9000 + 1000);
-                const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
-                const couponCode = 'save' + randomNum + randomLetter;
-                
-                const claimData = {
-                    userId: currentUser.uid,
-                    userFingerprint: userFingerprint,
-                    adId: currentAd,
-                    adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
-                    productId: currentProduct,
-                    productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
-                    hostId: currentHost,
-                    hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
-                    couponCode: couponCode,
-                    claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
-                    status: 'claimed',
-                    redeemed: false
-                };
-                
-                await db.collection('claims').add(claimData);
-                showSuccessPage(claimData);
-                
-            } catch (error) {
-                console.error(error);
-                showError('Failed to generate coupon: ' + error.message);
-            }
-        }
+async function generateNewCoupon() {
+    try {
+        // Get the campaign to get official advertiser name
+        const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
+        const advertiserName = campaign.exists ? campaign.data().advertiserName : decodeURIComponent(currentAd).replace(/_/g, ' ');
+        
+        const randomNum = Math.floor(Math.random() * 9000 + 1000);
+        const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+        const couponCode = 'save' + randomNum + randomLetter;
+        
+        const claimData = {
+            userId: currentUser.uid,
+            userFingerprint: userFingerprint,
+            adId: currentAd,
+            adName: decodeURIComponent(currentAd).replace(/_/g, ' '),
+            advertiserName: advertiserName,  // ← CRITICAL: Store advertiser name
+            productId: currentProduct,
+            productName: decodeURIComponent(currentProduct).replace(/_/g, ' '),
+            hostId: currentHost,
+            hostName: decodeURIComponent(currentHost).replace(/_/g, ' '),
+            couponCode: couponCode,
+            claimedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            expiresAt: new Date(Date.now() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000)),
+            status: 'claimed',
+            redeemed: false
+        };
+        
+        await db.collection('claims').add(claimData);
+        showSuccessPage(claimData);
+        
+    } catch (error) {
+        console.error(error);
+        showError('Failed to generate coupon: ' + error.message);
+    }
+}
         
         async function generateUserFingerprint() {
             let deviceId = sessionStorage.getItem('device_id');
