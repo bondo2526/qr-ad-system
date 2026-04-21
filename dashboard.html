@@ -3152,8 +3152,6 @@ window.exportClaimsToPDF = function() {
         }
     });
     
-    const nonRedeemed = claimed - redeemed;
-    
     const rows = filteredClaims.map(c => {
         const isExpired = c.expiresAt < now;
         let st = 'Claimed';
@@ -3206,8 +3204,8 @@ window.exportClaimsToPDF = function() {
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
     doc.text(`Generated: ${formatCompactDate(nowDate)}`, 14, 22);
-    doc.text(`Total Records: ${filteredClaims.length}`, 14, 29);
-    doc.text(`Claimed: ${claimed} | Redeemed: ${redeemed} | Non-Redeemed: ${nonRedeemed} | Expired: ${expired}`, 14, 36);
+   // doc.text(`Total Records: ${filteredClaims.length}`, 14, 29);
+    doc.text(`Claimed: ${claimed} | Redeemed: ${redeemed} | Expired: ${expired}`, 14, 36);
     
     doc.autoTable({
         head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']],
