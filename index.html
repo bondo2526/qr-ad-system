@@ -195,44 +195,7 @@
             </div>
         </div>
         
-        <div id="blocked" class="hidden">
-            <h1 class="blocked">⛔ Already Claimed</h1>
-            <h3 id="blockedAdName"></h3>
-            
-            <div class="coupon-section">
-                <p style="font-weight: bold; color: #333; margin-bottom: 10px;">Your previously claimed coupon:</p>
-                <div class="coupon-blocked" id="blockedCouponCode"></div>
-                <p style="color: #666; font-size: 14px; margin-top: 5px;">Use this code at checkout</p>
-            </div>
-            
-            <div class="info blocked-info">
-                <p>You've already claimed <strong>this ad</strong> today.</p>
-                <p><strong>Product:</strong> <span id="blockedProduct"></span></p>
-                <p><strong>Location Claimed:</strong> <span id="blockedLocation"></span></p>
-                <p><strong>Claimed at:</strong> <span id="blockedTime"></span></p>
-                <p><strong>Status:</strong> <span id="blockedStatus">Available for use</span></p>
-            </div>
-            
-            <div class="countdown" id="countdown"></div>
-            
-            <div class="screenshot-instruction">
-                📸 Need a screenshot? Take one now!<br>
-                You won't be able to see this code again
-            </div>
-            
-            <div class="info">
-                <p><strong>Coupon Rules:</strong></p>
-                <p>✅ <strong>This coupon is valid</strong> for 24 hours from claim time</p>
-                <p>✅ Show this code at checkout to advertiser</p>
-                <p>❌ <strong>Cannot claim same ad</strong> again until tomorrow</p>
-                <p>✅ You CAN claim <strong>different ads/products</strong></p>
-            </div>
-            
-            <div class="action-buttons">
-                <button class="secondary" onclick="copyCouponCode()">Copy Code</button>
-            </div>
-        </div>
-        
+<div id="blocked" class="hidden">       
         <div id="soldout" class="hidden">
             <h1 class="soldout">🔴 SOLD OUT</h1>
             <h2 align="center" id="soldoutAdName"></h2>
@@ -329,37 +292,7 @@ async function checkIfAlreadyClaimed() {
         console.log("Current Product:", currentProduct);
         console.log("User Fingerprint:", userFingerprint);
         
-        // Check if user already claimed this ad today
-        const claimsRef = db.collection('claims');
-        const querySnapshot = await claimsRef
-            .where('userFingerprint', '==', userFingerprint)
-            .get();
-        
-        let alreadyClaimed = false;
-        let existingClaim = null;
-        
-        querySnapshot.forEach(doc => {
-            const claim = doc.data();
-            const claimTime = claim.claimedAt?.toDate();
-            
-            const isSameAd = claim.adName === currentAd || claim.adId === currentAd;
-            const isWithin24h = claimTime >= twentyFourHoursAgo;
-            
-            if (isSameAd && isWithin24h) {
-                alreadyClaimed = true;
-                existingClaim = { ...claim, id: doc.id, claimedAt: claim.claimedAt };
-                existingCouponCode = claim.couponCode;
-            }
-        });
-        
-        if (alreadyClaimed) {
-            showBlockedPage(existingClaim);
-            return true;
-        }
-        
-        // ========== NEW VALIDATION: CHECK IF CAMPAIGN EXISTS ==========
-        console.log("Checking if campaign exists for:", currentAd);
-        
+        // First, check if the campaign exists
         const campaign = await db.collection('ad_campaigns').doc(currentAd).get();
         
         if (!campaign.exists) {
@@ -378,19 +311,17 @@ async function checkIfAlreadyClaimed() {
             return false;
         }
         
-        // ========== NEW VALIDATION: CHECK IF PRODUCT EXISTS ==========
+        // Check if product exists in campaign
         const products = campaignData.products || [];
-        console.log("Available products:", products.map(p => p.productName));
-        
         const product = products.find(p => p.productName === currentProduct);
         
         if (!product) {
             console.log("❌ Product not found:", currentProduct);
-            showError(`❌ Product "${currentProduct}" not found in campaign "${currentAd}". Available products: ${products.map(p => p.productName).join(', ') || 'none'}`);
+            showError(`❌ Product "${currentProduct}" not found in campaign "${currentAd}".`);
             return false;
         }
         
-        // ========== CHECK PRODUCT STOCK ==========
+        // Check product stock
         const redeemedCount = product.redeemedCount || 0;
         const totalProducts = product.totalProducts || 0;
         const remaining = totalProducts - redeemedCount;
@@ -399,8 +330,51 @@ async function checkIfAlreadyClaimed() {
         
         if (remaining <= 0) {
             console.log("❌ Product sold out");
-            showError(`❌ Product "${currentProduct}" is SOLD OUT! No more coupons available.`);
+            showSoldOutPage();
             return false;
+        }
+        
+        // ========== KEY CHANGE: Check by ADVERTISER + PRODUCT only (NOT location) ==========
+        const claimsRef = db.collection('claims');
+        const querySnapshot = await claimsRef
+            .where('userFingerprint', '==', userFingerprint)
+            .get();
+        
+        let alreadyClaimed = false;
+        let existingClaim = null;
+        let claimedAtDifferentLocation = null;
+        
+        querySnapshot.forEach(doc => {
+            const claim = doc.data();
+            const claimTime = claim.claimedAt?.toDate();
+            
+            // Check if claim is within 24 hours
+            const isWithin24h = claimTime >= twentyFourHoursAgo;
+            if (!isWithin24h) return;
+            
+            // Compare by advertiser name + product name (not location)
+            const isSameAdvertiserAndProduct = 
+                (claim.adName === currentAd) && 
+                (claim.productName === decodeURIComponent(currentProduct).replace(/_/g, ' '));
+            
+            if (isSameAdvertiserAndProduct) {
+                alreadyClaimed = true;
+                existingClaim = { ...claim, id: doc.id, claimedAt: claim.claimedAt };
+                existingCouponCode = claim.couponCode;
+                
+                // Check if location is different
+                const claimedLocation = claim.hostName || 'Unknown';
+                const currentLocation = decodeURIComponent(currentHost).replace(/_/g, ' ');
+                if (claimedLocation !== currentLocation) {
+                    claimedAtDifferentLocation = claimedLocation;
+                }
+            }
+        });
+        
+        if (alreadyClaimed) {
+            // Show blocked page with location info if applicable
+            showBlockedPage(existingClaim, claimedAtDifferentLocation);
+            return true;
         }
         
         // All checks passed - generate coupon
@@ -528,26 +502,45 @@ async function generateUserFingerprint() {
             setupRefreshProtection();
         }
         
-        function showBlockedPage(existingClaim) {
-            document.body.className = 'blocked-bg';
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('success').classList.add('hidden');
-            document.getElementById('blocked').classList.remove('hidden');
-            document.getElementById('soldout').classList.add('hidden');
-            document.getElementById('error').classList.add('hidden');
-            
-            const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
-            document.getElementById('blockedTime').textContent = formatCompactDate(claimedTime);
-            document.getElementById('blockedCouponCode').textContent = existingCouponCode || 'Not available';
-            
-            if (existingClaim.redeemed) {
-                document.getElementById('blockedStatus').textContent = 'Already redeemed';
-                document.getElementById('blockedStatus').style.color = '#c62828';
-            }
-            
-            const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
-            startCountdown(nextAvailable);
+function showBlockedPage(existingClaim, differentLocation = null) {
+    document.body.className = 'blocked-bg';
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('success').classList.add('hidden');
+    document.getElementById('blocked').classList.remove('hidden');
+    document.getElementById('soldout').classList.add('hidden');
+    document.getElementById('error').classList.add('hidden');
+    
+    const claimedTime = existingClaim.claimedAt?.toDate() || new Date();
+    document.getElementById('blockedTime').textContent = formatCompactDate(claimedTime);
+    document.getElementById('blockedCouponCode').textContent = existingCouponCode || 'Not available';
+    
+    // Show location info if claimed at different location
+    const locationInfo = document.getElementById('blockedLocationInfo');
+    if (differentLocation) {
+        if (!document.getElementById('locationWarning')) {
+            const warningDiv = document.createElement('div');
+            warningDiv.id = 'locationWarning';
+            warningDiv.style.marginTop = '10px';
+            warningDiv.style.padding = '10px';
+            warningDiv.style.background = '#FFF3E0';
+            warningDiv.style.borderRadius = '8px';
+            warningDiv.style.borderLeft = '4px solid #FF9800';
+            warningDiv.innerHTML = `<strong>📍 Note:</strong> You claimed this coupon at <strong>${differentLocation}</strong>. You have only ONE coupon for this product, regardless of location.`;
+            document.getElementById('blockedLocation').parentNode.insertBefore(warningDiv, document.getElementById('blockedLocation').nextSibling);
         }
+    }
+    
+    if (existingClaim.redeemed) {
+        document.getElementById('blockedStatus').textContent = 'Already redeemed';
+        document.getElementById('blockedStatus').style.color = '#c62828';
+    } else {
+        document.getElementById('blockedStatus').textContent = 'Available for use';
+        document.getElementById('blockedStatus').style.color = '#2E7D32';
+    }
+    
+    const nextAvailable = new Date(claimedTime.getTime() + (24 * 60 * 60 * 1000));
+    startCountdown(nextAvailable);
+}
         
      function showSoldOutPage() {
     document.body.className = 'soldout-bg';
