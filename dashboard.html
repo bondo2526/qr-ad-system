@@ -3009,8 +3009,8 @@
                 productActive: true
             });
             
-            // Return clean URL (update with your domain)
-            const claimUrl = `${window.location.origin}/claim/${uniqueId}`;
+            // Return URL parameters
+         const claimUrl = `${window.location.origin}/index.html?c=${uniqueId}`;
             return claimUrl;
         } catch (error) {
             console.error('Error generating claim link:', error);
