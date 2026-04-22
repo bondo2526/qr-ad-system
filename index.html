@@ -338,6 +338,54 @@
             }
             
             const linkData = qrDoc.data();
+            // Fetch the claim data from Firestore
+const qrDoc = await db.collection('qr_links').doc(uniqueId).get();
+
+if (!qrDoc.exists) {
+    showError('Invalid or expired claim link. Please contact the advertiser.');
+    return;
+}
+
+const linkData = qrDoc.data();
+
+// ========== NEW: Verify campaign still exists and is active ==========
+const campaignCheck = await db.collection('ad_campaigns').doc(linkData.ad).get();
+
+if (!campaignCheck.exists) {
+    showError(`❌ Campaign "${linkData.ad}" no longer exists.\n\nThis QR code is no longer valid.`);
+    return;
+}
+
+const campaignData = campaignCheck.data();
+
+if (campaignData.isActive === false) {
+    showError(`❌ Campaign "${linkData.ad}" has been DEACTIVATED.\n\nThis QR code is no longer valid.`);
+    return;
+}
+
+// Verify product still exists and is active
+const productCheck = campaignData.products.find(p => p.productName === linkData.product);
+
+if (!productCheck) {
+    showError(`❌ Product "${linkData.product}" no longer exists in this campaign.\n\nThis QR code is no longer valid.`);
+    return;
+}
+
+if (productCheck.isActive === false) {
+    showError(`❌ Product "${linkData.product}" has been DEACTIVATED.\n\nThis QR code is no longer valid.`);
+    return;
+}
+
+const remainingStock = (productCheck.totalProducts || 0) - (productCheck.redeemedCount || 0);
+if (remainingStock <= 0) {
+    showSoldOutPage();
+    return;
+}
+
+// All checks passed - continue with claim process
+currentAd = linkData.ad;
+currentProduct = linkData.product;
+currentHost = linkData.host;
             currentAd = linkData.ad;
             currentProduct = linkData.product;
             currentHost = linkData.host;
