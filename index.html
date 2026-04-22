@@ -329,16 +329,7 @@
             
             console.log("Looking up claim ID:", uniqueId);
             
-            // Fetch the claim data from Firestore
-            const qrDoc = await db.collection('qr_links').doc(uniqueId).get();
-            
-            if (!qrDoc.exists) {
-                showError('Invalid or expired claim link. Please contact the advertiser.');
-                return;
-            }
-            
-            const linkData = qrDoc.data();
-            // Fetch the claim data from Firestore
+// Fetch the claim data from Firestore
 const qrDoc = await db.collection('qr_links').doc(uniqueId).get();
 
 if (!qrDoc.exists) {
@@ -348,7 +339,7 @@ if (!qrDoc.exists) {
 
 const linkData = qrDoc.data();
 
-// ========== NEW: Verify campaign still exists and is active ==========
+// ========== Verify campaign still exists and is active ==========
 const campaignCheck = await db.collection('ad_campaigns').doc(linkData.ad).get();
 
 if (!campaignCheck.exists) {
@@ -386,11 +377,8 @@ if (remainingStock <= 0) {
 currentAd = linkData.ad;
 currentProduct = linkData.product;
 currentHost = linkData.host;
-            currentAd = linkData.ad;
-            currentProduct = linkData.product;
-            currentHost = linkData.host;
-            
-            console.log("Loaded claim data:", { currentAd, currentProduct, currentHost });
+
+console.log("Loaded claim data:", { currentAd, currentProduct, currentHost });
             
             const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
             const displayProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
