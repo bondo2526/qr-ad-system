@@ -2959,65 +2959,82 @@
 
     // ========== QR CODE GENERATION FUNCTIONS ==========
     
-    // Generate a clean claim link (no visible parameters)
-    async function generateClaimLink(advertiserName, productName, location) {
-        try {
-            // First, verify that the campaign exists and is active
-            const campaignDoc = await db.collection('ad_campaigns').doc(advertiserName).get();
-            
-            if (!campaignDoc.exists) {
-                alert(`❌ Campaign "${advertiserName}" does not exist!\n\nPlease create the campaign first before generating QR codes.`);
-                return null;
-            }
-            
-            const campaignData = campaignDoc.data();
-            if (campaignData.isActive === false) {
-                alert(`❌ Campaign "${advertiserName}" is DEACTIVATED!\n\nPlease activate the campaign first.`);
-                return null;
-            }
-            
-            // Verify product exists and is active
-            const products = campaignData.products || [];
-            const product = products.find(p => p.productName === productName);
-            
-            if (!product) {
-                alert(`❌ Product "${productName}" not found in campaign "${advertiserName}"!\n\nPlease add the product first.`);
-                return null;
-            }
-            
-            if (product.isActive === false) {
-                alert(`❌ Product "${productName}" is DEACTIVATED!\n\nPlease activate the product first.`);
-                return null;
-            }
-            
-            const remaining = (product.totalProducts || 0) - (product.redeemedCount || 0);
-            if (remaining <= 0) {
-                alert(`❌ Product "${productName}" is SOLD OUT!\n\nNo more coupons available.`);
-                return null;
-            }
-            
-            // Generate random 10-character ID
-            const uniqueId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 5);
-            
-            // Store in Firestore
-            await db.collection('qr_links').doc(uniqueId).set({
-                ad: advertiserName,
-                product: productName,
-                host: location,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                campaignActive: true,
-                productActive: true
-            });
-            
-            // Return URL parameters
-         const claimUrl = `${window.location.origin}/index.html?c=${uniqueId}`;
-            return claimUrl;
-        } catch (error) {
-            console.error('Error generating claim link:', error);
-            alert('Error generating claim link: ' + error.message);
+// Generate a clean claim link (WITH FULL VALIDATION)
+async function generateClaimLink(advertiserName, productName, location) {
+    try {
+        // ========== STEP 1: Verify Campaign Exists ==========
+        const campaignDoc = await db.collection('ad_campaigns').doc(advertiserName).get();
+        
+        if (!campaignDoc.exists) {
+            alert(`❌ CAMPAIGN NOT FOUND!\n\nNo campaign found for "${advertiserName}".\n\nPlease create the campaign first before generating QR codes.`);
             return null;
         }
+        
+        const campaignData = campaignDoc.data();
+        
+        // ========== STEP 2: Check if Campaign is Active ==========
+        if (campaignData.isActive === false) {
+            alert(`❌ CAMPAIGN IS DEACTIVATED!\n\nCampaign "${advertiserName}" is currently DEACTIVATED.\n\nPlease activate the campaign first.`);
+            return null;
+        }
+        
+        // ========== STEP 3: Verify Product Exists ==========
+        const products = campaignData.products || [];
+        const product = products.find(p => p.productName === productName);
+        
+        if (!product) {
+            // Show available products to help user
+            const availableProducts = products.map(p => p.productName).join(', ');
+            alert(`❌ PRODUCT NOT FOUND!\n\nProduct "${productName}" not found in campaign "${advertiserName}".\n\nAvailable products: ${availableProducts || 'none'}\n\nPlease add the product first.`);
+            return null;
+        }
+        
+        // ========== STEP 4: Check if Product is Active ==========
+        if (product.isActive === false) {
+            alert(`❌ PRODUCT IS DEACTIVATED!\n\nProduct "${productName}" is currently DEACTIVATED.\n\nPlease activate the product first.`);
+            return null;
+        }
+        
+        // ========== STEP 5: Check Stock Availability ==========
+        const redeemedCount = product.redeemedCount || 0;
+        const totalProducts = product.totalProducts || 0;
+        const remaining = totalProducts - redeemedCount;
+        
+        if (remaining <= 0) {
+            alert(`❌ PRODUCT SOLD OUT!\n\nProduct "${productName}" has no remaining stock.\n\nNo more coupons available.`);
+            return null;
+        }
+        
+        // ========== STEP 6: All checks passed - Generate QR Link ==========
+        const uniqueId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 5);
+        
+        // Store in Firestore with campaign snapshot data
+        await db.collection('qr_links').doc(uniqueId).set({
+            ad: advertiserName,
+            product: productName,
+            host: location,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            // Store a snapshot of campaign state to detect changes later
+            campaignSnapshot: {
+                isActive: campaignData.isActive,
+                productActive: product.isActive,
+                remainingStock: remaining,
+                productTotal: totalProducts,
+                productRedeemed: redeemedCount
+            }
+        });
+        
+        // Return clean URL
+        const claimUrl = `${window.location.origin}/qr-ad-system/?c=${uniqueId}`;
+        console.log("✅ QR Link generated with validation passed!");
+        return claimUrl;
+        
+    } catch (error) {
+        console.error('Error generating claim link:', error);
+        alert('Error generating claim link: ' + error.message);
+        return null;
     }
+}
 
     // Generate QR code for a product
     async function generateProductQRCode(advertiserName, productName) {
