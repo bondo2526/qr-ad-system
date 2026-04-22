@@ -3124,14 +3124,14 @@ async function generateClaimLink(advertiserName, productName, location) {
                 </head>
                 <body>
                     <h2>📱 Scan to Claim Coupon</h2>
-                    <p>Product: <strong>${productName}</strong></p>
                     <p>Advertiser: <strong>${advertiserName}</strong></p>
+                    <p>Product: <strong>${productName}</strong></p>
                     <p>Location: <strong>${station}</strong></p>
                     <div class="qr-container">
                         <img src="${qrCodeUrl}" style="width: 250px; height: 250px;">
                     </div>
                     <div class="link">
-                        🔗 Link: ${claimUrl}
+                     ${claimUrl}
                     </div>
                     <div class="info">
                         ✅ Campaign is ACTIVE | Product is AVAILABLE
