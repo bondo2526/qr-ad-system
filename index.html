@@ -249,7 +249,6 @@
     let currentProduct = null;
     let currentHost = null;
     let userFingerprint = null;
-    let existingCouponCode = null;
     
     async function getClientIP() {
         try {
@@ -427,12 +426,6 @@ console.log("Loaded claim data:", { currentAd, currentProduct, currentHost });
             }
             
             const campaignData = campaign.data();
-if (campaignData.isActive === false) {
-    // Get list of active campaigns (for reference)
-    showError(`❌ Campaign "${linkData.ad}" has been DEACTIVATED.\n\nThis QR code is no longer valid.\n\nPlease contact the advertiser for active promotions.`);
-    return;
-}
-            
             const advertiserName = campaignData.advertiserName || decodeURIComponent(currentAd).replace(/_/g, ' ');
             const currentProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
             
