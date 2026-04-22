@@ -5,7 +5,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
@@ -31,8 +30,6 @@
         h1 { color: #333; margin-bottom: 10px; text-align: center; font-size: clamp(28px, 6vw, 32px); }
         h2 { color: #333; margin: 20px 0 10px 0; text-align: center; font-size: clamp(22px, 5vw, 26px); }
         p { color: #666; margin: 10px 0; font-size: 16px; line-height: 1.6; text-align: center; }
-        
-        #reader { width: 100%; max-width: 300px; margin: 20px auto; border: 3px solid #ddd; border-radius: 10px; overflow: hidden; }
         
         .result { margin: 20px 0; padding: 20px; border-radius: 10px; text-align: left; }
         .valid { background: #E8F5E9; border: 2px solid #4CAF50; }
@@ -66,10 +63,7 @@
         .btn-logout:hover { background: #d32f2f; }
         .btn-change-password { background: #9C27B0; color: white; margin-top: 20px; }
         .btn-change-password:hover { background: #7B1FA2; }
-        .btn-sold { background: #FF9800; color: white; width: 100%; }
-        .btn-sold:hover { background: #F57C00; }
         
-        .sold-out-section { border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px; }
         .hidden { display: none; }
         .login-section { text-align: center; }
         .advertiser-id-section { margin-bottom: 20px; }
@@ -91,7 +85,6 @@
         .action-buttons { display: flex; gap: 10px; margin-top: 20px; }
         .header-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         
-        .scanner-instruction { background: #E3F2FD; border: 2px solid #2196F3; border-radius: 10px; padding: 15px; margin: 20px 0; text-align: center; font-size: 15px; }
         .advertiser-info { background: #E8F5E9; border: 2px solid #4CAF50; border-radius: 10px; padding: 15px; margin: 20px 0; text-align: center; }
         .advertiser-info h3 { color: #2E7D32; margin-bottom: 10px; }
         
@@ -133,7 +126,6 @@
             .action-buttons { flex-direction: column; }
             .btn { width: 100%; margin: 5px 0; }
             .header-controls { flex-direction: column; }
-            #reader { max-width: 250px; }
         }
     </style>
 </head>
@@ -178,14 +170,14 @@
                 <input type="text" id="manualCode" placeholder="Enter coupon code here" onkeypress="handleManualCodeEnter(event)">
                 <div class="action-buttons">
                     <button class="btn btn-validate" onclick="validateManualCode()">✅ Validate Code</button>
-                    <button class="btn btn-reset" onclick="resetScanner()">🔄 Reset Scanner</button>
+                    <button class="btn btn-reset" onclick="resetScanner()">🔄 Reset</button>
                 </div>
             </div>
             
             <div id="resultSection" class="hidden">
                 <div class="coupon-display" id="scannedCoupon"></div>
                 
-                <div id="validResult" class="result hidden">
+                <div id="validResult" class="result valid hidden">
                     <h2 style="color: #4CAF50;">✅ VALID COUPON</h2>
                     <div class="info-item"><strong>Campaign Advertiser:</strong> <span id="resultAd"></span></div>
                     <div class="info-item"><strong>Product:</strong> <span id="resultProduct"></span></div>
@@ -206,12 +198,11 @@
                     </div>
                 </div>
                 
-                <div id="usedResult" class="validation-result hidden">
-                    <div class="validation-icon">⚠️</div>
-                    <h2 style="color: #FF9800;">COUPON ALREADY REDEEMED</h2>
-                    <p class="validation-message">This coupon was already redeemed on <strong><span id="redeemedTime"></span></strong>.</p>
+                <div id="usedResult" class="result used hidden">
+                    <h2 style="color: #FF9800;">⚠️ COUPON ALREADY REDEEMED</h2>
+                    <p style="text-align: center;">This coupon was already redeemed on <strong><span id="redeemedTime"></span></strong>.</p>
                     <div class="action-buttons">
-                        <button class="btn btn-reset" onclick="resetScanner()">🔄 Scan Another Coupon</button>
+                        <button class="btn btn-reset" onclick="resetScanner()">🔄 Scan Another</button>
                     </div>
                 </div>
                 
@@ -220,7 +211,7 @@
                     <h2 style="color: #4CAF50;">VALIDATION COMPLETE!</h2>
                     <p class="validation-message">Coupon code <span class="coupon-code-highlight" id="successCouponCode"></span><br>has been successfully validated and marked as used.</p>
                     <div class="action-buttons">
-                        <button class="btn btn-reset" onclick="resetScanner()">🔄 Scan Another Coupon</button>
+                        <button class="btn btn-reset" onclick="resetScanner()">🔄 Scan Another</button>
                     </div>
                 </div>
                 
@@ -230,7 +221,7 @@
                     <p class="validation-message"><strong>Coupon belongs to another business!</strong></p>
                     <p id="unauthorizedMessage" style="color: #666; font-size: 14px; margin-top: 10px;"></p>
                     <div class="action-buttons">
-                        <button class="btn btn-reset" onclick="resetScanner()">🔄 Try Another Coupon</button>
+                        <button class="btn btn-reset" onclick="resetScanner()">🔄 Try Another</button>
                     </div>
                 </div>
             </div>
@@ -241,9 +232,9 @@
         <div class="modal">
             <h2>🔑 Change Your Password</h2>
             <div style="margin-bottom: 20px;">
-                <input type="password" id="currentPassword" class="password-input" placeholder="Current Password" style="margin-bottom: 15px;">
-                <input type="password" id="newPassword" class="password-input" placeholder="New Password (min 6 characters)" style="margin-bottom: 15px;">
-                <input type="password" id="confirmPassword" class="password-input" placeholder="Confirm New Password">
+                <input type="password" id="currentPassword" placeholder="Current Password" style="margin-bottom: 15px;">
+                <input type="password" id="newPassword" placeholder="New Password (min 6 characters)" style="margin-bottom: 15px;">
+                <input type="password" id="confirmPassword" placeholder="Confirm New Password">
                 <div class="error-message" id="passwordError"></div>
                 <div class="success-message" id="passwordSuccess"></div>
             </div>
@@ -269,12 +260,8 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        const TELEGRAM_BOT_TOKEN = "8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk";
-        const TELEGRAM_CHAT_ID = "6597376744";
-        
         const ADVERTISERS_COLLECTION = 'advertisers';
         let currentAdvertiser = null;
-        let html5QrCode = null;
         let currentCouponData = null;
         
         function formatCompactDate(date) {
@@ -288,101 +275,22 @@
             const minutes = String(date.getMinutes()).padStart(2, '0');
             return `${dayName}, ${day}-${month}-${year} ${hours}:${minutes}`;
         }
-// Add this after formatCompactDate() function
-async function sendSoldOutTelegram(advertiserName, productName, totalProducts, redeemedCount, remaining) {
-    const BOT_TOKEN = "8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk";
-    const CHAT_ID = "6597376744";
-    
-    const timestamp = new Date().toLocaleString();
-    const message = `
-🔴 PRODUCT SOLD OUT ALERT 🔴
-
-Advertiser: ${advertiserName}
-Product: ${productName}
-Total Quantity: ${totalProducts}
-Redeemed: ${redeemedCount}
-Remaining: ${remaining}
-Status: SOLD OUT
-
-⏰ Time: ${timestamp}
-
-⚠️ Action Required: Remove this ad from display system.
-    `;
-    
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: message,
-                parse_mode: 'HTML'
-            })
-        });
-        const result = await response.json();
-        if (result.ok) {
-            console.log("✅ Telegram notification sent for sold out product:", productName);
-        } else {
-            console.error("Telegram error:", result);
-        }
-    } catch (error) {
-        console.error("Failed to send Telegram notification:", error);
-    }
-}
         
-        async function manualMarkSoldOut() {
-            if (!currentAdvertiser) { alert("Please login first"); return; }
+        async function sendSoldOutTelegram(advertiserName, productName, totalProducts, redeemedCount, remaining) {
+            const BOT_TOKEN = "8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk";
+            const CHAT_ID = "6597376744";
             
-            const adId = prompt("Enter Ad ID to mark as sold (e.g., ph1):");
-            if (!adId) return;
-            
-            const productName = prompt("Enter product name:");
-            if (!productName) return;
-            
-            const hostName = prompt("Enter location/host name:");
-            if (!hostName) return;
-            
-            if (!confirm(`⚠️ Confirm: Mark ${adId} as SOLD OUT? This will notify admin.`)) return;
+            const message = `🔴 PRODUCT SOLD OUT ALERT 🔴\n\nAdvertiser: ${advertiserName}\nProduct: ${productName}\nTotal Quantity: ${totalProducts}\nRedeemed: ${redeemedCount}\nRemaining: ${remaining}\n\n⏰ Time: ${new Date().toLocaleString()}\n\n⚠️ Action Required: Remove this ad from display system.`;
             
             try {
-                await db.collection('sold_out_requests').add({
-                    adId: adId, advertiserName: currentAdvertiser.name, advertiserId: currentAdvertiser.id,
-                    productName: productName, hostName: hostName,
-                    requestedAt: firebase.firestore.FieldValue.serverTimestamp(), status: 'pending'
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: message })
                 });
-                
-                await sendTelegramNotification(currentAdvertiser.name, adId, productName, hostName, false);
-                alert("✅ Request sent! Admin will remove the ad shortly.");
+                console.log("✅ Telegram notification sent");
             } catch (error) {
-                console.error("Error:", error);
-                alert("Error sending request.");
-            }
-        }
-        
-        async function checkAndUpdateRedeemedCount(adId) {
-            try {
-                const campaignRef = db.collection('ad_campaigns').doc(adId);
-                const campaign = await campaignRef.get();
-                
-                if (!campaign.exists) return;
-                
-                const data = campaign.data();
-                const newRedeemedCount = (data.redeemedCount || 0) + 1;
-                
-                await campaignRef.update({
-                    redeemedCount: newRedeemedCount,
-                    lastRedeemedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                const totalProducts = data.totalProducts || 999;
-                if (newRedeemedCount >= totalProducts && data.isActive !== false) {
-                    await campaignRef.update({ isActive: false, autoMarkedSoldAt: firebase.firestore.FieldValue.serverTimestamp() });
-                    await sendTelegramNotification(data.advertiserName || 'Unknown', adId, 'Auto', 'System', true);
-                }
-            } catch (error) {
-                console.error("Error updating redeemed count:", error);
+                console.error("Failed to send Telegram notification:", error);
             }
         }
         
@@ -400,78 +308,54 @@ Status: SOLD OUT
             }
         });
         
-async function login() {
-    const advertiserName = document.getElementById('advertiserName').value.trim();
-    const password = document.getElementById('advertiserPassword').value.trim();
-    const errorDiv = document.getElementById('loginError');
-    
-    errorDiv.textContent = '';
-    if (!advertiserName) { errorDiv.textContent = '❌ Please enter your business name'; return; }
-    if (!password) { errorDiv.textContent = '❌ Please enter your password'; return; }
-    if (password.length < 6) { errorDiv.textContent = '❌ Password must be at least 6 characters'; return; }
-    
-    try {
-        const existingDoc = await db.collection(ADVERTISERS_COLLECTION).doc(advertiserName).get();
-        
-        if (!existingDoc.exists) {
-            errorDiv.textContent = `❌ Account "${advertiserName}" does not exist. Contact admin.`;
-            document.getElementById('advertiserPassword').value = '';
-            return;
+        async function login() {
+            const advertiserName = document.getElementById('advertiserName').value.trim();
+            const password = document.getElementById('advertiserPassword').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            
+            errorDiv.textContent = '';
+            if (!advertiserName) { errorDiv.textContent = '❌ Please enter your business name'; return; }
+            if (!password) { errorDiv.textContent = '❌ Please enter your password'; return; }
+            if (password.length < 6) { errorDiv.textContent = '❌ Password must be at least 6 characters'; return; }
+            
+            try {
+                const existingDoc = await db.collection(ADVERTISERS_COLLECTION).doc(advertiserName).get();
+                
+                if (!existingDoc.exists) {
+                    errorDiv.textContent = `❌ Account "${advertiserName}" does not exist. Contact admin.`;
+                    document.getElementById('advertiserPassword').value = '';
+                    return;
+                }
+                
+                const advertiserData = existingDoc.data();
+                
+                if (advertiserData.password !== password) {
+                    errorDiv.textContent = '❌ Incorrect password';
+                    document.getElementById('advertiserPassword').value = '';
+                    return;
+                }
+                
+                await db.collection(ADVERTISERS_COLLECTION).doc(advertiserName).update({
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                currentAdvertiser = {
+                    id: existingDoc.id,
+                    name: advertiserData.displayName,
+                    advertiserName: advertiserData.displayName,
+                    couponValidations: advertiserData.couponValidations || 0
+                };
+                
+                sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
+                document.getElementById('advertiserName').value = '';
+                document.getElementById('advertiserPassword').value = '';
+                showScannerSection();
+                
+            } catch (error) {
+                console.error("Login error:", error);
+                errorDiv.textContent = '❌ Login error: ' + error.message;
+            }
         }
-        
-        const advertiserData = existingDoc.data();
-        
-        if (advertiserData.password !== password) {
-            errorDiv.textContent = '❌ Incorrect password';
-            document.getElementById('advertiserPassword').value = '';
-            return;
-        }
-        
-        // ✅ UPDATE LAST LOGIN - ADD THIS
-        await db.collection(ADVERTISERS_COLLECTION).doc(advertiserName).update({
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        currentAdvertiser = {
-            id: existingDoc.id,
-            name: advertiserData.displayName,
-            advertiserName: advertiserData.displayName,
-            couponValidations: advertiserData.couponValidations || 0
-        };
-        
-        sessionStorage.setItem('advertiser_logged_in', JSON.stringify(currentAdvertiser));
-        document.getElementById('advertiserName').value = '';
-        document.getElementById('advertiserPassword').value = '';
-        showScannerSection();
-        
-    } catch (error) {
-        console.error("Login error:", error);
-        errorDiv.textContent = '❌ Login error: ' + error.message;
-    }
-}
- async function createNewAdvertiser(displayName, password) {
-    const newAdvertiser = {
-        advertiserName: displayName,
-        displayName: displayName,
-        password: password,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-        couponValidations: 0,
-        isActive: true
-    };
-    
-    // Use displayName as document ID (NO random ID)
-    await db.collection(ADVERTISERS_COLLECTION)
-        .doc(displayName)
-        .set(newAdvertiser);
-    
-    currentAdvertiser = {
-        id: displayName,
-        name: displayName,
-        advertiserName: displayName,
-        couponValidations: 0
-    };
-}
         
         function handleLoginEnter(event) { if (event.key === 'Enter') login(); }
         
@@ -480,14 +364,12 @@ async function login() {
             document.getElementById('scannerSection').classList.remove('hidden');
             document.getElementById('resultSection').classList.add('hidden');
             document.getElementById('loggedInAdvertiserName').textContent = currentAdvertiser.name;
-            initializeScanner();
         }
         
         function logout() {
             sessionStorage.removeItem('advertiser_logged_in');
             currentAdvertiser = null;
             currentCouponData = null;
-            if (html5QrCode) { try { html5QrCode.stop(); } catch(e) {} }
             document.getElementById('scannerSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('resultSection').classList.add('hidden');
@@ -495,7 +377,6 @@ async function login() {
         }
         
         function showChangePasswordModal() {
-            if (currentAdvertiser?.isTest) { alert('Test account cannot change password.'); return; }
             document.getElementById('passwordModal').style.display = 'flex';
             document.getElementById('currentPassword').focus();
         }
@@ -505,118 +386,114 @@ async function login() {
             document.getElementById('currentPassword').value = '';
             document.getElementById('newPassword').value = '';
             document.getElementById('confirmPassword').value = '';
+            document.getElementById('passwordError').textContent = '';
+            document.getElementById('passwordSuccess').textContent = '';
         }
         
-    async function changePassword() {
-    const currentPass = document.getElementById('currentPassword').value;
-    const newPass = document.getElementById('newPassword').value;
-    const confirmPass = document.getElementById('confirmPassword').value;
-    const errorDiv = document.getElementById('passwordError');
-    const successDiv = document.getElementById('passwordSuccess');
-    
-    errorDiv.textContent = '';
-    successDiv.textContent = '';
-    
-    if (!currentPass || !newPass || !confirmPass) { errorDiv.textContent = '❌ Please fill all fields'; return; }
-    if (newPass.length < 6) { errorDiv.textContent = '❌ New password must be at least 6 characters'; return; }
-    if (newPass !== confirmPass) { errorDiv.textContent = '❌ New passwords do not match'; return; }
-    
-    try {
-        const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).get();
-        if (!advertiserDoc.exists) { errorDiv.textContent = '❌ Advertiser not found'; return; }
-        if (advertiserDoc.data().password !== currentPass) { errorDiv.textContent = '❌ Current password is incorrect'; return; }
-        
-        // ✅ UPDATE PASSWORD AND LAST PASSWORD CHANGE - ADD THIS
-        await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).update({ 
-            password: newPass,
-            lastPasswordChange: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        successDiv.textContent = '✅ Password changed successfully!';
-        setTimeout(() => closePasswordModal(), 2000);
-    } catch (error) {
-        errorDiv.textContent = '❌ Error: ' + error.message;
-    }
-}
-        function initializeScanner() {
-    console.log("Scanner ready (manual entry only)");
+        async function changePassword() {
+            const currentPass = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirmPass = document.getElementById('confirmPassword').value;
+            const errorDiv = document.getElementById('passwordError');
+            const successDiv = document.getElementById('passwordSuccess');
+            
+            errorDiv.textContent = '';
+            successDiv.textContent = '';
+            
+            if (!currentPass || !newPass || !confirmPass) { errorDiv.textContent = '❌ Please fill all fields'; return; }
+            if (newPass.length < 6) { errorDiv.textContent = '❌ New password must be at least 6 characters'; return; }
+            if (newPass !== confirmPass) { errorDiv.textContent = '❌ New passwords do not match'; return; }
+            
+            try {
+                const advertiserDoc = await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).get();
+                if (!advertiserDoc.exists) { errorDiv.textContent = '❌ Advertiser not found'; return; }
+                if (advertiserDoc.data().password !== currentPass) { errorDiv.textContent = '❌ Current password is incorrect'; return; }
+                
+                await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).update({ 
+                    password: newPass,
+                    lastPasswordChange: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                successDiv.textContent = '✅ Password changed successfully!';
+                setTimeout(() => closePasswordModal(), 2000);
+            } catch (error) {
+                errorDiv.textContent = '❌ Error: ' + error.message;
+            }
         }
         
-        function onScanSuccess(decodedText) { if (html5QrCode) html5QrCode.stop(); validateCoupon(decodedText); }
-        function onScanError(error) { console.debug("Scan error:", error); }
         function handleManualCodeEnter(event) { if (event.key === 'Enter') validateManualCode(); }
-        function validateManualCode() { const code = document.getElementById('manualCode').value.trim(); if (code) validateCoupon(code); else alert("Please enter a coupon code"); }
         
-    async function validateCoupon(couponCode) {
-    try {
-        document.getElementById('resultSection').classList.remove('hidden');
-        document.getElementById('validResult').classList.add('hidden');
-        document.getElementById('invalidResult').classList.add('hidden');
-        document.getElementById('usedResult').classList.add('hidden');
-        document.getElementById('successResult').classList.add('hidden');
-        document.getElementById('unauthorizedResult').classList.add('hidden');
-        document.getElementById('scannedCoupon').textContent = couponCode;
-        
-        const querySnapshot = await db.collection('claims').where('couponCode', '==', couponCode).limit(1).get();
-        if (querySnapshot.empty) { 
-            showInvalidResult("Coupon not found in database"); 
-            return; 
+        function validateManualCode() { 
+            const code = document.getElementById('manualCode').value.trim(); 
+            if (code) validateCoupon(code); 
+            else alert("Please enter a coupon code"); 
         }
         
-        const doc = querySnapshot.docs[0];
-        const couponData = doc.data();
-        currentCouponData = { id: doc.id, ...couponData };
-        
-        let couponOwner = couponData.advertiserName;
-        const expiresTime = couponData.expiresAt?.toDate();
-        const now = new Date();
-        
-        // Check ownership
-        if (couponOwner !== currentAdvertiser.name) {
-            showUnauthorizedResult(`This coupon belongs to another business. You are logged in as "${currentAdvertiser.name}".`);
-            return;
+        async function validateCoupon(couponCode) {
+            try {
+                document.getElementById('resultSection').classList.remove('hidden');
+                document.getElementById('validResult').classList.add('hidden');
+                document.getElementById('invalidResult').classList.add('hidden');
+                document.getElementById('usedResult').classList.add('hidden');
+                document.getElementById('successResult').classList.add('hidden');
+                document.getElementById('unauthorizedResult').classList.add('hidden');
+                document.getElementById('scannedCoupon').textContent = couponCode;
+                
+                const querySnapshot = await db.collection('claims').where('couponCode', '==', couponCode).limit(1).get();
+                if (querySnapshot.empty) { 
+                    showInvalidResult("Coupon not found in database"); 
+                    return; 
+                }
+                
+                const doc = querySnapshot.docs[0];
+                const couponData = doc.data();
+                currentCouponData = { id: doc.id, ...couponData };
+                
+                const couponOwner = couponData.advertiserName;
+                const expiresTime = couponData.expiresAt?.toDate();
+                const now = new Date();
+                
+                if (couponOwner !== currentAdvertiser.name) {
+                    showUnauthorizedResult(`This coupon belongs to another business. You are logged in as "${currentAdvertiser.name}".`);
+                    return;
+                }
+                
+                const campaign = await db.collection('ad_campaigns').doc(couponOwner).get();
+                if (!campaign.exists) {
+                    showInvalidResult("No campaign found for this advertiser.");
+                    return;
+                }
+                
+                const products = campaign.data().products || [];
+                const product = products.find(p => p.productName === couponData.productName);
+                
+                if (!product) {
+                    showInvalidResult(`Product "${couponData.productName}" not found in campaign.`);
+                    return;
+                }
+                
+                if (product.totalProducts <= 0) {
+                    showInvalidResult("This product has no available stock.");
+                    return;
+                }
+                
+                if (expiresTime && expiresTime < now) { 
+                    showInvalidResult("Coupon has expired"); 
+                    return; 
+                }
+                
+                if (couponData.redeemed === true) { 
+                    showUsedResult(); 
+                    return; 
+                }
+                
+                showValidResult();
+                
+            } catch (error) {
+                console.error("Validation error:", error);
+                showInvalidResult("Error: " + error.message);
+            }
         }
-        
-        // Check if campaign exists for this product
-        const campaign = await db.collection('ad_campaigns').doc(couponOwner).get();
-        if (!campaign.exists) {
-            showInvalidResult("No campaign found for this advertiser. Please contact support.");
-            return;
-        }
-        
-        const products = campaign.data().products || [];
-        const product = products.find(p => p.productName === couponData.productName);
-        
-        if (!product) {
-            showInvalidResult(`Product "${couponData.productName}" not found in campaign. Please contact advertiser.`);
-            return;
-        }
-        
-        if (product.totalProducts <= 0) {
-            showInvalidResult("This product has no available stock.");
-            return;
-        }
-        
-        // Check expiry
-        if (expiresTime && expiresTime < now) { 
-            showInvalidResult("Coupon has expired"); 
-            return; 
-        }
-        
-        // Check if already redeemed
-        if (couponData.redeemed === true) { 
-            showUsedResult(); 
-            return; 
-        }
-        
-        // ALL CHECKS PASSED - Show valid result with Mark as Used button
-        showValidResult();
-        
-    } catch (error) {
-        console.error("Validation error:", error);
-        showInvalidResult("Error: " + error.message);
-    }
-}
         
         function showUnauthorizedResult(details) {
             document.getElementById('unauthorizedResult').classList.remove('hidden');
@@ -645,107 +522,85 @@ async function login() {
             document.getElementById('redeemedTime').textContent = redeemedTime ? formatCompactDate(redeemedTime) : 'an earlier date';
         }
         
-async function markCouponUsed() {
-    try {
-        const couponOwner = currentCouponData.advertiserName;
-        
-        if (couponOwner !== currentAdvertiser.name) { 
-            alert("Unauthorized"); 
-            resetScanner(); 
-            return; 
-        }
-        
-        if (currentCouponData.redeemed === true) { 
-            alert("Already redeemed"); 
-            resetScanner(); 
-            return; 
-        }
-        
-        if (currentAdvertiser?.isTest) {
-            document.getElementById('validResult').classList.add('hidden');
-            document.getElementById('successResult').classList.remove('hidden');
-            document.getElementById('successCouponCode').textContent = currentCouponData.couponCode;
-            setTimeout(() => resetScanner(), 2000);
-            return;
-        }
-        
-        // 1. Mark coupon as redeemed
-        await db.collection('claims').doc(currentCouponData.id).update({
-            redeemed: true,
-            status: 'redeemed',
-            redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            redeemedBy: currentAdvertiser.id,
-            redeemedByName: currentAdvertiser.name
-        });
-        
-        // 2. Update advertiser stats
-        await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).update({
-            couponValidations: firebase.firestore.FieldValue.increment(1),
-            lastValidation: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        // 3. UPDATE PRODUCT REMAINING COUNT IN AD_CAMPAIGNS
-        const advertiserName = currentCouponData.advertiserName;
-        const productName = currentCouponData.productName;
-        
-        const campaignRef = db.collection('ad_campaigns').doc(advertiserName);
-        const campaign = await campaignRef.get();
-        
-        if (campaign.exists) {
-            const products = campaign.data().products || [];
-            const productIndex = products.findIndex(p => p.productName === productName);
-            
-            if (productIndex !== -1) {
-                // Increment redeemedCount
-                const newRedeemedCount = (products[productIndex].redeemedCount || 0) + 1;
-                const newRemaining = products[productIndex].totalProducts - newRedeemedCount;
+        async function markCouponUsed() {
+            try {
+                const couponOwner = currentCouponData.advertiserName;
                 
-                products[productIndex].redeemedCount = newRedeemedCount;
-                products[productIndex].remaining = newRemaining;
-                
-                // Save back to Firestore
-                await campaignRef.update({ products: products });
-                
-                console.log(`✅ Updated ${productName}: redeemed=${newRedeemedCount}, remaining=${newRemaining}`);
-                
-                // ===== ADD THIS: Send Telegram notification if sold out =====
-                if (newRemaining <= 0) {
-                    await sendSoldOutTelegram(
-                        advertiserName,
-                        productName,
-                        products[productIndex].totalProducts,
-                        newRedeemedCount,
-                        newRemaining
-                    );
+                if (couponOwner !== currentAdvertiser.name) { 
+                    alert("Unauthorized"); 
+                    resetScanner(); 
+                    return; 
                 }
-                // ========================================================
-            } else {
-                console.log(`❌ Product ${productName} not found in campaign`);
+                
+                if (currentCouponData.redeemed === true) { 
+                    alert("Already redeemed"); 
+                    resetScanner(); 
+                    return; 
+                }
+                
+                await db.collection('claims').doc(currentCouponData.id).update({
+                    redeemed: true,
+                    status: 'redeemed',
+                    redeemedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    redeemedBy: currentAdvertiser.id,
+                    redeemedByName: currentAdvertiser.name
+                });
+                
+                await db.collection(ADVERTISERS_COLLECTION).doc(currentAdvertiser.id).update({
+                    couponValidations: firebase.firestore.FieldValue.increment(1),
+                    lastValidation: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                const advertiserName = currentCouponData.advertiserName;
+                const productName = currentCouponData.productName;
+                
+                const campaignRef = db.collection('ad_campaigns').doc(advertiserName);
+                const campaign = await campaignRef.get();
+                
+                if (campaign.exists) {
+                    const products = campaign.data().products || [];
+                    const productIndex = products.findIndex(p => p.productName === productName);
+                    
+                    if (productIndex !== -1) {
+                        const newRedeemedCount = (products[productIndex].redeemedCount || 0) + 1;
+                        const newRemaining = products[productIndex].totalProducts - newRedeemedCount;
+                        
+                        products[productIndex].redeemedCount = newRedeemedCount;
+                        products[productIndex].remaining = newRemaining;
+                        
+                        await campaignRef.update({ products: products });
+                        
+                        if (newRemaining <= 0) {
+                            await sendSoldOutTelegram(
+                                advertiserName,
+                                productName,
+                                products[productIndex].totalProducts,
+                                newRedeemedCount,
+                                newRemaining
+                            );
+                        }
+                    }
+                }
+                
+                document.getElementById('validResult').classList.add('hidden');
+                document.getElementById('successResult').classList.remove('hidden');
+                document.getElementById('successCouponCode').textContent = currentCouponData.couponCode;
+                
+                setTimeout(() => {
+                    resetScanner();
+                }, 3000);
+                
+            } catch (error) {
+                console.error("Mark used error:", error);
+                alert('❌ Error marking coupon as used: ' + error.message);
             }
-        } else {
-            console.log(`❌ Campaign ${advertiserName} not found`);
         }
         
-        // Show success
-        document.getElementById('validResult').classList.add('hidden');
-        document.getElementById('successResult').classList.remove('hidden');
-        document.getElementById('successCouponCode').textContent = currentCouponData.couponCode;
-        
-        setTimeout(() => {
-            resetScanner();
-        }, 3000);
-        
-    } catch (error) {
-        console.error("Mark used error:", error);
-        alert('❌ Error marking coupon as used: ' + error.message);
-    }
-}
         function resetScanner() {
             currentCouponData = null;
             document.getElementById('resultSection').classList.add('hidden');
             document.getElementById('manualCode').value = '';
             document.getElementById('manualCode').focus();
-            if (html5QrCode) { try { html5QrCode.stop(); } catch(e) {}; initializeScanner(); }
         }
     </script>
 </body>
