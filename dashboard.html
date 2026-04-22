@@ -3004,9 +3004,9 @@ row.innerHTML = `
     <td style="padding:10px;text-align:center;">${product.redeemedCount||0}</td>
     <td style="padding:10px;text-align:center;font-weight:bold;color:${statusColor};">${rem}</td>
     <td style="padding:10px;text-align:center;">
-        <span style="background:${product.isActive === false ? '#2a2a1a' : (isPA ? '#1a2a1a' : '#2a1a1a')};color:${product.isActive === false ? '#ffc107' : statusColor};padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;">
-            ${product.isActive === false ? '⏸️ Deactivated' : (isPA ? '🟢 Active' : '🔴 Sold Out')}
-        </span>
+        <span style="background:${product.isActive === false ? '#2a2a1a' : (isPA ? '#1a2a1a' : '#2a1a1a')};
+        color:${!isActive ? '#dc3545' : (product.isActive === false ? '#ffc107' : statusColor)};padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;">
+${!isActive ? '⛔ Campaign Deactivated' : (product.isActive === false ? '⏸️ Product Deactivated' : (isPA ? '🟢 Active' : '🔴 Sold Out'))}        </span>
     </td>
     <td style="padding:10px;text-align:center;">
         <button class="btn-sm btn-sm-blue" onclick="updateCouponProductQty('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}','${inputId}')">📦 Update Qty</button>
