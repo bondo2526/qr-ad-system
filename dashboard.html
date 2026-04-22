@@ -1823,88 +1823,159 @@ function updateStationDropdowns() {
         }
     });
 
-    function validateDailyHours() {
-        const startDateTime = document.getElementById('startDateTime').value;
-        const endDateTime = document.getElementById('endDateTime').value;
-        const planSelect = document.getElementById('pricingPlan');
-        const selectedPlan = planSelect ? planSelect.value : 'light';
-        
-        if (!startDateTime || !endDateTime) return true;
-        
-        const startDate = new Date(startDateTime);
-        const endDate = new Date(endDateTime);
-        
-        const totalHours = (endDate - startDate) / (1000 * 60 * 60);
-        
-        let maxHoursPerDay = 0;
-        let planName = '';
-        
-        if (selectedPlan === 'light') {
-            maxHoursPerDay = 4;
-            planName = 'Light';
-        } else if (selectedPlan === 'standard') {
-            maxHoursPerDay = 6;
-            planName = 'Standard';
-        } else if (selectedPlan === 'professional') {
-            maxHoursPerDay = 8;
-            planName = 'Professional';
-        } else {
-            return true;
-        }
-        
-        if (totalHours > maxHoursPerDay) {
-            let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
-            alert(message);
-            document.getElementById('endDateTime').focus();
-            return false;
-        }
-        
+function validateDailyHours() {
+    const startDateTime = document.getElementById('startDateTime').value;
+    const endDateTime = document.getElementById('endDateTime').value;
+    const planSelect = document.getElementById('pricingPlan');
+    const selectedPlan = planSelect ? planSelect.value : 'light';
+    
+    if (!startDateTime || !endDateTime) return true;
+    
+    const startDate = new Date(startDateTime);
+    const endDate = new Date(endDateTime);
+    
+    let requiredHoursPerDay = 0;
+    let planName = '';
+    
+    if (selectedPlan === 'light') {
+        requiredHoursPerDay = 4;
+        planName = 'Light';
+    } else if (selectedPlan === 'standard') {
+        requiredHoursPerDay = 6;
+        planName = 'Standard';
+    } else if (selectedPlan === 'professional') {
+        requiredHoursPerDay = 8;
+        planName = 'Professional';
+    } else {
         return true;
     }
+    
+    // Calculate hours for EACH individual day
+    const currentDate = new Date(startDate);
+    let invalidDays = [];
+    
+    while (currentDate <= endDate) {
+        // Get start of this day
+        const dayStart = new Date(currentDate);
+        dayStart.setHours(0, 0, 0, 0);
+        
+        // Get end of this day
+        const dayEnd = new Date(currentDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        
+        // Calculate overlap between campaign and this day
+        const overlapStart = new Date(Math.max(startDate, dayStart));
+        const overlapEnd = new Date(Math.min(endDate, dayEnd));
+        
+        if (overlapStart < overlapEnd) {
+            const hoursThisDay = (overlapEnd - overlapStart) / (1000 * 60 * 60);
+            
+            // Check if hours are NOT exactly the required amount (allow 0.05 tolerance for rounding)
+            const tolerance = 0.05; // 3 minutes tolerance
+            if (Math.abs(hoursThisDay - requiredHoursPerDay) > tolerance) {
+                invalidDays.push({
+                    date: formatCompactDate(currentDate),
+                    hours: hoursThisDay.toFixed(2),
+                    required: requiredHoursPerDay
+                });
+            }
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    if (invalidDays.length > 0) {
+        let message = `❌ ${planName} Plan requires EXACTLY ${requiredHoursPerDay} hours per day.\n\n`;
+        message += `The following days do not meet this requirement:\n`;
+        invalidDays.forEach(day => {
+            message += `   • ${day.date}: ${day.hours} hours (should be ${day.required} hours)\n`;
+        });
+        message += `\nPlease adjust your start/end times to exactly ${requiredHoursPerDay} hours per day.`;
+        
+        alert(message);
+        document.getElementById('endDateTime').focus();
+        return false;
+    }
+    
+    return true;
+}
 
-    function validateEditDailyHours() {
-        const startDateTime = document.getElementById('editStartDateTime').value;
-        const endDateTime = document.getElementById('editEndDateTime').value;
-        
-        const campaignId = document.getElementById('editCampaignId').value;
-        const campaign = allAdCampaigns.find(x => x.id === campaignId);
-        
-        if (!campaign) return true;
-        
-        const selectedPlan = campaign.pricing_plan || 'light';
-        
-        if (!startDateTime || !endDateTime) return true;
-        
-        const startDate = new Date(startDateTime);
-        const endDate = new Date(endDateTime);
-        
-        const totalHours = (endDate - startDate) / (1000 * 60 * 60);
-        
-        let maxHoursPerDay = 0;
-        let planName = '';
-        
-        if (selectedPlan === 'light' || selectedPlan === 'Light') {
-            maxHoursPerDay = 4;
-            planName = 'Light';
-        } else if (selectedPlan === 'standard' || selectedPlan === 'Standard') {
-            maxHoursPerDay = 6;
-            planName = 'Standard';
-        } else if (selectedPlan === 'professional' || selectedPlan === 'Professional') {
-            maxHoursPerDay = 8;
-            planName = 'Professional';
-        } else {
-            return true;
-        }
-        
-        if (totalHours > maxHoursPerDay) {
-            let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
-            alert(message);
-            document.getElementById('editEndDateTime').focus();
-            return false;
-        }
-        
+function validateEditDailyHours() {
+    const startDateTime = document.getElementById('editStartDateTime').value;
+    const endDateTime = document.getElementById('editEndDateTime').value;
+    
+    const campaignId = document.getElementById('editCampaignId').value;
+    const campaign = allAdCampaigns.find(x => x.id === campaignId);
+    
+    if (!campaign) return true;
+    
+    const selectedPlan = campaign.pricing_plan || 'light';
+    
+    if (!startDateTime || !endDateTime) return true;
+    
+    const startDate = new Date(startDateTime);
+    const endDate = new Date(endDateTime);
+    
+    let requiredHoursPerDay = 0;
+    let planName = '';
+    
+    if (selectedPlan === 'light' || selectedPlan === 'Light') {
+        requiredHoursPerDay = 4;
+        planName = 'Light';
+    } else if (selectedPlan === 'standard' || selectedPlan === 'Standard') {
+        requiredHoursPerDay = 6;
+        planName = 'Standard';
+    } else if (selectedPlan === 'professional' || selectedPlan === 'Professional') {
+        requiredHoursPerDay = 8;
+        planName = 'Professional';
+    } else {
         return true;
     }
+    
+    const currentDate = new Date(startDate);
+    let invalidDays = [];
+    
+    while (currentDate <= endDate) {
+        const dayStart = new Date(currentDate);
+        dayStart.setHours(0, 0, 0, 0);
+        
+        const dayEnd = new Date(currentDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        
+        const overlapStart = new Date(Math.max(startDate, dayStart));
+        const overlapEnd = new Date(Math.min(endDate, dayEnd));
+        
+        if (overlapStart < overlapEnd) {
+            const hoursThisDay = (overlapEnd - overlapStart) / (1000 * 60 * 60);
+            
+            const tolerance = 0.05;
+            if (Math.abs(hoursThisDay - requiredHoursPerDay) > tolerance) {
+                invalidDays.push({
+                    date: formatCompactDate(currentDate),
+                    hours: hoursThisDay.toFixed(2),
+                    required: requiredHoursPerDay
+                });
+            }
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    if (invalidDays.length > 0) {
+        let message = `❌ ${planName} Plan requires EXACTLY ${requiredHoursPerDay} hours per day.\n\n`;
+        message += `The following days do not meet this requirement:\n`;
+        invalidDays.forEach(day => {
+            message += `   • ${day.date}: ${day.hours} hours (should be ${day.required} hours)\n`;
+        });
+        message += `\nPlease adjust your start/end times to exactly ${requiredHoursPerDay} hours per day.`;
+        
+        alert(message);
+        document.getElementById('editEndDateTime').focus();
+        return false;
+    }
+    
+    return true;
+}
 
     function renderImagePreviews() {
         renderImagePreview();
