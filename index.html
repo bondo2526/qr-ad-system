@@ -358,12 +358,21 @@ if (campaignData.isActive === false) {
 const productCheck = campaignData.products.find(p => p.productName === linkData.product);
 
 if (!productCheck) {
-    showError(`❌ Product "${linkData.product}" no longer exists in this campaign.\n\nThis QR code is no longer valid.`);
+    // Get list of all products in campaign
+    const allProducts = campaignData.products.map(p => p.productName).join(', ');
+    showError(`❌ Product "${linkData.product}" no longer exists in this campaign.\n\nThis QR code is no longer valid.\n\n📦 Products in this campaign: ${allProducts || 'none'}`);
     return;
 }
 
 if (productCheck.isActive === false) {
-    showError(`❌ Product "${linkData.product}" has been DEACTIVATED.\n\nThis QR code is no longer valid.`);
+    // Get list of active available products
+    const activeProducts = campaignData.products.filter(p => 
+        p.isActive !== false && 
+        ((p.totalProducts || 0) - (p.redeemedCount || 0)) > 0
+    );
+    const activeProductNames = activeProducts.map(p => p.productName).join(', ');
+    
+    showError(`❌ Product "${linkData.product}" has been DEACTIVATED.\n\nThis QR code is no longer valid.\n\n📦 Available products from this advertiser: ${activeProductNames || 'none'}`);
     return;
 }
 
@@ -418,10 +427,11 @@ console.log("Loaded claim data:", { currentAd, currentProduct, currentHost });
             }
             
             const campaignData = campaign.data();
-            if (campaignData.isActive === false) {
-                showError(`Campaign "${currentAd}" is inactive`);
-                return;
-            }
+if (campaignData.isActive === false) {
+    // Get list of active campaigns (for reference)
+    showError(`❌ Campaign "${linkData.ad}" has been DEACTIVATED.\n\nThis QR code is no longer valid.\n\nPlease contact the advertiser for active promotions.`);
+    return;
+}
             
             const advertiserName = campaignData.advertiserName || decodeURIComponent(currentAd).replace(/_/g, ' ');
             const currentProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
