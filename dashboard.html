@@ -677,16 +677,25 @@
                         <div class="stat-card"><h3>Today's Claims</h3><div class="stat-number purple" id="todayClaims">0</div></div>
                         <div class="stat-card"><h3>Total Redeemed</h3><div class="stat-number purple" id="redeemedCount">0</div></div>
                     </div>
-                    <div class="info-box">
-                        <div class="section-title" style="margin-bottom:14px;font-size:16px;">📦 Create New Campaign</div>
-                        <div class="create-form">
-                            <div class="form-group">
-                                <label>Advertiser Name</label>
-                                <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
-                            </div>
-                            <button class="btn-primary" onclick="createCouponCampaign()" style="white-space:nowrap;">➕ Create Campaign</button>
-                        </div>
-                    </div>
+<div class="info-box">
+    <div class="section-title" style="margin-bottom:14px;font-size:16px;">📦 Create New Campaign</div>
+    <div class="create-form">
+        <div class="form-group">
+            <label>Advertiser Name</label>
+            <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
+        </div>
+        <div class="form-group">
+            <label>Station Name</label>
+            <div style="display: flex; gap: 10px;">
+                <select id="newCampaignStation" required style="flex: 1;">
+                    <option value="" disabled selected>Select a station</option>
+                </select>
+                <button type="button" class="btn-secondary" onclick="addNewStation()" style="white-space: nowrap;">➕ Add New Station</button>
+            </div>
+        </div>
+        <button class="btn-primary" onclick="createCouponCampaign()" style="white-space:nowrap;">➕ Create Campaign</button>
+    </div>
+</div>
                     <div id="couponCampaignsList">
                         <div class="loading-block"><div class="spinner-large"></div>Loading campaigns...</div>
                     </div>
@@ -841,24 +850,24 @@
     }
 
     // Update all station dropdowns in the page
-    function updateStationDropdowns() {
-        const stationSelects = document.querySelectorAll('#stationName, #editStationName');
-        stationSelects.forEach(select => {
-            if (select) {
-                const currentValue = select.value;
-                select.innerHTML = '<option value="" disabled selected>Select a station</option>';
-                stationsList.forEach(station => {
-                    const option = document.createElement('option');
-                    option.value = station;
-                    option.textContent = station;
-                    select.appendChild(option);
-                });
-                if (currentValue && stationsList.includes(currentValue)) {
-                    select.value = currentValue;
-                }
+function updateStationDropdowns() {
+    const stationSelects = document.querySelectorAll('#stationName, #editStationName, #newCampaignStation');
+    stationSelects.forEach(select => {
+        if (select) {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="" disabled selected>Select a station</option>';
+            stationsList.forEach(station => {
+                const option = document.createElement('option');
+                option.value = station;
+                option.textContent = station;
+                select.appendChild(option);
+            });
+            if (currentValue && stationsList.includes(currentValue)) {
+                select.value = currentValue;
             }
-        });
-    }
+        }
+    });
+}
 
     // Add new station
     window.addNewStation = async function() {
@@ -2811,34 +2820,51 @@
 
     window.refreshCouponData = async function() { await loadCouponData(); };
 
-    window.createCouponCampaign = async function() {
-        const name = document.getElementById('newAdvertiserName').value.trim();
-        const stationSelect = document.getElementById('stationName');
-        const station = stationSelect ? stationSelect.value : 'Station 1';
+window.createCouponCampaign = async function() {
+    const name = document.getElementById('newAdvertiserName').value.trim();
+    const stationSelect = document.getElementById('newCampaignStation');
+    const station = stationSelect ? stationSelect.value : '';
+    
+    if (!name) { 
+        alert('❌ Please enter Advertiser Name'); 
+        return; 
+    }
+    
+    if (!station || station === '') { 
+        alert('❌ Please select a Station'); 
+        return; 
+    }
+    
+    try {
+        const advDoc = await db.collection('advertisers').doc(name).get();
+        if (!advDoc.exists) {
+            alert(`❌ Advertiser "${name}" not found!\n\nPlease create the advertiser account first using "Create New Advertiser Account" button.`);
+            return;
+        }
         
-        if (!name) { alert('❌ Please enter Advertiser Name'); return; }
-        if (!station || station === '') { alert('❌ Please select a Station'); return; }
+        const existing = await db.collection('ad_campaigns').doc(name).get();
+        if (existing.exists) { 
+            alert(`⚠️ Campaign "${name}" already exists!`); 
+            return; 
+        }
         
-        try {
-            const advDoc = await db.collection('advertisers').doc(name).get();
-            if (!advDoc.exists) {
-                alert(`❌ Advertiser "${name}" not found!\n Please create new advertiser account before.`);
-                return;
-            }
-            const existing = await db.collection('ad_campaigns').doc(name).get();
-            if (existing.exists) { alert(`⚠️ Campaign "${name}" already exists!`); return; }
-            await db.collection('ad_campaigns').doc(name).set({
-                advertiserName: name,
-                station: station,
-                products: [],
-                isActive: true,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            alert(`✅ Campaign created for ${name} at ${station}`);
-            document.getElementById('newAdvertiserName').value = '';
-            await loadCouponCampaigns();
-        } catch(e) { alert('Error: '+e.message); }
-    };
+        await db.collection('ad_campaigns').doc(name).set({
+            advertiserName: name,
+            station: station,
+            products: [],
+            isActive: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert(`✅ Campaign created for ${name} at ${station}`);
+        document.getElementById('newAdvertiserName').value = '';
+        if (stationSelect) stationSelect.value = '';
+        await loadCouponCampaigns();
+        
+    } catch(e) { 
+        alert('Error: '+e.message); 
+    }
+};
 
     window.addCouponProduct = async function(advertiserName) {
         const productName = prompt('Enter product name:'); if(!productName) return;
@@ -3167,9 +3193,9 @@ async function generateClaimLink(advertiserName, productName, location) {
                 <div style="display:flex;flex-wrap:wrap;">
                     <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);width:200px;min-width:160px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px;">
                         <div style="font-size:22px;font-weight:bold;color:white;word-break:break-word;">${advertiserName}</div>
-                        <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:8px;">
-                            📍 ${station} &nbsp;| 📦 ${totalP} &nbsp;✅ ${totalR} &nbsp;📊 ${totalRem}
-                        </div>
+<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:8px;">
+    📍 ${station} &nbsp;| 📦 ${totalP} &nbsp;✅ ${totalR} &nbsp;📊 ${totalRem}
+</div>
                     </div>
                     <div style="flex:1;min-width:250px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:#1a1e24;border-bottom:1px solid #3a4050;flex-wrap:wrap;gap:8px;">
