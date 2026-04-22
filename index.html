@@ -365,22 +365,34 @@
             const advertiserName = campaignData.advertiserName || decodeURIComponent(currentAd).replace(/_/g, ' ');
             const currentProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
             
-            const products = campaignData.products || [];
-            const product = products.find(p => p.productName === currentProductName);
-            
-            if (!product) {
-                showError(`Product "${currentProductName}" not found`);
-                return;
-            }
-            
-            const redeemedCount = product.redeemedCount || 0;
-            const totalProducts = product.totalProducts || 0;
-            const remaining = totalProducts - redeemedCount;
-            
-            if (remaining <= 0) {
-                showSoldOutPage();
-                return;
-            }
+// Check product stock
+const products = campaignData.products || [];
+const product = products.find(p => p.productName === currentProductName);
+
+if (!product) {
+    // Show available products instead
+    const availableProducts = products.filter(p => p.isActive !== false && (p.remaining || (p.totalProducts - (p.redeemedCount || 0))) > 0);
+    const availableProductNames = availableProducts.map(p => p.productName).join(', ');
+    showError(`Product "${currentProductName}" not found. Available products: ${availableProductNames || 'none'}`);
+    return;
+}
+
+// Check if product is deactivated
+if (product.isActive === false) {
+    const availableProducts = products.filter(p => p.isActive !== false && (p.remaining || (p.totalProducts - (p.redeemedCount || 0))) > 0);
+    const availableProductNames = availableProducts.map(p => p.productName).join(', ');
+    showError(`❌ Product "${currentProductName}" is DEACTIVATED.\n\nAvailable products from this advertiser: ${availableProductNames || 'none'}`);
+    return;
+}
+
+const redeemedCount = product.redeemedCount || 0;
+const totalProducts = product.totalProducts || 0;
+const remaining = totalProducts - redeemedCount;
+
+if (remaining <= 0) {
+    showSoldOutPage();
+    return;
+}
             
             const claimsSnapshot = await db.collection('claims')
                 .where('userFingerprint', '==', userFingerprint)
@@ -486,11 +498,18 @@
         document.getElementById('soldout').classList.remove('hidden');
     }
     
-    function showError(message) {
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('error').classList.remove('hidden');
-        document.getElementById('errorMessage').textContent = message;
+function showError(message) {
+    document.body.className = '';
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('error').classList.remove('hidden');
+    // Handle multiline messages
+    const errorMessage = document.getElementById('errorMessage');
+    if (message.includes('\n')) {
+        errorMessage.innerHTML = message.replace(/\n/g, '<br>');
+    } else {
+        errorMessage.textContent = message;
     }
+}
     
     function startCountdown(targetTime) {
         function updateCountdown() {
