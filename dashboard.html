@@ -2854,6 +2854,49 @@ window.exportAdToExcel = function() {
             await loadCouponCampaigns();
         } catch(e) { alert('Error: '+e.message); }
     };
+     // Deactivate a specific product in a coupon campaign
+window.deactivateCouponProduct = async function(advertiserName, productName) {
+    if (!confirm(`⚠️ Deactivate "${productName}" for ${advertiserName}?\n\nCustomers will NOT be able to claim this product until reactivated.`)) return;
+    
+    try {
+        const ref = db.collection('ad_campaigns').doc(advertiserName);
+        const doc = await ref.get();
+        const products = doc.data().products || [];
+        const idx = products.findIndex(p => p.productName === productName);
+        
+        if (idx !== -1) {
+            products[idx].isActive = false;
+            await ref.update({ products });
+            alert(`✅ "${productName}" has been DEACTIVATED.`);
+            await loadCouponCampaigns();
+        }
+    } catch(e) {
+        console.error(e);
+        alert('Error: ' + e.message);
+    }
+};
+
+// Activate a specific product in a coupon campaign
+window.activateCouponProduct = async function(advertiserName, productName) {
+    if (!confirm(`✅ Activate "${productName}" for ${advertiserName}?\n\nCustomers will be able to claim this product again.`)) return;
+    
+    try {
+        const ref = db.collection('ad_campaigns').doc(advertiserName);
+        const doc = await ref.get();
+        const products = doc.data().products || [];
+        const idx = products.findIndex(p => p.productName === productName);
+        
+        if (idx !== -1) {
+            products[idx].isActive = true;
+            await ref.update({ products });
+            alert(`✅ "${productName}" has been ACTIVATED.`);
+            await loadCouponCampaigns();
+        }
+    } catch(e) {
+        console.error(e);
+        alert('Error: ' + e.message);
+    }
+};   
 
     window.toggleCouponCampaign = async function(advertiserName) {
         const c = allCouponCampaigns.find(x=>x.advertiserName===advertiserName);
@@ -2960,11 +3003,19 @@ window.exportAdToExcel = function() {
                         <td style="padding:10px;text-align:center;"><input type="number" id="${inputId}" value="${product.totalProducts}" min="0" step="1" style="width:65px;padding:5px;text-align:center;background:#2a2f38;border:1px solid #3a4050;color:white;border-radius:6px;"></td>
                         <td style="padding:10px;text-align:center;">${product.redeemedCount||0}</td>
                         <td style="padding:10px;text-align:center;font-weight:bold;color:${statusColor};">${rem}</td>
-                        <td style="padding:10px;text-align:center;"><span style="background:${isPA?'#1a2a1a':'#2a1a1a'};color:${statusColor};padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;">${isPA?'🟢 Active':'🔴 Sold Out'}</span></td>
-                        <td style="padding:10px;text-align:center;">
-                            <button class="btn-sm btn-sm-blue" onclick="updateCouponProductQty('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}','${inputId}')">📦 Update Qty</button>
-                            <button class="btn-sm btn-sm-red" onclick="removeCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🗑️ Remove</button>
-                        </td>`;
+                       <td style="padding:10px;text-align:center;">
+    <span style="background:${product.isActive === false ? '#2a2a1a' : (isPA ? '#1a2a1a' : '#2a1a1a')};color:${product.isActive === false ? '#ffc107' : statusColor};padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;">
+        ${product.isActive === false ? '⏸️ Deactivated' : (isPA ? '🟢 Active' : '🔴 Sold Out')}
+    </span>
+</td>
+<td style="padding:10px;text-align:center;">
+    <button class="btn-sm btn-sm-blue" onclick="updateCouponProductQty('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}','${inputId}')">📦 Update Qty</button>
+    ${isPA ? 
+        `<button class="btn-sm btn-sm-orange" onclick="deactivateCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🔴 Deactivate</button>` :
+        `<button class="btn-sm btn-sm-green" onclick="activateCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🟢 Activate</button>`
+    }
+    <button class="btn-sm btn-sm-red"  onclick="removeCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🗑️ Remove</button>
+</td>
                     tbody.appendChild(row);
                 }
             }
