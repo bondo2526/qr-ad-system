@@ -1850,33 +1850,40 @@ function validateDailyHours() {
         return true;
     }
     
-    // Calculate hours for EACH individual day
+    // Calculate hours for EACH individual day with EXACT minute check
     const currentDate = new Date(startDate);
     let invalidDays = [];
     
     while (currentDate <= endDate) {
-        // Get start of this day
         const dayStart = new Date(currentDate);
         dayStart.setHours(0, 0, 0, 0);
         
-        // Get end of this day
         const dayEnd = new Date(currentDate);
         dayEnd.setHours(23, 59, 59, 999);
         
-        // Calculate overlap between campaign and this day
         const overlapStart = new Date(Math.max(startDate, dayStart));
         const overlapEnd = new Date(Math.min(endDate, dayEnd));
         
         if (overlapStart < overlapEnd) {
-            const hoursThisDay = (overlapEnd - overlapStart) / (1000 * 60 * 60);
+            // Calculate exact hours and minutes
+            const diffMs = overlapEnd - overlapStart;
+            const diffHours = diffMs / (1000 * 60 * 60);
+            const diffHoursExact = diffMs / (1000 * 60 * 60);
             
-            // Check if hours are NOT exactly the required amount (allow 0.05 tolerance for rounding)
-            const tolerance = 0.05; // 3 minutes tolerance
-            if (Math.abs(hoursThisDay - requiredHoursPerDay) > tolerance) {
+            // Convert required hours to milliseconds for exact comparison
+            const requiredMs = requiredHoursPerDay * 60 * 60 * 1000;
+            
+            // Check if exact match (no tolerance)
+            if (diffMs !== requiredMs) {
+                // Calculate the difference in minutes
+                const diffMinutes = Math.round((diffMs - requiredMs) / (1000 * 60));
+                const sign = diffMinutes > 0 ? '+' : '';
+                
                 invalidDays.push({
                     date: formatCompactDate(currentDate),
-                    hours: hoursThisDay.toFixed(2),
-                    required: requiredHoursPerDay
+                    hours: diffHoursExact.toFixed(2),
+                    required: requiredHoursPerDay,
+                    diffMinutes: `${sign}${diffMinutes} min`
                 });
             }
         }
@@ -1888,9 +1895,9 @@ function validateDailyHours() {
         let message = `❌ ${planName} Plan requires EXACTLY ${requiredHoursPerDay} hours per day.\n\n`;
         message += `The following days do not meet this requirement:\n`;
         invalidDays.forEach(day => {
-            message += `   • ${day.date}: ${day.hours} hours (should be ${day.required} hours)\n`;
+            message += `   • ${day.date}: ${day.hours} hours (should be ${day.required} hours, off by ${day.diffMinutes})\n`;
         });
-        message += `\nPlease adjust your start/end times to exactly ${requiredHoursPerDay} hours per day.`;
+        message += `\nPlease adjust your start/end times to exactly ${requiredHoursPerDay} hours.`;
         
         alert(message);
         document.getElementById('endDateTime').focus();
@@ -1946,14 +1953,19 @@ function validateEditDailyHours() {
         const overlapEnd = new Date(Math.min(endDate, dayEnd));
         
         if (overlapStart < overlapEnd) {
-            const hoursThisDay = (overlapEnd - overlapStart) / (1000 * 60 * 60);
+            const diffMs = overlapEnd - overlapStart;
+            const diffHoursExact = diffMs / (1000 * 60 * 60);
+            const requiredMs = requiredHoursPerDay * 60 * 60 * 1000;
             
-            const tolerance = 0.05;
-            if (Math.abs(hoursThisDay - requiredHoursPerDay) > tolerance) {
+            if (diffMs !== requiredMs) {
+                const diffMinutes = Math.round((diffMs - requiredMs) / (1000 * 60));
+                const sign = diffMinutes > 0 ? '+' : '';
+                
                 invalidDays.push({
                     date: formatCompactDate(currentDate),
-                    hours: hoursThisDay.toFixed(2),
-                    required: requiredHoursPerDay
+                    hours: diffHoursExact.toFixed(2),
+                    required: requiredHoursPerDay,
+                    diffMinutes: `${sign}${diffMinutes} min`
                 });
             }
         }
@@ -1965,9 +1977,9 @@ function validateEditDailyHours() {
         let message = `❌ ${planName} Plan requires EXACTLY ${requiredHoursPerDay} hours per day.\n\n`;
         message += `The following days do not meet this requirement:\n`;
         invalidDays.forEach(day => {
-            message += `   • ${day.date}: ${day.hours} hours (should be ${day.required} hours)\n`;
+            message += `   • ${day.date}: ${day.hours} hours (should be ${day.required} hours, off by ${day.diffMinutes})\n`;
         });
-        message += `\nPlease adjust your start/end times to exactly ${requiredHoursPerDay} hours per day.`;
+        message += `\nPlease adjust your start/end times to exactly ${requiredHoursPerDay} hours.`;
         
         alert(message);
         document.getElementById('editEndDateTime').focus();
@@ -1976,7 +1988,6 @@ function validateEditDailyHours() {
     
     return true;
 }
-
     function renderImagePreviews() {
         renderImagePreview();
     }
