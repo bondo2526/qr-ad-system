@@ -518,15 +518,16 @@
                         <div class="progress-stats"><span id="progressCurrent">Preparing...</span><span id="progressTime">Calculating...</span></div>
                     </div>
                     <form id="addCampaignForm">
-                        <div class="station-selector">
-                            <label>Station Name</label>
-                            <select id="stationName" required>
-                                <option value="" disabled selected>Select a station</option>
-                                <option>Station 1</option><option>Station 2</option>
-                                <option>Station 3</option><option>Station 4</option><option>Station 5</option>
-                            </select>
-                            <p style="font-size:12px;color:#a0a0a0;margin-top:5px;">Each station has its own unique ID and syncs only its own ads</p>
-                        </div>
+<div class="station-selector">
+    <label>Station Name</label>
+    <div style="display: flex; gap: 10px;">
+        <select id="stationName" required style="flex: 1;">
+            <option value="" disabled selected>Select a station</option>
+        </select>
+        <button type="button" class="btn-secondary" onclick="addNewStation()" style="white-space: nowrap;">➕ Add New Station</button>
+    </div>
+    <p style="font-size:12px;color:#a0a0a0;margin-top:5px;">Each station has its own unique ID and syncs only its own ads</p>
+</div>
                         <div class="form-group">
                             <label>Customer Name</label>
                             <input type="text" id="customerName" placeholder="Advertiser Name Goes Here" required oninput="updateHashPreviews()">
@@ -807,7 +808,7 @@
         </div>
     </div>
 
-    <script>
+<script>
     // Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyCxuGBz5FNcaXbCNOfoC9ccR5IsZSYS1d4",
@@ -823,22 +824,74 @@
     const db = firebase.firestore();
     db.enablePersistence().catch(err => console.log('Persistence error:', err));
 
+    // Station list (will be loaded from Firestore)
+    let stationsList = ['Station 1', 'Station 2', 'Station 3', 'Station 4', 'Station 5'];
+
+    // Load stations from Firestore
+    async function loadStations() {
+        try {
+            const stationsDoc = await db.collection('settings').doc('stations').get();
+            if (stationsDoc.exists) {
+                stationsList = stationsDoc.data().stations || stationsList;
+            }
+            updateStationDropdowns();
+        } catch(e) {
+            console.error('Error loading stations:', e);
+        }
+    }
+
+    // Update all station dropdowns in the page
+    function updateStationDropdowns() {
+        const stationSelects = document.querySelectorAll('#stationName, #editStationName');
+        stationSelects.forEach(select => {
+            if (select) {
+                const currentValue = select.value;
+                select.innerHTML = '<option value="" disabled selected>Select a station</option>';
+                stationsList.forEach(station => {
+                    const option = document.createElement('option');
+                    option.value = station;
+                    option.textContent = station;
+                    select.appendChild(option);
+                });
+                if (currentValue && stationsList.includes(currentValue)) {
+                    select.value = currentValue;
+                }
+            }
+        });
+    }
+
+    // Add new station
+    window.addNewStation = async function() {
+        const newStation = prompt('Enter new station name:', '');
+        if (newStation && newStation.trim()) {
+            const stationName = newStation.trim();
+            if (stationsList.includes(stationName)) {
+                alert('❌ Station already exists!');
+                return;
+            }
+            stationsList.push(stationName);
+            await db.collection('settings').doc('stations').set({ stations: stationsList });
+            updateStationDropdowns();
+            alert(`✅ Station "${stationName}" added successfully!`);
+        }
+    };
+
     // Compact date formatter
-function formatCompactDate(date) {
-    if (!date || isNaN(date.getTime())) return 'Invalid';
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const dayName = days[date.getDay()];
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-    let hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12; // Convert 0 to 12
-    const hoursStr = String(hours).padStart(2, '0');
-    return `${dayName} ${day}/${month}/${year} ${hoursStr}:${minutes} ${ampm}`;
-}
+    function formatCompactDate(date) {
+        if (!date || isNaN(date.getTime())) return 'Invalid';
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayName = days[date.getDay()];
+        const day = date.getDate();
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+        let hours = date.getHours();
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const hoursStr = String(hours).padStart(2, '0');
+        return `${dayName} ${day}/${month}/${year} ${hoursStr}:${minutes} ${ampm}`;
+    }
 
     // Password / Session
     const STORAGE_KEY = 'dashboard_password';
@@ -917,6 +970,7 @@ function formatCompactDate(date) {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('dashboardContent').style.display = 'block';
         document.getElementById('lastLoginTime').textContent = formatCompactDate(new Date());
+        loadStations();
         auth.signInAnonymously().then(cred => {
             currentUser = cred.user;
             document.getElementById('userBadge').textContent = `ID: ${cred.user.uid.slice(0,6)}...`;
@@ -1073,133 +1127,130 @@ function formatCompactDate(date) {
         applyAdFilters();
     }
 
-function buildAdCampaignHTML(c, adNumber) {
-    try {
-        const status = getAdStatus(c);
-        var html = '<div class="campaign-item ' + status + '" data-ad-number="AD #' + adNumber + '">';
-        const start = new Date(c.start_datetime);
-        const end = new Date(c.end_datetime);
-        const images = c.images || [];
-        const updates = c.update_history || c.updates || [];
-        const hashes = c.hashes || {};
-        
-        let imgsHTML = '';
-        if (images && images.length > 0) {
-            imgsHTML = images.slice(0, 5).map(function(img, idx) {
-            }).join('');
-        } else {
-            imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 No images uploaded</div>';
-        }
-        
-        // Calculate compression stats
-        let totalOriginalSize = 0;
-        let totalCompressedSize = 0;
-        for (var i = 0; i < images.length; i++) {
-            var img = images[i];
-            if (img) {
-                totalOriginalSize += img.originalSize || 0;
-                totalCompressedSize += img.compressedSize || 0;
+    function buildAdCampaignHTML(c, adNumber) {
+        try {
+            const status = getAdStatus(c);
+            var html = '<div class="campaign-item ' + status + '" data-ad-number="AD #' + adNumber + '">';
+            const start = new Date(c.start_datetime);
+            const end = new Date(c.end_datetime);
+            const images = c.images || [];
+            const updates = c.update_history || c.updates || [];
+            const hashes = c.hashes || {};
+            
+            let imgsHTML = '';
+            if (images && images.length > 0) {
+                imgsHTML = images.slice(0, 5).map(function(img, idx) {
+                }).join('');
+            } else {
+                imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 No images uploaded</div>';
             }
-        }
-        var savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
-        
-        // START building the HTML - DO NOT redeclare var html again
-html += '<div class="campaign-header-row">';
-html += '<div style="display:flex;flex-direction:column;gap:4px;">';
-// ADD AD NUMBER BADGE HERE
-html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">';
-html += '<span style="background: linear-gradient(135deg, #4a9eff, #6f42c1); color: white; font-weight: bold; font-size: 14px; padding: 4px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">AD #' + adNumber + '</span>';
-html += '<span class="campaign-name" style="font-size:24px;">' + (c.name || 'Unknown') + '</span>';
-html += '</div>';
-html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
-html += '<div style="margin-top: 5px;">';
-html += '<span style="font-size:14px;color:#28a745;">📋 Plan: ' + (c.pricing_plan || 'light').toUpperCase() + '</span>';
-html += '<span style="font-size:12px;color:#a0a0a0;margin-left:10px;">⏱️ ' + (c.plan_hours || 32) + ' hours | 💰 $' + (c.plan_price || 35) + '</span>';
-html += '</div>';
-html += '</div>';
-html += '<span class="campaign-id">' + c.id + '</span>';
-html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
-        if (updates.length) {
-            html += '<span class="update-badge">↑' + updates.length + ' updates</span>';
-        }
-        html += '</div>';
-        html += '<span class="status-badge ' + status + '">' + status.toUpperCase() + '</span>';
-        html += '</div>';
-        
-        html += '<div class="campaign-dates">';
-        html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + (isNaN(start) ? 'Invalid' : formatCompactDate(start)) + '</span></div>';
-        html += '<div class="date-row"><span class="date-label">■ End</span><span class="date-value">' + (isNaN(end) ? 'Invalid' : formatCompactDate(end)) + '</span></div>';
-        html += '<div class="date-row"><span class="date-label">⏱️ Duration</span><span class="date-value">' + (isNaN(start) || isNaN(end) ? 'Unknown' : Math.round((end - start) / 3600000) + ' hours') + '</span></div>';
-        html += '</div>';
-        
-        html += '<div class="campaign-images">' + imgsHTML + '</div>';
-        
-        if (images.length > 0 && totalOriginalSize > 0) {
-            html += '<div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">';
-            html += '<div class="proof-label">📊 COMPRESSION STATS</div>';
-            html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">';
-            html += '<span>Original: ' + (totalOriginalSize/1024).toFixed(1) + ' KB</span>';
-            html += '<span>Compressed: ' + (totalCompressedSize/1024).toFixed(1) + ' KB</span>';
-            html += '<span>Saved: ' + savingsPercent + '%</span>';
-            html += '</div></div>';
-        }
-        
-        html += '<div>';
-        html += '<div class="proof-label">🔐 START HASH</div>';
-        html += '<div class="proof-box">' + (hashes.start?.hash || 'PENDING') + '</div>';
-        if (hashes.start?.timestamp) {
-            html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + formatCompactDate(new Date(hashes.start.timestamp)) + '</div>';
-        }
-        html += '<div class="proof-label">🔐 END HASH</div>';
-        html += '<div class="proof-box">' + (hashes.end?.hash || 'PENDING') + '</div>';
-        if (hashes.end?.timestamp) {
-            html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + formatCompactDate(new Date(hashes.end.timestamp)) + '</div>';
-        }
-        html += '</div>';
-        
-        if (updates.length > 0) {
-            html += '<div style="margin-top:12px;">';
-            html += '<div class="proof-label">📝 UPDATE HISTORY (' + updates.length + ')</div>';
-            var recentUpdates = updates.slice(-3).reverse();
-            for (var u = 0; u < recentUpdates.length; u++) {
-                var update = recentUpdates[u];
-                html += '<div class="update-history" style="margin-top:5px;">';
-                html += '<div style="font-size:11px;color:#f39c12;">📅 ' + (update.timestamp ? formatCompactDate(new Date(update.timestamp)) : 'Unknown date') + '</div>';
-                html += '<div style="font-size:11px;margin:5px 0;">' + (Array.isArray(update.changes) ? update.changes.join(' | ') : (update.changes || 'No details')) + '</div>';
-                html += '<div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ' + ((update.updated_by || 'Unknown').substring(0,15)) + '...</div>';
-                html += '</div>';
+            
+            let totalOriginalSize = 0;
+            let totalCompressedSize = 0;
+            for (var i = 0; i < images.length; i++) {
+                var img = images[i];
+                if (img) {
+                    totalOriginalSize += img.originalSize || 0;
+                    totalCompressedSize += img.compressedSize || 0;
+                }
             }
-            if (updates.length > 3) {
-                html += '<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+' + (updates.length - 3) + ' more updates</span></div>';
+            var savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
+            
+            html += '<div class="campaign-header-row">';
+            html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+            html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">';
+            html += '<span style="background: linear-gradient(135deg, #4a9eff, #6f42c1); color: white; font-weight: bold; font-size: 14px; padding: 4px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">AD #' + adNumber + '</span>';
+            html += '<span class="campaign-name" style="font-size:24px;">' + (c.name || 'Unknown') + '</span>';
+            html += '</div>';
+            html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
+            html += '<div style="margin-top: 5px;">';
+            html += '<span style="font-size:14px;color:#28a745;">📋 Plan: ' + (c.pricing_plan || 'light').toUpperCase() + '</span>';
+            html += '<span style="font-size:12px;color:#a0a0a0;margin-left:10px;">⏱️ ' + (c.plan_hours || 32) + ' hours | 💰 $' + (c.plan_price || 35) + '</span>';
+            html += '</div>';
+            html += '</div>';
+            html += '<span class="campaign-id">' + c.id + '</span>';
+            html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
+            if (updates.length) {
+                html += '<span class="update-badge">↑' + updates.length + ' updates</span>';
             }
             html += '</div>';
+            html += '<span class="status-badge ' + status + '">' + status.toUpperCase() + '</span>';
+            html += '</div>';
+            
+            html += '<div class="campaign-dates">';
+            html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + (isNaN(start) ? 'Invalid' : formatCompactDate(start)) + '</span></div>';
+            html += '<div class="date-row"><span class="date-label">■ End</span><span class="date-value">' + (isNaN(end) ? 'Invalid' : formatCompactDate(end)) + '</span></div>';
+            html += '<div class="date-row"><span class="date-label">⏱️ Duration</span><span class="date-value">' + (isNaN(start) || isNaN(end) ? 'Unknown' : Math.round((end - start) / 3600000) + ' hours') + '</span></div>';
+            html += '</div>';
+            
+            html += '<div class="campaign-images">' + imgsHTML + '</div>';
+            
+            if (images.length > 0 && totalOriginalSize > 0) {
+                html += '<div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">';
+                html += '<div class="proof-label">📊 COMPRESSION STATS</div>';
+                html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">';
+                html += '<span>Original: ' + (totalOriginalSize/1024).toFixed(1) + ' KB</span>';
+                html += '<span>Compressed: ' + (totalCompressedSize/1024).toFixed(1) + ' KB</span>';
+                html += '<span>Saved: ' + savingsPercent + '%</span>';
+                html += '</div></div>';
+            }
+            
+            html += '<div>';
+            html += '<div class="proof-label">🔐 START HASH</div>';
+            html += '<div class="proof-box">' + (hashes.start?.hash || 'PENDING') + '</div>';
+            if (hashes.start?.timestamp) {
+                html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + formatCompactDate(new Date(hashes.start.timestamp)) + '</div>';
+            }
+            html += '<div class="proof-label">🔐 END HASH</div>';
+            html += '<div class="proof-box">' + (hashes.end?.hash || 'PENDING') + '</div>';
+            if (hashes.end?.timestamp) {
+                html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + formatCompactDate(new Date(hashes.end.timestamp)) + '</div>';
+            }
+            html += '</div>';
+            
+            if (updates.length > 0) {
+                html += '<div style="margin-top:12px;">';
+                html += '<div class="proof-label">📝 UPDATE HISTORY (' + updates.length + ')</div>';
+                var recentUpdates = updates.slice(-3).reverse();
+                for (var u = 0; u < recentUpdates.length; u++) {
+                    var update = recentUpdates[u];
+                    html += '<div class="update-history" style="margin-top:5px;">';
+                    html += '<div style="font-size:11px;color:#f39c12;">📅 ' + (update.timestamp ? formatCompactDate(new Date(update.timestamp)) : 'Unknown date') + '</div>';
+                    html += '<div style="font-size:11px;margin:5px 0;">' + (Array.isArray(update.changes) ? update.changes.join(' | ') : (update.changes || 'No details')) + '</div>';
+                    html += '<div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ' + ((update.updated_by || 'Unknown').substring(0,15)) + '...</div>';
+                    html += '</div>';
+                }
+                if (updates.length > 3) {
+                    html += '<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+' + (updates.length - 3) + ' more updates</span></div>';
+                }
+                html += '</div>';
+            }
+            
+            html += '<div style="margin-top:12px;font-size:11px;color:#a0a0a0;">';
+            html += '📸 ' + (c.image_count || images.length) + ' image(s) | ';
+            html += '👤 Created by: ' + ((c.created_by || 'Unknown').substring(0,15)) + '... | ';
+            html += '📅 Created: ' + (c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown');
+            html += '</div>';
+            
+            html += '<div class="action-buttons">';
+            html += '<button class="btn-edit" onclick="openEditModal(\'' + c.id + '\')">✏️ Edit</button>';
+            html += '<button class="btn-pdf" onclick="showPDFPreview(\'' + c.id + '\')">📄 PDF Proof</button>';
+            html += '<button class="btn-danger" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
+            html += '</div>';
+            html += '</div>';
+            
+            return html;
+        } catch (err) {
+            console.error('Error building campaign HTML:', err, c);
+            return '<div class="campaign-item expired">' +
+                '<div class="campaign-header-row">' +
+                '<span class="campaign-name">Error loading campaign</span>' +
+                '<span class="campaign-id">' + c.id + '</span>' +
+                '</div>' +
+                '<div style="color:#dc3545;padding:10px;">Failed to display: ' + err.message + '</div>' +
+                '</div>';
         }
-        
-        html += '<div style="margin-top:12px;font-size:11px;color:#a0a0a0;">';
-        html += '📸 ' + (c.image_count || images.length) + ' image(s) | ';
-        html += '👤 Created by: ' + ((c.created_by || 'Unknown').substring(0,15)) + '... | ';
-        html += '📅 Created: ' + (c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown');
-        html += '</div>';
-        
-        html += '<div class="action-buttons">';
-        html += '<button class="btn-edit" onclick="openEditModal(\'' + c.id + '\')">✏️ Edit</button>';
-        html += '<button class="btn-pdf" onclick="showPDFPreview(\'' + c.id + '\')">📄 PDF Proof</button>';
-        html += '<button class="btn-danger" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
-        html += '</div>';
-        html += '</div>';
-        
-        return html;
-    } catch (err) {
-        console.error('Error building campaign HTML:', err, c);
-        return '<div class="campaign-item expired">' +
-            '<div class="campaign-header-row">' +
-            '<span class="campaign-name">Error loading campaign</span>' +
-            '<span class="campaign-id">' + c.id + '</span>' +
-            '</div>' +
-            '<div style="color:#dc3545;padding:10px;">Failed to display: ' + err.message + '</div>' +
-            '</div>';
     }
-}
 
     function displayProofs() {
         const list = document.getElementById('proofsList');
@@ -1280,55 +1331,55 @@ html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>'
         applyAdFilters();
     };
 
-function applyAdFilters() {
-    const list = document.getElementById('campaignsAdList');
-    if (!list) return;
-    
-    let campaigns = allAdCampaigns.filter(c => {
-        const st = getAdStatus(c);
-        if (currentFilter !== 'all' && st !== currentFilter) return false;
-        if (currentStationFilter !== 'all' && c.station !== currentStationFilter) return false;
-        if (advNameFilterValue) {
-            const advName = (c.name || '').toLowerCase();
-            if (!advName.includes(advNameFilterValue)) return false;
+    function applyAdFilters() {
+        const list = document.getElementById('campaignsAdList');
+        if (!list) return;
+        
+        let campaigns = allAdCampaigns.filter(c => {
+            const st = getAdStatus(c);
+            if (currentFilter !== 'all' && st !== currentFilter) return false;
+            if (currentStationFilter !== 'all' && c.station !== currentStationFilter) return false;
+            if (advNameFilterValue) {
+                const advName = (c.name || '').toLowerCase();
+                if (!advName.includes(advNameFilterValue)) return false;
+            }
+            if (productNameFilterValue) {
+                const prodName = (c.product_name || '').toLowerCase();
+                if (!prodName.includes(productNameFilterValue)) return false;
+            }
+            return true;
+        });
+        
+        const filteredCount = campaigns.length;
+        const totalCount = allAdCampaigns.length;
+        const statsDiv = document.getElementById('filterStats');
+        const filteredCountSpan = document.getElementById('filteredCount');
+        const totalCountSpan = document.getElementById('totalCount');
+        
+        if (filteredCountSpan) filteredCountSpan.textContent = filteredCount;
+        if (totalCountSpan) totalCountSpan.textContent = totalCount;
+        
+        if (statsDiv) {
+            if (advNameFilterValue || productNameFilterValue || currentFilter !== 'all' || currentStationFilter !== 'all') {
+                statsDiv.style.display = 'block';
+            } else {
+                statsDiv.style.display = 'none';
+            }
         }
-        if (productNameFilterValue) {
-            const prodName = (c.product_name || '').toLowerCase();
-            if (!prodName.includes(productNameFilterValue)) return false;
+        
+        if (campaigns.length === 0) {
+            list.innerHTML = '<div class="loading-block">No campaigns found matching your filters.</div>';
+            return;
         }
-        return true;
-    });
-    
-    const filteredCount = campaigns.length;
-    const totalCount = allAdCampaigns.length;
-    const statsDiv = document.getElementById('filterStats');
-    const filteredCountSpan = document.getElementById('filteredCount');
-    const totalCountSpan = document.getElementById('totalCount');
-    
-    if (filteredCountSpan) filteredCountSpan.textContent = filteredCount;
-    if (totalCountSpan) totalCountSpan.textContent = totalCount;
-    
-    if (statsDiv) {
-        if (advNameFilterValue || productNameFilterValue || currentFilter !== 'all' || currentStationFilter !== 'all') {
-            statsDiv.style.display = 'block';
-        } else {
-            statsDiv.style.display = 'none';
-        }
+        
+        let html = '';
+        campaigns.forEach((campaign, index) => {
+            const adNumber = index + 1;
+            html += buildAdCampaignHTML(campaign, adNumber);
+        });
+        list.innerHTML = html;
     }
-    
-    if (campaigns.length === 0) {
-        list.innerHTML = '<div class="loading-block">No campaigns found matching your filters.</div>';
-        return;
-    }
-    
-    // Generate HTML with AD numbers
-    let html = '';
-    campaigns.forEach((campaign, index) => {
-        const adNumber = index + 1;
-        html += buildAdCampaignHTML(campaign, adNumber);
-    });
-    list.innerHTML = html;
-}
+
     window.filterCampaigns = function(filter) {
         currentFilter = filter;
         document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -1408,78 +1459,76 @@ function applyAdFilters() {
         }
     });
 
-window.updatePlanDetails = function() {
-    const plan = document.getElementById('pricingPlan').value;
-    const planDetails = document.getElementById('planDetails');
-    const planHoursSpan = document.getElementById('planHours');
-    const planPriceSpan = document.getElementById('planPrice');
-    
-    let hours = 0;
-    let price = 0;
-    let planName = '';
-    let maxDailyHours = 0;
-    
-    if (plan === 'light') {
-        hours = 32;
-        price = 35;
-        planName = 'Light';
-        maxDailyHours = 4;
-        planDetails.style.display = 'block';
-        planHoursSpan.innerHTML = '⏱️ 2 days (4 hrs) display/week';
-        planPriceSpan.innerHTML = '💰 $35/month';
-    } else if (plan === 'standard') {
-        hours = 96;
-        price = 48;
-        planName = 'Standard';
-        maxDailyHours = 6;
-        planDetails.style.display = 'block';
-        planHoursSpan.innerHTML = '⏱️ 4 days (6 hrs) display/week';
-        planPriceSpan.innerHTML = '💰 $48/month';
-    } else if (plan === 'professional') {
-        hours = 192;
-        price = 54;
-        planName = 'Professional';
-        maxDailyHours = 8;
-        planDetails.style.display = 'block';
-        planHoursSpan.innerHTML = '⏱️ 6 days (8 hrs) display/week';
-        planPriceSpan.innerHTML = '💰 $54/month';
-    } else {
-        planDetails.style.display = 'none';
-        return;
-    }
-    
-    window.selectedPlanData = {
-        name: planName,
-        hours: hours,
-        price: price,
-        maxDailyHours: maxDailyHours
+    window.updatePlanDetails = function() {
+        const plan = document.getElementById('pricingPlan').value;
+        const planDetails = document.getElementById('planDetails');
+        const planHoursSpan = document.getElementById('planHours');
+        const planPriceSpan = document.getElementById('planPrice');
+        
+        let hours = 0;
+        let price = 0;
+        let planName = '';
+        let maxDailyHours = 0;
+        
+        if (plan === 'light') {
+            hours = 32;
+            price = 35;
+            planName = 'Light';
+            maxDailyHours = 4;
+            planDetails.style.display = 'block';
+            planHoursSpan.innerHTML = '⏱️ 2 days (4 hrs) display/week';
+            planPriceSpan.innerHTML = '💰 $35/month';
+        } else if (plan === 'standard') {
+            hours = 96;
+            price = 48;
+            planName = 'Standard';
+            maxDailyHours = 6;
+            planDetails.style.display = 'block';
+            planHoursSpan.innerHTML = '⏱️ 4 days (6 hrs) display/week';
+            planPriceSpan.innerHTML = '💰 $48/month';
+        } else if (plan === 'professional') {
+            hours = 192;
+            price = 54;
+            planName = 'Professional';
+            maxDailyHours = 8;
+            planDetails.style.display = 'block';
+            planHoursSpan.innerHTML = '⏱️ 6 days (8 hrs) display/week';
+            planPriceSpan.innerHTML = '💰 $54/month';
+        } else {
+            planDetails.style.display = 'none';
+            return;
+        }
+        
+        window.selectedPlanData = {
+            name: planName,
+            hours: hours,
+            price: price,
+            maxDailyHours: maxDailyHours
+        };
+        
+        const startDateTime = document.getElementById('startDateTime').value;
+        const endDateTime = document.getElementById('endDateTime').value;
+        if (startDateTime && endDateTime) {
+            const startDate = new Date(startDateTime);
+            const endDate = new Date(endDateTime);
+            const totalHours = (endDate - startDate) / (1000 * 60 * 60);
+            const days = Math.ceil(totalHours / 24);
+            const avgHoursPerDay = totalHours / days;
+            
+            const existingWarning = document.getElementById('planWarning');
+            if (existingWarning) {
+                existingWarning.remove();
+            }
+            
+            if (avgHoursPerDay > maxDailyHours) {
+                const warning = document.createElement('div');
+                warning.id = 'planWarning';
+                warning.style.cssText = 'margin-top: 8px; padding: 8px; background: #2a1e1e; border-left: 3px solid #dc3545; border-radius: 6px; font-size: 12px; color: #dc3545;';
+                warning.innerHTML = `⚠️ Warning: ${planName} plan allows max ${maxDailyHours} hours/day. Current schedule averages ${avgHoursPerDay.toFixed(1)} hours/day.`;
+                planDetails.parentNode.insertBefore(warning, planDetails.nextSibling);
+            }
+        }
     };
-    
-    // Check existing dates and show warning
-    const startDateTime = document.getElementById('startDateTime').value;
-    const endDateTime = document.getElementById('endDateTime').value;
-    if (startDateTime && endDateTime) {
-        const startDate = new Date(startDateTime);
-        const endDate = new Date(endDateTime);
-        const totalHours = (endDate - startDate) / (1000 * 60 * 60);
-        const days = Math.ceil(totalHours / 24);
-        const avgHoursPerDay = totalHours / days;
-        
-        // Remove existing warning if any
-        const existingWarning = document.getElementById('planWarning');
-        if (existingWarning) {
-            existingWarning.remove();
-        }
-        
-        if (avgHoursPerDay > maxDailyHours) {
-            const warning = document.createElement('div');
-            warning.id = 'planWarning';
-            warning.style.cssText = 'margin-top: 8px; padding: 8px; background: #2a1e1e; border-left: 3px solid #dc3545; border-radius: 6px; font-size: 12px; color: #dc3545;';
-            warning.innerHTML = `⚠️ Warning: ${planName} plan allows max ${maxDailyHours} hours/day. Current schedule averages ${avgHoursPerDay.toFixed(1)} hours/day.`;
-            planDetails.parentNode.insertBefore(warning, planDetails.nextSibling);
-        }
-    }
-};
     
     function renderImagePreview() {
         const grid = document.getElementById('imagePreview');
@@ -1634,10 +1683,9 @@ window.updatePlanDetails = function() {
             return;
         }
         
-    //Validate daily hours based on plan
-    if (!validateDailyHours()) {
-        return;
-    }
+        if (!validateDailyHours()) {
+            return;
+        }
         const btn = document.getElementById('submitBtn');
         const showAlert = (msg, type) => {
             const a = document.getElementById('addAlert');
@@ -1765,91 +1813,90 @@ window.updatePlanDetails = function() {
             document.getElementById('submitLoading').style.display = 'none';
         }
     });
-// Validate daily display hours - REJECT if ANY hours exceed the daily limit
-function validateDailyHours() {
-    const startDateTime = document.getElementById('startDateTime').value;
-    const endDateTime = document.getElementById('endDateTime').value;
-    const planSelect = document.getElementById('pricingPlan');
-    const selectedPlan = planSelect ? planSelect.value : 'light';
-    
-    if (!startDateTime || !endDateTime) return true;
-    
-    const startDate = new Date(startDateTime);
-    const endDate = new Date(endDateTime);
-    
-    // Calculate total hours
-    const totalHours = (endDate - startDate) / (1000 * 60 * 60);
-    
-    let maxHoursPerDay = 0;
-    let planName = '';
-    
-    if (selectedPlan === 'light') {
-        maxHoursPerDay = 4;
-        planName = 'Light';
-    } else if (selectedPlan === 'standard') {
-        maxHoursPerDay = 6;
-        planName = 'Standard';
-    } else if (selectedPlan === 'professional') {
-        maxHoursPerDay = 8;
-        planName = 'Professional';
-    } else {
-        return true;
-    }
-    
-    // If total hours exceeds daily limit, reject immediately
-    if (totalHours > maxHoursPerDay) {
-        let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
-        alert(message);
-        document.getElementById('endDateTime').focus();
-        return false;
-    }
-    
-    return true;
-}
 
-  function validateEditDailyHours() {
-    const startDateTime = document.getElementById('editStartDateTime').value;
-    const endDateTime = document.getElementById('editEndDateTime').value;
-    
-    const campaignId = document.getElementById('editCampaignId').value;
-    const campaign = allAdCampaigns.find(x => x.id === campaignId);
-    
-    if (!campaign) return true;
-    
-    const selectedPlan = campaign.pricing_plan || 'light';
-    
-    if (!startDateTime || !endDateTime) return true;
-    
-    const startDate = new Date(startDateTime);
-    const endDate = new Date(endDateTime);
-    
-    const totalHours = (endDate - startDate) / (1000 * 60 * 60);
-    
-    let maxHoursPerDay = 0;
-    let planName = '';
-    
-    if (selectedPlan === 'light' || selectedPlan === 'Light') {
-        maxHoursPerDay = 4;
-        planName = 'Light';
-    } else if (selectedPlan === 'standard' || selectedPlan === 'Standard') {
-        maxHoursPerDay = 6;
-        planName = 'Standard';
-    } else if (selectedPlan === 'professional' || selectedPlan === 'Professional') {
-        maxHoursPerDay = 8;
-        planName = 'Professional';
-    } else {
+    function validateDailyHours() {
+        const startDateTime = document.getElementById('startDateTime').value;
+        const endDateTime = document.getElementById('endDateTime').value;
+        const planSelect = document.getElementById('pricingPlan');
+        const selectedPlan = planSelect ? planSelect.value : 'light';
+        
+        if (!startDateTime || !endDateTime) return true;
+        
+        const startDate = new Date(startDateTime);
+        const endDate = new Date(endDateTime);
+        
+        const totalHours = (endDate - startDate) / (1000 * 60 * 60);
+        
+        let maxHoursPerDay = 0;
+        let planName = '';
+        
+        if (selectedPlan === 'light') {
+            maxHoursPerDay = 4;
+            planName = 'Light';
+        } else if (selectedPlan === 'standard') {
+            maxHoursPerDay = 6;
+            planName = 'Standard';
+        } else if (selectedPlan === 'professional') {
+            maxHoursPerDay = 8;
+            planName = 'Professional';
+        } else {
+            return true;
+        }
+        
+        if (totalHours > maxHoursPerDay) {
+            let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
+            alert(message);
+            document.getElementById('endDateTime').focus();
+            return false;
+        }
+        
         return true;
     }
-    
-    if (totalHours > maxHoursPerDay) {
-        let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
-        alert(message);
-        document.getElementById('editEndDateTime').focus();
-        return false;
+
+    function validateEditDailyHours() {
+        const startDateTime = document.getElementById('editStartDateTime').value;
+        const endDateTime = document.getElementById('editEndDateTime').value;
+        
+        const campaignId = document.getElementById('editCampaignId').value;
+        const campaign = allAdCampaigns.find(x => x.id === campaignId);
+        
+        if (!campaign) return true;
+        
+        const selectedPlan = campaign.pricing_plan || 'light';
+        
+        if (!startDateTime || !endDateTime) return true;
+        
+        const startDate = new Date(startDateTime);
+        const endDate = new Date(endDateTime);
+        
+        const totalHours = (endDate - startDate) / (1000 * 60 * 60);
+        
+        let maxHoursPerDay = 0;
+        let planName = '';
+        
+        if (selectedPlan === 'light' || selectedPlan === 'Light') {
+            maxHoursPerDay = 4;
+            planName = 'Light';
+        } else if (selectedPlan === 'standard' || selectedPlan === 'Standard') {
+            maxHoursPerDay = 6;
+            planName = 'Standard';
+        } else if (selectedPlan === 'professional' || selectedPlan === 'Professional') {
+            maxHoursPerDay = 8;
+            planName = 'Professional';
+        } else {
+            return true;
+        }
+        
+        if (totalHours > maxHoursPerDay) {
+            let message = `❌ ${planName} Plan allows maximum ${maxHoursPerDay} hours per day.\n\n`;
+            alert(message);
+            document.getElementById('editEndDateTime').focus();
+            return false;
+        }
+        
+        return true;
     }
-    
-    return true;
-}
+
     function renderImagePreviews() {
         renderImagePreview();
     }
@@ -1878,171 +1925,154 @@ function validateDailyHours() {
     
     window.closeEditModal = function() { document.getElementById('editModal').classList.remove('active'); };
     
-document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    
-    // DATE VALIDATION - Check if end date is after start date
-    const newStartRaw = document.getElementById('editStartDateTime').value;
-    const newEndRaw = document.getElementById('editEndDateTime').value;
-    const newStart = new Date(newStartRaw);
-    const newEnd = new Date(newEndRaw);
-    
-    if (newEnd <= newStart) {
-        const a = document.getElementById('editAlert');
-        a.className = 'alert error';
-        a.textContent = '❌ End Date & Time must be after Start Date & Time';
-        a.style.display = 'block';
-        setTimeout(() => a.style.display = 'none', 3000);
-        document.getElementById('editEndDateTime').focus();
-        return;
-    }
-    
-    // VALIDATE DAILY HOURS BASED ON PLAN
-    if (!validateEditDailyHours()) {
-        return;
-    }
-    
-    const id = document.getElementById('editCampaignId').value;
-    const btn = document.getElementById('editSaveBtn');
-    btn.disabled = true;
-    document.getElementById('editSaveText').style.display = 'none';
-    document.getElementById('editSaveLoading').style.display = 'inline-block';
-    
-    try {
-        const old = allAdCampaigns.find(x => x.id === id) || {};
-        const updates = old.update_history || old.updates || [];
+    document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
+        e.preventDefault();
         
-        // Get form values
-        const newName = document.getElementById('editCustomerName').value.trim();
-        const newStation = document.getElementById('editStationName').value;
-        const newStartRaw2 = document.getElementById('editStartDateTime').value;
-        const newEndRaw2 = document.getElementById('editEndDateTime').value;
+        const newStartRaw = document.getElementById('editStartDateTime').value;
+        const newEndRaw = document.getElementById('editEndDateTime').value;
+        const newStart = new Date(newStartRaw);
+        const newEnd = new Date(newEndRaw);
         
-        // Create datetime strings
-        const newStartDateTimeString = newStartRaw2 + ':00';
-        const newEndDateTimeString = newEndRaw2 + ':00';
-        
-        const newStart2 = new Date(newStartRaw2);
-        const newEnd2 = new Date(newEndRaw2);
-        
-        // Get old values
-        const oldName = old.name || '';
-        const oldStation = old.station || '';
-        const oldStart = new Date(old.start_datetime);
-        const oldEnd = new Date(old.end_datetime);
-        
-        // Track ONLY changed fields
-        const changedFields = [];
-        const updateData = {};
-        
-        // Check Customer Name
-        if (oldName !== newName) {
-            changedFields.push('Customer Name');
-            updateData.name = newName;
-        }
-        
-        // Check Station
-        if (oldStation !== newStation) {
-            changedFields.push('Station');
-            updateData.station = newStation;
-        }
-        
-        // Check Start Date
-        if (oldStart.getTime() !== newStart2.getTime()) {
-            changedFields.push('Start Date');
-            updateData.start_datetime = newStartDateTimeString;
-            // Update hash timestamp too
-            if (old.hashes?.start) {
-                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
-                updateData.hashes.start = {
-                    ...old.hashes.start,
-                    timestamp: newStartDateTimeString
-                };
-            }
-        }
-        
-        // Check End Date
-        if (oldEnd.getTime() !== newEnd2.getTime()) {
-            changedFields.push('End Date');
-            updateData.end_datetime = newEndDateTimeString;
-            // Update hash timestamp too
-            if (old.hashes?.end) {
-                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
-                updateData.hashes.end = {
-                    ...old.hashes.end,
-                    timestamp: newEndDateTimeString
-                };
-            }
-        }
-        
-        // If nothing changed, show message and exit
-        if (changedFields.length === 0) {
+        if (newEnd <= newStart) {
             const a = document.getElementById('editAlert');
-            a.className = 'alert warning';
-            a.textContent = '⚠️ No changes detected. Nothing was updated.';
+            a.className = 'alert error';
+            a.textContent = '❌ End Date & Time must be after Start Date & Time';
             a.style.display = 'block';
             setTimeout(() => a.style.display = 'none', 3000);
-            btn.disabled = false;
-            document.getElementById('editSaveText').style.display = 'inline';
-            document.getElementById('editSaveLoading').style.display = 'none';
+            document.getElementById('editEndDateTime').focus();
             return;
         }
         
-        // Update status based on new dates
-        const now = new Date();
-        let newStatus = 'upcoming';
-        if (now >= newStart2 && now <= newEnd2) newStatus = 'active';
-        if (now > newEnd2) newStatus = 'expired';
-        updateData.status = newStatus;
+        if (!validateEditDailyHours()) {
+            return;
+        }
         
-        // Add common update fields
-        updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
-        updateData.updated_by = currentUser?.uid || 'anonymous';
+        const id = document.getElementById('editCampaignId').value;
+        const btn = document.getElementById('editSaveBtn');
+        btn.disabled = true;
+        document.getElementById('editSaveText').style.display = 'none';
+        document.getElementById('editSaveLoading').style.display = 'inline-block';
         
-        // Create update record with ONLY the changed fields
-        const changeDetails = changedFields.map(field => {
-            if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
-            if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
-            if (field === 'Start Date') return `${field}: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`;
-            if (field === 'End Date') return `${field}: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`;
-            return field;
-        }).join(' | ');
-        
-        const updateRecord = {
-            changes: changeDetails,
-            changed_fields: changedFields,
-            timestamp: new Date().toISOString(),
-            updated_by: currentUser?.uid || 'anonymous'
-        };
-        
-        updates.push(updateRecord);
-        updateData.update_history = updates;
-        
-        // Apply ONLY the changed fields to Firestore
-        await db.collection('customers').doc(id).update(updateData);
-        
-        closeEditModal();
-        await loadAdData();
-        
-        const a = document.getElementById('editAlert');
-        a.className = 'alert success';
-        a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
-        a.style.display = 'block';
-        setTimeout(() => a.style.display = 'none', 4000);
-        
-    } catch (err) {
-        console.error('Edit error:', err);
-        const a = document.getElementById('editAlert');
-        a.className = 'alert error';
-        a.textContent = '❌ ' + err.message;
-        a.style.display = 'block';
-        setTimeout(() => a.style.display = 'none', 3000);
-    } finally {
-        btn.disabled = false;
-        document.getElementById('editSaveText').style.display = 'inline';
-        document.getElementById('editSaveLoading').style.display = 'none';
-    }
-});
+        try {
+            const old = allAdCampaigns.find(x => x.id === id) || {};
+            const updates = old.update_history || old.updates || [];
+            
+            const newName = document.getElementById('editCustomerName').value.trim();
+            const newStation = document.getElementById('editStationName').value;
+            const newStartRaw2 = document.getElementById('editStartDateTime').value;
+            const newEndRaw2 = document.getElementById('editEndDateTime').value;
+            
+            const newStartDateTimeString = newStartRaw2 + ':00';
+            const newEndDateTimeString = newEndRaw2 + ':00';
+            
+            const newStart2 = new Date(newStartRaw2);
+            const newEnd2 = new Date(newEndRaw2);
+            
+            const oldName = old.name || '';
+            const oldStation = old.station || '';
+            const oldStart = new Date(old.start_datetime);
+            const oldEnd = new Date(old.end_datetime);
+            
+            const changedFields = [];
+            const updateData = {};
+            
+            if (oldName !== newName) {
+                changedFields.push('Customer Name');
+                updateData.name = newName;
+            }
+            
+            if (oldStation !== newStation) {
+                changedFields.push('Station');
+                updateData.station = newStation;
+            }
+            
+            if (oldStart.getTime() !== newStart2.getTime()) {
+                changedFields.push('Start Date');
+                updateData.start_datetime = newStartDateTimeString;
+                if (old.hashes?.start) {
+                    if (!updateData.hashes) updateData.hashes = { ...old.hashes };
+                    updateData.hashes.start = {
+                        ...old.hashes.start,
+                        timestamp: newStartDateTimeString
+                    };
+                }
+            }
+            
+            if (oldEnd.getTime() !== newEnd2.getTime()) {
+                changedFields.push('End Date');
+                updateData.end_datetime = newEndDateTimeString;
+                if (old.hashes?.end) {
+                    if (!updateData.hashes) updateData.hashes = { ...old.hashes };
+                    updateData.hashes.end = {
+                        ...old.hashes.end,
+                        timestamp: newEndDateTimeString
+                    };
+                }
+            }
+            
+            if (changedFields.length === 0) {
+                const a = document.getElementById('editAlert');
+                a.className = 'alert warning';
+                a.textContent = '⚠️ No changes detected. Nothing was updated.';
+                a.style.display = 'block';
+                setTimeout(() => a.style.display = 'none', 3000);
+                btn.disabled = false;
+                document.getElementById('editSaveText').style.display = 'inline';
+                document.getElementById('editSaveLoading').style.display = 'none';
+                return;
+            }
+            
+            const now = new Date();
+            let newStatus = 'upcoming';
+            if (now >= newStart2 && now <= newEnd2) newStatus = 'active';
+            if (now > newEnd2) newStatus = 'expired';
+            updateData.status = newStatus;
+            
+            updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
+            updateData.updated_by = currentUser?.uid || 'anonymous';
+            
+            const changeDetails = changedFields.map(field => {
+                if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
+                if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
+                if (field === 'Start Date') return `${field}: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`;
+                if (field === 'End Date') return `${field}: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`;
+                return field;
+            }).join(' | ');
+            
+            const updateRecord = {
+                changes: changeDetails,
+                changed_fields: changedFields,
+                timestamp: new Date().toISOString(),
+                updated_by: currentUser?.uid || 'anonymous'
+            };
+            
+            updates.push(updateRecord);
+            updateData.update_history = updates;
+            
+            await db.collection('customers').doc(id).update(updateData);
+            
+            closeEditModal();
+            await loadAdData();
+            
+            const a = document.getElementById('editAlert');
+            a.className = 'alert success';
+            a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
+            a.style.display = 'block';
+            setTimeout(() => a.style.display = 'none', 4000);
+            
+        } catch (err) {
+            console.error('Edit error:', err);
+            const a = document.getElementById('editAlert');
+            a.className = 'alert error';
+            a.textContent = '❌ ' + err.message;
+            a.style.display = 'block';
+            setTimeout(() => a.style.display = 'none', 3000);
+        } finally {
+            btn.disabled = false;
+            document.getElementById('editSaveText').style.display = 'inline';
+            document.getElementById('editSaveLoading').style.display = 'none';
+        }
+    });
 
     window.deleteCampaign = async function(id) {
         if (!confirm('Delete this campaign? This cannot be undone.')) return;
@@ -2164,7 +2194,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
                             <th style="padding:8px;text-align:left;">Old Value</th>
                             <th style="padding:8px;text-align:left;">New Value</th>
                             <th style="padding:8px;text-align:left;">By</th>
-                        </tr>
+                        </td>
                     </thead>
                     <tbody>`;
             const allUpdates = [...updates].reverse();
@@ -2699,27 +2729,27 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         closePDFPreview();
     };
     
-window.exportAdToExcel = function() {
-    if (!allAdCampaigns.length) { alert('No data to export'); return; }
-    const data = allAdCampaigns.map(c => ({
-        'Campaign ID': c.id,
-        'Station Name': c.station || 'N/A',
-        'Customer Name': c.name || 'Unknown',
-        'Product Name': c.product_name || 'Not specified',
-        'Pricing Plan': (c.pricing_plan || c.plan_name || 'Light').toUpperCase(),
-        'Start Date/Time': c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
-        'End Date/Time': c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
-        'Status': getAdStatus(c).toUpperCase(),
-        'Start Hash': c.hashes?.start?.hash || 'PENDING',
-        'End Hash': c.hashes?.end?.hash || 'PENDING'
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Ad Campaigns');
-    XLSX.writeFile(wb, `ad_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
-};
+    window.exportAdToExcel = function() {
+        if (!allAdCampaigns.length) { alert('No data to export'); return; }
+        const data = allAdCampaigns.map(c => ({
+            'Campaign ID': c.id,
+            'Station Name': c.station || 'N/A',
+            'Customer Name': c.name || 'Unknown',
+            'Product Name': c.product_name || 'Not specified',
+            'Pricing Plan': (c.pricing_plan || c.plan_name || 'Light').toUpperCase(),
+            'Start Date/Time': c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
+            'End Date/Time': c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
+            'Status': getAdStatus(c).toUpperCase(),
+            'Start Hash': c.hashes?.start?.hash || 'PENDING',
+            'End Hash': c.hashes?.end?.hash || 'PENDING'
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Ad Campaigns');
+        XLSX.writeFile(wb, `ad_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
+    };
 
-    // COUPON SYSTEM (keep existing coupon functions - they don't use date formatting that needs changing)
+    // COUPON SYSTEM
     let allClaims = [];
     let filteredClaims = [];
     let currentPage = 1;
@@ -2783,7 +2813,12 @@ window.exportAdToExcel = function() {
 
     window.createCouponCampaign = async function() {
         const name = document.getElementById('newAdvertiserName').value.trim();
+        const stationSelect = document.getElementById('stationName');
+        const station = stationSelect ? stationSelect.value : 'Station 1';
+        
         if (!name) { alert('❌ Please enter Advertiser Name'); return; }
+        if (!station || station === '') { alert('❌ Please select a Station'); return; }
+        
         try {
             const advDoc = await db.collection('advertisers').doc(name).get();
             if (!advDoc.exists) {
@@ -2793,10 +2828,13 @@ window.exportAdToExcel = function() {
             const existing = await db.collection('ad_campaigns').doc(name).get();
             if (existing.exists) { alert(`⚠️ Campaign "${name}" already exists!`); return; }
             await db.collection('ad_campaigns').doc(name).set({
-                advertiserName: name, products: [], isActive: true,
+                advertiserName: name,
+                station: station,
+                products: [],
+                isActive: true,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            alert(`✅ Campaign created for ${name}`);
+            alert(`✅ Campaign created for ${name} at ${station}`);
             document.getElementById('newAdvertiserName').value = '';
             await loadCouponCampaigns();
         } catch(e) { alert('Error: '+e.message); }
@@ -2812,7 +2850,7 @@ window.exportAdToExcel = function() {
             const doc = await ref.get();
             const products = doc.data().products||[];
             if (products.find(p=>p.productName===productName)) { alert(`Product "${productName}" already exists.`); return; }
-            products.push({ productName, totalProducts, redeemedCount:0, remaining:totalProducts });
+            products.push({ productName, totalProducts, redeemedCount:0, remaining:totalProducts, isActive: true });
             await ref.update({ products });
             alert(`✅ Added ${productName} (${totalProducts} units)`);
             await loadCouponCampaigns();
@@ -2830,12 +2868,13 @@ window.exportAdToExcel = function() {
             const idx = products.findIndex(p=>p.productName===productName);
             if (idx===-1) return;
             const oldRedeemed = products[idx].redeemedCount||0;
-            const oldRemaining = products[idx].totalProducts - oldRedeemed;
             products[idx].totalProducts = newTotal;
             products[idx].remaining = newTotal - oldRedeemed;
             await ref.update({ products });
             const newRemaining = newTotal - oldRedeemed;
-            if (newRemaining<=0 && oldRemaining>0) {
+            if (newRemaining<=0 && (products[idx].isActive !== false)) {
+                products[idx].isActive = false;
+                await ref.update({ products });
                 await sendSoldOutTelegram(advertiserName, productName, newTotal, oldRedeemed, newRemaining);
                 alert(`🔴 ${productName} is now SOLD OUT! Telegram notification sent.`);
             } else { alert(`✅ Updated ${productName} to ${newTotal} units (Remaining: ${newRemaining})`); }
@@ -2854,49 +2893,48 @@ window.exportAdToExcel = function() {
             await loadCouponCampaigns();
         } catch(e) { alert('Error: '+e.message); }
     };
-     // Deactivate a specific product in a coupon campaign
-window.deactivateCouponProduct = async function(advertiserName, productName) {
-    if (!confirm(`⚠️ Deactivate "${productName}" for ${advertiserName}?\n\nCustomers will NOT be able to claim this product until reactivated.`)) return;
-    
-    try {
-        const ref = db.collection('ad_campaigns').doc(advertiserName);
-        const doc = await ref.get();
-        const products = doc.data().products || [];
-        const idx = products.findIndex(p => p.productName === productName);
-        
-        if (idx !== -1) {
-            products[idx].isActive = false;
-            await ref.update({ products });
-            alert(`✅ "${productName}" has been DEACTIVATED.`);
-            await loadCouponCampaigns();
-        }
-    } catch(e) {
-        console.error(e);
-        alert('Error: ' + e.message);
-    }
-};
 
-// Activate a specific product in a coupon campaign
-window.activateCouponProduct = async function(advertiserName, productName) {
-    if (!confirm(`✅ Activate "${productName}" for ${advertiserName}?\n\nCustomers will be able to claim this product again.`)) return;
-    
-    try {
-        const ref = db.collection('ad_campaigns').doc(advertiserName);
-        const doc = await ref.get();
-        const products = doc.data().products || [];
-        const idx = products.findIndex(p => p.productName === productName);
+    window.deactivateCouponProduct = async function(advertiserName, productName) {
+        if (!confirm(`⚠️ Deactivate "${productName}" for ${advertiserName}?\n\nCustomers will NOT be able to claim this product until reactivated.`)) return;
         
-        if (idx !== -1) {
-            products[idx].isActive = true;
-            await ref.update({ products });
-            alert(`✅ "${productName}" has been ACTIVATED.`);
-            await loadCouponCampaigns();
+        try {
+            const ref = db.collection('ad_campaigns').doc(advertiserName);
+            const doc = await ref.get();
+            const products = doc.data().products || [];
+            const idx = products.findIndex(p => p.productName === productName);
+            
+            if (idx !== -1) {
+                products[idx].isActive = false;
+                await ref.update({ products });
+                alert(`✅ "${productName}" has been DEACTIVATED.`);
+                await loadCouponCampaigns();
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Error: ' + e.message);
         }
-    } catch(e) {
-        console.error(e);
-        alert('Error: ' + e.message);
-    }
-};   
+    };
+
+    window.activateCouponProduct = async function(advertiserName, productName) {
+        if (!confirm(`✅ Activate "${productName}" for ${advertiserName}?\n\nCustomers will be able to claim this product again.`)) return;
+        
+        try {
+            const ref = db.collection('ad_campaigns').doc(advertiserName);
+            const doc = await ref.get();
+            const products = doc.data().products || [];
+            const idx = products.findIndex(p => p.productName === productName);
+            
+            if (idx !== -1) {
+                products[idx].isActive = true;
+                await ref.update({ products });
+                alert(`✅ "${productName}" has been ACTIVATED.`);
+                await loadCouponCampaigns();
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Error: ' + e.message);
+        }
+    };
 
     window.toggleCouponCampaign = async function(advertiserName) {
         const c = allCouponCampaigns.find(x=>x.advertiserName===advertiserName);
@@ -2918,6 +2956,162 @@ window.activateCouponProduct = async function(advertiserName, productName) {
             await loadCouponCampaigns();
         } catch(e) { alert('❌ Error: '+e.message); }
     };
+
+    // ========== QR CODE GENERATION FUNCTIONS ==========
+    
+    // Generate a clean claim link (no visible parameters)
+    async function generateClaimLink(advertiserName, productName, location) {
+        try {
+            // First, verify that the campaign exists and is active
+            const campaignDoc = await db.collection('ad_campaigns').doc(advertiserName).get();
+            
+            if (!campaignDoc.exists) {
+                alert(`❌ Campaign "${advertiserName}" does not exist!\n\nPlease create the campaign first before generating QR codes.`);
+                return null;
+            }
+            
+            const campaignData = campaignDoc.data();
+            if (campaignData.isActive === false) {
+                alert(`❌ Campaign "${advertiserName}" is DEACTIVATED!\n\nPlease activate the campaign first.`);
+                return null;
+            }
+            
+            // Verify product exists and is active
+            const products = campaignData.products || [];
+            const product = products.find(p => p.productName === productName);
+            
+            if (!product) {
+                alert(`❌ Product "${productName}" not found in campaign "${advertiserName}"!\n\nPlease add the product first.`);
+                return null;
+            }
+            
+            if (product.isActive === false) {
+                alert(`❌ Product "${productName}" is DEACTIVATED!\n\nPlease activate the product first.`);
+                return null;
+            }
+            
+            const remaining = (product.totalProducts || 0) - (product.redeemedCount || 0);
+            if (remaining <= 0) {
+                alert(`❌ Product "${productName}" is SOLD OUT!\n\nNo more coupons available.`);
+                return null;
+            }
+            
+            // Generate random 10-character ID
+            const uniqueId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 5);
+            
+            // Store in Firestore
+            await db.collection('qr_links').doc(uniqueId).set({
+                ad: advertiserName,
+                product: productName,
+                host: location,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                campaignActive: true,
+                productActive: true
+            });
+            
+            // Return clean URL (update with your domain)
+            const claimUrl = `${window.location.origin}/claim/${uniqueId}`;
+            return claimUrl;
+        } catch (error) {
+            console.error('Error generating claim link:', error);
+            alert('Error generating claim link: ' + error.message);
+            return null;
+        }
+    }
+
+    // Generate QR code for a product
+    async function generateProductQRCode(advertiserName, productName) {
+        // Get the station from the campaign
+        const campaignDoc = await db.collection('ad_campaigns').doc(advertiserName).get();
+        const station = campaignDoc.exists ? (campaignDoc.data().station || 'Station 1') : 'Station 1';
+        
+        const claimUrl = await generateClaimLink(advertiserName, productName, station);
+        if (claimUrl) {
+            // Generate QR code using free API
+            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(claimUrl)}`;
+            
+            // Open QR code in new window
+            const qrWindow = window.open();
+            qrWindow.document.write(`
+                <html>
+                <head>
+                    <title>QR Code - ${productName}</title>
+                    <style>
+                        body { 
+                            font-family: Arial; 
+                            text-align: center; 
+                            padding: 40px; 
+                            background: #1a1e24;
+                            color: white;
+                        }
+                        .qr-container {
+                            background: white;
+                            padding: 30px;
+                            border-radius: 20px;
+                            display: inline-block;
+                            margin: 20px auto;
+                        }
+                        .link {
+                            margin-top: 20px;
+                            padding: 10px;
+                            background: #2a2f38;
+                            border-radius: 8px;
+                            word-break: break-all;
+                            font-size: 12px;
+                        }
+                        button {
+                            background: #4a9eff;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            margin-top: 20px;
+                        }
+                        button:hover { background: #6f42c1; }
+                        .info {
+                            margin-top: 20px;
+                            padding: 10px;
+                            background: #1e2a1e;
+                            border-radius: 8px;
+                            font-size: 12px;
+                            color: #28a745;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>📱 Scan to Claim Coupon</h2>
+                    <p>Product: <strong>${productName}</strong></p>
+                    <p>Advertiser: <strong>${advertiserName}</strong></p>
+                    <p>Location: <strong>${station}</strong></p>
+                    <div class="qr-container">
+                        <img src="${qrCodeUrl}" style="width: 250px; height: 250px;">
+                    </div>
+                    <div class="link">
+                        🔗 Link: ${claimUrl}
+                    </div>
+                    <div class="info">
+                        ✅ Campaign is ACTIVE | Product is AVAILABLE
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('${claimUrl}')">📋 Copy Link</button>
+                    <button onclick="window.print()">🖨️ Print QR Code</button>
+                    <button onclick="window.close()">❌ Close</button>
+                    <p style="margin-top: 30px; font-size: 12px; color: #888;">
+                        Customer scans this QR code → Claims coupon → Gets unique 48-hour coupon
+                    </p>
+                </body>
+                </html>
+            `);
+            
+            // Also copy to clipboard as fallback
+            await navigator.clipboard.writeText(claimUrl);
+            
+            return claimUrl;
+        }
+        return null;
+    }
+
+    window.generateProductQRCode = generateProductQRCode;
 
     async function sendSoldOutTelegram(advertiserName, productName, totalProducts, redeemedCount, remaining) {
         const BOT_TOKEN = "8689556571:AAHn6tPs6l2gdhcOspEXy-C4syJmsFtoWkk";
@@ -2943,6 +3137,7 @@ window.activateCouponProduct = async function(advertiserName, productName) {
             const products = campaign.products||[];
             const isActive = campaign.isActive !== false;
             const advertiserName = campaign.advertiserName;
+            const station = campaign.station || 'Station 1';
             let totalP=0, totalR=0, totalRem=0;
             for (const p of products) {
                 totalP += p.totalProducts||0;
@@ -2956,17 +3151,17 @@ window.activateCouponProduct = async function(advertiserName, productName) {
                     <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);width:200px;min-width:160px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px;">
                         <div style="font-size:22px;font-weight:bold;color:white;word-break:break-word;">${advertiserName}</div>
                         <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:8px;">
-                            📦 ${totalP} &nbsp;✅ ${totalR} &nbsp;📊 ${totalRem}
+                            📍 ${station} &nbsp;| 📦 ${totalP} &nbsp;✅ ${totalR} &nbsp;📊 ${totalRem}
                         </div>
                     </div>
                     <div style="flex:1;min-width:250px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:#1a1e24;border-bottom:1px solid #3a4050;flex-wrap:wrap;gap:8px;">
-                            <span style="background:${isActive?'#1a2a1a':'#2a1a1a'};color:${isActive?'#28a745':'#dc3545'};padding:4px 12px;border-radius:20px;font-size:12px;font-weight:bold;">${isActive?'🟢 Active':'🔴 Inactive'}</span>
+                            <span style="background:${isActive?'#1a2a1a':'#2a1a1a'};color:${isActive?'#28a745':'#dc3545'};padding:4px 12px;border-radius:20px;font-size:12px;font-weight:bold;">${isActive?'🟢 Active':'🔴 Campaign Deactivated'}</span>
                             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                 <button class="btn-sm btn-sm-green" onclick="addCouponProduct('${advertiserName.replace(/'/g,"\\'")}')">➕ Add Product</button>
                                 <button class="btn-sm ${isActive?'btn-sm-orange':'btn-sm-green'}" onclick="toggleCouponCampaign('${advertiserName.replace(/'/g,"\\'")}')">
-                                    ${isActive?'🔴 Deactivate':'🟢 Activate'}</button>
-                                <button class="btn-sm btn-sm-red" onclick="deleteCouponCampaign('${advertiserName.replace(/'/g,"\\'")}')">🗑️ Delete</button>
+                                    ${isActive?'🔴 Deactivate Campaign':'🟢 Activate Campaign'}</button>
+                                <button class="btn-sm btn-sm-red" onclick="deleteCouponCampaign('${advertiserName.replace(/'/g,"\\'")}')">🗑️ Delete Campaign</button>
                             </div>
                         </div>
                         <div style="overflow-x:auto;padding:4px;">
@@ -2993,30 +3188,43 @@ window.activateCouponProduct = async function(advertiserName, productName) {
             } else {
                 for (const product of products) {
                     const rem = product.remaining||(product.totalProducts-(product.redeemedCount||0));
-                    const isPA = isActive && rem > 0 && product.isActive !== false;                    
-                    const statusColor = isPA ? '#28a745':'#dc3545';
+                    const isProductActive = product.isActive !== false;
+                    const isPA = isActive && rem > 0 && isProductActive;
+                    const statusColor = isPA ? '#28a745' : (isProductActive ? '#dc3545' : '#ffc107');
+                    let statusText = '';
+                    if (!isActive) {
+                        statusText = '⛔ Campaign Deactivated';
+                    } else if (!isProductActive) {
+                        statusText = '⏸️ Product Deactivated';
+                    } else if (rem > 0) {
+                        statusText = '🟢 Active';
+                    } else {
+                        statusText = '🔴 Sold Out';
+                    }
                     const inputId = `qty_${advertiserName.replace(/[^a-zA-Z0-9]/g,'_')}_${product.productName.replace(/[^a-zA-Z0-9]/g,'_')}`;
                     const row = document.createElement('tr');
                     row.style.borderBottom = '1px solid #3a4050';
-row.innerHTML = `
-    <td style="padding:10px;font-weight:500;">${product.productName}</td>
-    <td style="padding:10px;text-align:center;"><input type="number" id="${inputId}" value="${product.totalProducts}" min="0" step="1" style="width:65px;padding:5px;text-align:center;background:#2a2f38;border:1px solid #3a4050;color:white;border-radius:6px;"></td>
-    <td style="padding:10px;text-align:center;">${product.redeemedCount||0}</td>
-    <td style="padding:10px;text-align:center;font-weight:bold;color:${statusColor};">${rem}</td>
-    <td style="padding:10px;text-align:center;">
-        <span style="background:${product.isActive === false ? '#2a2a1a' : (isPA ? '#1a2a1a' : '#2a1a1a')};
-        color:${!isActive ? '#dc3545' : (product.isActive === false ? '#ffc107' : statusColor)};padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;">
-${!isActive ? '⛔ Campaign Deactivated' : (product.isActive === false ? '⏸️ Product Deactivated' : (isPA ? '🟢 Active' : '🔴 Sold Out'))}        </span>
-    </td>
-    <td style="padding:10px;text-align:center;">
-        <button class="btn-sm btn-sm-blue" onclick="updateCouponProductQty('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}','${inputId}')">📦 Update Qty</button>
-        ${isPA ? 
-            `<button class="btn-sm btn-sm-orange" onclick="deactivateCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🔴 Deactivate</button>` :
-            `<button class="btn-sm btn-sm-green" onclick="activateCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🟢 Activate</button>`
-        }
-        <button class="btn-sm btn-sm-red" onclick="removeCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🗑️ Remove</button>
-    </td>
-`;
+                    row.innerHTML = `
+                        <td style="padding:10px;font-weight:500;">${product.productName}</td>
+                        <td style="padding:10px;text-align:center;"><input type="number" id="${inputId}" value="${product.totalProducts}" min="0" step="1" style="width:65px;padding:5px;text-align:center;background:#2a2f38;border:1px solid #3a4050;color:white;border-radius:6px;"></td>
+                        <td style="padding:10px;text-align:center;">${product.redeemedCount||0}</td>
+                        <td style="padding:10px;text-align:center;font-weight:bold;color:${statusColor};">${rem}</td>
+                        <td style="padding:10px;text-align:center;">
+                            <span style="background:${!isActive ? '#2a1a1a' : (!isProductActive ? '#2a2a1a' : (rem > 0 ? '#1a2a1a' : '#2a1a1a'))};color:${statusColor};padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;">
+                                ${statusText}
+                            </span>
+                        </span></div></td>
+                        <td style="padding:10px;text-align:center;">
+                            <button class="btn-sm btn-sm-blue" onclick="updateCouponProductQty('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}','${inputId}')">📦 Update Qty</button>
+                            <button class="btn-sm btn-sm-green" onclick="generateProductQRCode('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">📱 QR Code</button>
+                            ${isProductActive && isActive && rem > 0 ? 
+                                `<button class="btn-sm btn-sm-orange" onclick="deactivateCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🔴 Deactivate</button>` :
+                                (isProductActive === false && isActive ? 
+                                    `<button class="btn-sm btn-sm-green" onclick="activateCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🟢 Activate</button>` : '')
+                            }
+                            <button class="btn-sm btn-sm-red" onclick="removeCouponProduct('${advertiserName.replace(/'/g,"\\'")}','${product.productName.replace(/'/g,"\\'")}')">🗑️ Remove</button>
+                        </td>
+                    `;
                     tbody.appendChild(row);
                 }
             }
@@ -3134,7 +3342,8 @@ ${!isActive ? '⛔ Campaign Deactivated' : (product.isActive === false ? '⏸️
                 <td><span class="badge ${cls}">${txt}</span></td>
                 <td>${claim.redeemed?'Yes':'No'}</td>
                 <td>${claim.redeemedAt ? fmtDate(claim.redeemedAt):'-'}</td>
-                <td>${fmtDate(claim.expiresAt)}</span></div></td>`;
+                <td>${fmtDate(claim.expiresAt)}</td>
+            `;
             tbody.appendChild(row);
         });
         renderClaimsPagination(totalPages);
@@ -3180,97 +3389,94 @@ ${!isActive ? '⛔ Campaign Deactivated' : (product.isActive === false ? '⏸️
         XLSX.writeFile(wb, `claims_${new Date().toISOString().slice(0,10)}.xlsx`);
     };
 
-window.exportClaimsToPDF = function() {
-    if (!filteredClaims.length) { alert('No data to export!'); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-    
-    // Calculate statistics
-    let claimed = 0;
-    let redeemed = 0;
-    let expired = 0;
-    const now = new Date();
-    
-    filteredClaims.forEach(c => {
-        const isExpired = c.expiresAt < now;
-        if (c.redeemed) {
-            redeemed++;
-            claimed++; // Redeemed also counts as claimed
-        } else if (isExpired) {
-            expired++;
-            claimed++; // Expired also counts as claimed
+    window.exportClaimsToPDF = function() {
+        if (!filteredClaims.length) { alert('No data to export!'); return; }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+        
+        let claimed = 0;
+        let redeemed = 0;
+        let expired = 0;
+        const now = new Date();
+        
+        filteredClaims.forEach(c => {
+            const isExpired = c.expiresAt < now;
+            if (c.redeemed) {
+                redeemed++;
+                claimed++;
+            } else if (isExpired) {
+                expired++;
+                claimed++;
+            } else {
+                claimed++;
+            }
+        });
+        
+        const rows = filteredClaims.map(c => {
+            const isExpired = c.expiresAt < now;
+            let st = 'Claimed';
+            if (c.redeemed) st = 'Redeemed';
+            else if (isExpired) st = 'Expired';
+            return [
+                fmtDate(c.claimedAt), 
+                c.advertiserName || 'Unknown', 
+                c.productName || 'Unknown',
+                c.hostName || 'Unknown', 
+                c.couponCode || 'N/A', 
+                st, 
+                c.redeemed ? 'Yes' : 'No',
+                c.redeemedAt ? fmtDate(c.redeemedAt) : '-', 
+                fmtDate(c.expiresAt)
+            ];
+        });
+        
+        const nowDate = new Date();
+        const year = nowDate.getFullYear();
+        const month = String(nowDate.getMonth() + 1).padStart(2, '0');
+        const day = String(nowDate.getDate()).padStart(2, '0');
+        const hours = String(nowDate.getHours()).padStart(2, '0');
+        const minutes = String(nowDate.getMinutes()).padStart(2, '0');
+        const seconds = String(nowDate.getSeconds()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+        
+        const uniqueAdvertisers = [...new Set(filteredClaims.map(c => c.advertiserName).filter(Boolean))];
+        const uniqueProducts = [...new Set(filteredClaims.map(c => c.productName).filter(Boolean))];
+        
+        let fileName = '';
+        
+        if (uniqueAdvertisers.length === 1 && uniqueProducts.length === 1) {
+            const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const productName = uniqueProducts[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            fileName = `${customerName}_${productName}_claimscouponsreport_${dateStr}.pdf`;
+        } else if (uniqueAdvertisers.length === 1 && uniqueProducts.length > 1) {
+            const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            fileName = `${customerName}_all_products_claimscouponsreport_${dateStr}.pdf`;
         } else {
-            claimed++;
+            fileName = `all_customers_claimscouponsreport_${dateStr}.pdf`;
         }
-    });
-    
-    const rows = filteredClaims.map(c => {
-        const isExpired = c.expiresAt < now;
-        let st = 'Claimed';
-        if (c.redeemed) st = 'Redeemed';
-        else if (isExpired) st = 'Expired';
-        return [
-            fmtDate(c.claimedAt), 
-            c.advertiserName || 'Unknown', 
-            c.productName || 'Unknown',
-            c.hostName || 'Unknown', 
-            c.couponCode || 'N/A', 
-            st, 
-            c.redeemed ? 'Yes' : 'No',
-            c.redeemedAt ? fmtDate(c.redeemedAt) : '-', 
-            fmtDate(c.expiresAt)
-        ];
-    });
-    
-    // Generate filename based on filters
-    const nowDate = new Date();
-    const year = nowDate.getFullYear();
-    const month = String(nowDate.getMonth() + 1).padStart(2, '0');
-    const day = String(nowDate.getDate()).padStart(2, '0');
-    const hours = String(nowDate.getHours()).padStart(2, '0');
-    const minutes = String(nowDate.getMinutes()).padStart(2, '0');
-    const seconds = String(nowDate.getSeconds()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-    
-    // Get unique advertisers and products from filtered claims
-    const uniqueAdvertisers = [...new Set(filteredClaims.map(c => c.advertiserName).filter(Boolean))];
-    const uniqueProducts = [...new Set(filteredClaims.map(c => c.productName).filter(Boolean))];
-    
-    let fileName = '';
-    
-    if (uniqueAdvertisers.length === 1 && uniqueProducts.length === 1) {
-        const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const productName = uniqueProducts[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        fileName = `${customerName}_${productName}_claimscouponsreport_${dateStr}.pdf`;
-    } else if (uniqueAdvertisers.length === 1 && uniqueProducts.length > 1) {
-        const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        fileName = `${customerName}_all_products_claimscouponsreport_${dateStr}.pdf`;
-    } else {
-        fileName = `all_customers_claimscouponsreport_${dateStr}.pdf`;
-    }
-    
-    doc.setFontSize(18);
-    doc.setTextColor(74, 158, 255);
-    doc.text('Coupon Claims Report', 14, 15);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${formatCompactDate(nowDate)}`, 14, 22);
-    doc.text(`Claimed: ${claimed} | Redeemed: ${redeemed} | Expired: ${expired}`, 14, 29);
-    
-    doc.autoTable({
-        head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']],
-        body: rows,
-        startY: 36,
-        theme: 'grid',
-        headStyles: { fillColor: [74, 158, 255], textColor: 255, fontStyle: 'bold', halign: 'center' },
-        bodyStyles: { fontSize: 8, cellPadding: 3 },
-        alternateRowStyles: { fillColor: [240, 242, 248] },
-        margin: { left: 14, right: 14 }
-    });
-    
-    doc.save(fileName);
-};
+        
+        doc.setFontSize(18);
+        doc.setTextColor(74, 158, 255);
+        doc.text('Coupon Claims Report', 14, 15);
+        
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generated: ${formatCompactDate(nowDate)}`, 14, 22);
+        doc.text(`Claimed: ${claimed} | Redeemed: ${redeemed} | Expired: ${expired}`, 14, 29);
+        
+        doc.autoTable({
+            head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']],
+            body: rows,
+            startY: 36,
+            theme: 'grid',
+            headStyles: { fillColor: [74, 158, 255], textColor: 255, fontStyle: 'bold', halign: 'center' },
+            bodyStyles: { fontSize: 8, cellPadding: 3 },
+            alternateRowStyles: { fillColor: [240, 242, 248] },
+            margin: { left: 14, right: 14 }
+        });
+        
+        doc.save(fileName);
+    };
 
     function fmtDate(date) {
         if (!date) return 'Unknown';
@@ -3302,6 +3508,6 @@ window.exportClaimsToPDF = function() {
         showAlert('Password updated successfully!', 'success');
         ['currentPasswordAd','newPasswordAd','confirmPasswordAd'].forEach(id => document.getElementById(id).value = '');
     };
-    </script>
+</script>
 </body>
 </html>
