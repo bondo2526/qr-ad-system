@@ -309,15 +309,40 @@
         showLoading();
         
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            currentAd = urlParams.get('ad') || '';
-            currentProduct = urlParams.get('product') || '';
-            currentHost = urlParams.get('host') || '';
+            // ========== NEW: Get data from Firestore using document ID ==========
+            const path = window.location.pathname;
+            // Expected format: /claim/abc123xyz or /abc123xyz
+            let uniqueId = path.split('/').pop();
             
-            if (!currentAd || !currentProduct || !currentHost) {
-                showError('Missing required parameters');
+            // Also check if there's a 'c' parameter (for backward compatibility)
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramId = urlParams.get('c');
+            
+            if (paramId) {
+                uniqueId = paramId;
+            }
+            
+            if (!uniqueId || uniqueId === 'claim' || uniqueId === 'index.html') {
+                showError('Invalid claim link. Please use the QR code provided.');
                 return;
             }
+            
+            console.log("Looking up claim ID:", uniqueId);
+            
+            // Fetch the claim data from Firestore
+            const qrDoc = await db.collection('qr_links').doc(uniqueId).get();
+            
+            if (!qrDoc.exists) {
+                showError('Invalid or expired claim link. Please contact the advertiser.');
+                return;
+            }
+            
+            const linkData = qrDoc.data();
+            currentAd = linkData.ad;
+            currentProduct = linkData.product;
+            currentHost = linkData.host;
+            
+            console.log("Loaded claim data:", { currentAd, currentProduct, currentHost });
             
             const displayAdName = decodeURIComponent(currentAd).replace(/_/g, ' ');
             const displayProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
@@ -365,34 +390,33 @@
             const advertiserName = campaignData.advertiserName || decodeURIComponent(currentAd).replace(/_/g, ' ');
             const currentProductName = decodeURIComponent(currentProduct).replace(/_/g, ' ');
             
-// Check product stock
-const products = campaignData.products || [];
-const product = products.find(p => p.productName === currentProductName);
-
-if (!product) {
-    // Show available products instead
-    const availableProducts = products.filter(p => p.isActive !== false && (p.remaining || (p.totalProducts - (p.redeemedCount || 0))) > 0);
-    const availableProductNames = availableProducts.map(p => p.productName).join(', ');
-    showError(`Product "${currentProductName}" not found. Available products: ${availableProductNames || 'none'}`);
-    return;
-}
-
-// Check if product is deactivated
-if (product.isActive === false) {
-    const availableProducts = products.filter(p => p.isActive !== false && (p.remaining || (p.totalProducts - (p.redeemedCount || 0))) > 0);
-    const availableProductNames = availableProducts.map(p => p.productName).join(', ');
-    showError(`❌ Product "${currentProductName}" is DEACTIVATED.\n\nAvailable products from this advertiser: ${availableProductNames || 'none'}`);
-    return;
-}
-
-const redeemedCount = product.redeemedCount || 0;
-const totalProducts = product.totalProducts || 0;
-const remaining = totalProducts - redeemedCount;
-
-if (remaining <= 0) {
-    showSoldOutPage();
-    return;
-}
+            // Check product stock
+            const products = campaignData.products || [];
+            const product = products.find(p => p.productName === currentProductName);
+            
+            if (!product) {
+                const availableProducts = products.filter(p => p.isActive !== false && (p.remaining || (p.totalProducts - (p.redeemedCount || 0))) > 0);
+                const availableProductNames = availableProducts.map(p => p.productName).join(', ');
+                showError(`Product "${currentProductName}" not found. Available products: ${availableProductNames || 'none'}`);
+                return;
+            }
+            
+            // Check if product is deactivated
+            if (product.isActive === false) {
+                const availableProducts = products.filter(p => p.isActive !== false && (p.remaining || (p.totalProducts - (p.redeemedCount || 0))) > 0);
+                const availableProductNames = availableProducts.map(p => p.productName).join(', ');
+                showError(`❌ Product "${currentProductName}" is DEACTIVATED.\n\nAvailable products from this advertiser: ${availableProductNames || 'none'}`);
+                return;
+            }
+            
+            const redeemedCount = product.redeemedCount || 0;
+            const totalProducts = product.totalProducts || 0;
+            const remaining = totalProducts - redeemedCount;
+            
+            if (remaining <= 0) {
+                showSoldOutPage();
+                return;
+            }
             
             const claimsSnapshot = await db.collection('claims')
                 .where('userFingerprint', '==', userFingerprint)
@@ -488,7 +512,7 @@ if (remaining <= 0) {
             warningDiv.innerHTML = `<div class="location-warning"><strong>📍 Note:</strong> You already claimed this coupon at <strong>${claimedLocation}</strong>. You cannot claim the same product at a different location.</div>`;
         }
         
-      const nextAvailable = new Date(claimTime.getTime() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000));
+        const nextAvailable = new Date(claimTime.getTime() + (CONFIG.BLOCK_HOURS * 60 * 60 * 1000));
         startCountdown(nextAvailable);
     }
     
@@ -498,18 +522,17 @@ if (remaining <= 0) {
         document.getElementById('soldout').classList.remove('hidden');
     }
     
-function showError(message) {
-    document.body.className = '';
-    document.getElementById('loading').classList.add('hidden');
-    document.getElementById('error').classList.remove('hidden');
-    // Handle multiline messages
-    const errorMessage = document.getElementById('errorMessage');
-    if (message.includes('\n')) {
-        errorMessage.innerHTML = message.replace(/\n/g, '<br>');
-    } else {
-        errorMessage.textContent = message;
+    function showError(message) {
+        document.body.className = '';
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+        const errorMessage = document.getElementById('errorMessage');
+        if (message.includes('\n')) {
+            errorMessage.innerHTML = message.replace(/\n/g, '<br>');
+        } else {
+            errorMessage.textContent = message;
+        }
     }
-}
     
     function startCountdown(targetTime) {
         function updateCountdown() {
@@ -522,7 +545,8 @@ function showError(message) {
             const hours = Math.floor(diff / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            document.getElementById('countdown').innerHTML = `<div style="font-size: 28px;">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</div><p>Time until you can claim again (${CONFIG.BLOCK_HOURS} hours)</p>`;            setTimeout(updateCountdown, 1000);
+            document.getElementById('countdown').innerHTML = `<div style="font-size: 28px;">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</div><p>Time until you can claim again (${CONFIG.BLOCK_HOURS} hours)</p>`;
+            setTimeout(updateCountdown, 1000);
         }
         updateCountdown();
     }
