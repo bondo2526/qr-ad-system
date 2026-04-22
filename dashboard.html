@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ad & Coupon Dashboard V 8.0</title>
+    <title>Ad & Coupon Dashboard V 9.0</title>
 
     <!-- Firebase v9 compat for Ad Display System -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -469,7 +469,7 @@
     <div id="loginScreen">
         <div class="login-box">
             <h2>🔐 Unified Dashboard</h2>
-            <p>Ad Display &amp; Coupon System · V 8.0</p>
+            <p>Ad Display &amp; Coupon System · V 9.0</p>
             <input type="password" id="passwordInput" placeholder="Enter dashboard password" onkeypress="if(event.key==='Enter')handleLogin()">
             <button class="login-btn-main" id="loginBtn" onclick="handleLogin()">
                 <span id="loginText">🔓 Login to Dashboard</span>
@@ -483,7 +483,7 @@
         <div class="container">
 
             <div class="header">
-                <h1>📊 Ad &amp; Coupon Dashboard <span class="version-badge">V 8.0</span></h1>
+                <h1>📊 Ad &amp; Coupon Dashboard <span class="version-badge">V 9.0</span></h1>
                 <div class="header-right">
                     <span class="auto-refresh-badge" id="autoRefreshStatus">🔄 Auto-refresh: ON (10s)</span>
                     <span class="user-badge" id="userBadge">Not logged in</span>
@@ -653,7 +653,7 @@
                         <div style="background:#1a1e24;padding:18px;border-radius:10px;margin-top:18px;">
                             <h4 style="color:#4a9eff;margin-bottom:13px;">📊 System Info</h4>
                             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
-                                <div><div style="color:#a0a0a0;">Version</div><div style="color:white;font-weight:bold;">V 8.0 - Unified</div></div>
+                                <div><div style="color:#a0a0a0;">Version</div><div style="color:white;font-weight:bold;">V 9.0 - Unified</div></div>
                                 <div><div style="color:#a0a0a0;">Firebase Project</div><div style="color:white;" id="firebaseProject">ad-coupon-system</div></div>
                                 <div><div style="color:#a0a0a0;">Last Login</div><div style="color:white;" id="lastLoginTime">Just now</div></div>
                                 <div><div style="color:#a0a0a0;">User ID</div><div style="color:#4a9eff;" id="userId">-</div></div>
@@ -2993,7 +2993,7 @@ window.activateCouponProduct = async function(advertiserName, productName) {
             } else {
                 for (const product of products) {
                     const rem = product.remaining||(product.totalProducts-(product.redeemedCount||0));
-                    const isPA = isActive && rem > 0;
+                    const isPA = isActive && rem > 0 && product.isActive !== false;                    
                     const statusColor = isPA ? '#28a745':'#dc3545';
                     const inputId = `qty_${advertiserName.replace(/[^a-zA-Z0-9]/g,'_')}_${product.productName.replace(/[^a-zA-Z0-9]/g,'_')}`;
                     const row = document.createElement('tr');
