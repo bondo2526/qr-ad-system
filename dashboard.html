@@ -1834,70 +1834,35 @@ function validateDailyHours() {
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
     
-    let requiredHoursPerDay = 0;
+    let requiredHours = 0;
     let planName = '';
     
     if (selectedPlan === 'light') {
-        requiredHoursPerDay = 4;
+        requiredHours = 4;
         planName = 'Light';
     } else if (selectedPlan === 'standard') {
-        requiredHoursPerDay = 6;
+        requiredHours = 6;
         planName = 'Standard';
     } else if (selectedPlan === 'professional') {
-        requiredHoursPerDay = 8;
+        requiredHours = 8;
         planName = 'Professional';
     } else {
         return true;
     }
     
-    // Calculate hours for EACH individual day with EXACT minute check
-    const currentDate = new Date(startDate);
-    let invalidDays = [];
+    // Calculate total duration in milliseconds
+    const totalDurationMs = endDate - startDate;
+    const totalDurationHours = totalDurationMs / (1000 * 60 * 60);
+    const requiredMs = requiredHours * 60 * 60 * 1000;
     
-    while (currentDate <= endDate) {
-        const dayStart = new Date(currentDate);
-        dayStart.setHours(0, 0, 0, 0);
+    // Check if total duration exactly matches required hours
+    if (totalDurationMs !== requiredMs) {
+        const diffMinutes = Math.round((totalDurationMs - requiredMs) / (1000 * 60));
+        const sign = diffMinutes > 0 ? '+' : '';
         
-        const dayEnd = new Date(currentDate);
-        dayEnd.setHours(23, 59, 59, 999);
-        
-        const overlapStart = new Date(Math.max(startDate, dayStart));
-        const overlapEnd = new Date(Math.min(endDate, dayEnd));
-        
-        if (overlapStart < overlapEnd) {
-            // Calculate exact hours and minutes
-            const diffMs = overlapEnd - overlapStart;
-            const diffHours = diffMs / (1000 * 60 * 60);
-            const diffHoursExact = diffMs / (1000 * 60 * 60);
-            
-            // Convert required hours to milliseconds for exact comparison
-            const requiredMs = requiredHoursPerDay * 60 * 60 * 1000;
-            
-            // Check if exact match (no tolerance)
-            if (diffMs !== requiredMs) {
-                // Calculate the difference in minutes
-                const diffMinutes = Math.round((diffMs - requiredMs) / (1000 * 60));
-                const sign = diffMinutes > 0 ? '+' : '';
-                
-                invalidDays.push({
-                    date: formatCompactDate(currentDate),
-                    hours: diffHoursExact.toFixed(2),
-                    required: requiredHoursPerDay,
-                    diffMinutes: `${sign}${diffMinutes} min`
-                });
-            }
-        }
-        
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    if (invalidDays.length > 0) {
-        let message = `❌ ${planName} Plan requires EXACTLY ${requiredHoursPerDay} hours per day.\n\n`;
-        message += `The following days do not meet this requirement:\n`;
-        invalidDays.forEach(day => {
-            message += `   • ${day.date}: ${day.hours} hours (should be ${day.required} hours, off by ${day.diffMinutes})\n`;
-        });
-        message += `\nPlease adjust your start/end times to exactly ${requiredHoursPerDay} hours.`;
+        let message = `❌ ${planName} Plan requires EXACTLY ${requiredHours} hours total.\n\n`;
+        message += `Your campaign duration is ${totalDurationHours.toFixed(2)} hours (off by ${sign}${diffMinutes} minutes).\n`;
+        message += `\nPlease adjust your start/end times to exactly ${requiredHours} hours.`;
         
         alert(message);
         document.getElementById('endDateTime').focus();
@@ -1923,63 +1888,33 @@ function validateEditDailyHours() {
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
     
-    let requiredHoursPerDay = 0;
+    let requiredHours = 0;
     let planName = '';
     
     if (selectedPlan === 'light' || selectedPlan === 'Light') {
-        requiredHoursPerDay = 4;
+        requiredHours = 4;
         planName = 'Light';
     } else if (selectedPlan === 'standard' || selectedPlan === 'Standard') {
-        requiredHoursPerDay = 6;
+        requiredHours = 6;
         planName = 'Standard';
     } else if (selectedPlan === 'professional' || selectedPlan === 'Professional') {
-        requiredHoursPerDay = 8;
+        requiredHours = 8;
         planName = 'Professional';
     } else {
         return true;
     }
     
-    const currentDate = new Date(startDate);
-    let invalidDays = [];
+    const totalDurationMs = endDate - startDate;
+    const totalDurationHours = totalDurationMs / (1000 * 60 * 60);
+    const requiredMs = requiredHours * 60 * 60 * 1000;
     
-    while (currentDate <= endDate) {
-        const dayStart = new Date(currentDate);
-        dayStart.setHours(0, 0, 0, 0);
+    if (totalDurationMs !== requiredMs) {
+        const diffMinutes = Math.round((totalDurationMs - requiredMs) / (1000 * 60));
+        const sign = diffMinutes > 0 ? '+' : '';
         
-        const dayEnd = new Date(currentDate);
-        dayEnd.setHours(23, 59, 59, 999);
-        
-        const overlapStart = new Date(Math.max(startDate, dayStart));
-        const overlapEnd = new Date(Math.min(endDate, dayEnd));
-        
-        if (overlapStart < overlapEnd) {
-            const diffMs = overlapEnd - overlapStart;
-            const diffHoursExact = diffMs / (1000 * 60 * 60);
-            const requiredMs = requiredHoursPerDay * 60 * 60 * 1000;
-            
-            if (diffMs !== requiredMs) {
-                const diffMinutes = Math.round((diffMs - requiredMs) / (1000 * 60));
-                const sign = diffMinutes > 0 ? '+' : '';
-                
-                invalidDays.push({
-                    date: formatCompactDate(currentDate),
-                    hours: diffHoursExact.toFixed(2),
-                    required: requiredHoursPerDay,
-                    diffMinutes: `${sign}${diffMinutes} min`
-                });
-            }
-        }
-        
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    if (invalidDays.length > 0) {
-        let message = `❌ ${planName} Plan requires EXACTLY ${requiredHoursPerDay} hours per day.\n\n`;
-        message += `The following days do not meet this requirement:\n`;
-        invalidDays.forEach(day => {
-            message += `   • ${day.date}: ${day.hours} hours (should be ${day.required} hours, off by ${day.diffMinutes})\n`;
-        });
-        message += `\nPlease adjust your start/end times to exactly ${requiredHoursPerDay} hours.`;
+        let message = `❌ ${planName} Plan requires EXACTLY ${requiredHours} hours total.\n\n`;
+        message += `Your campaign duration is ${totalDurationHours.toFixed(2)} hours (off by ${sign}${diffMinutes} minutes).\n`;
+        message += `\nPlease adjust your start/end times to exactly ${requiredHours} hours.`;
         
         alert(message);
         document.getElementById('editEndDateTime').focus();
