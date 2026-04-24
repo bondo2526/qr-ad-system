@@ -2957,7 +2957,7 @@ window.downloadPDF = function() {
             const oldLines = pdf.splitTextToSize(oldVal, 32);
             const newLines = pdf.splitTextToSize(newVal, 32);
             const maxLines = Math.max(1, oldLines.length, newLines.length);
-            const rowHeight = maxLines * 3 + 2;
+            const rowHeight = maxLines * 2.5 + 1;
             
             // Check if we need a new page
             if (yPos + rowHeight > pageHeight - 20) {
@@ -2996,90 +2996,101 @@ window.downloadPDF = function() {
             
             yPos += rowHeight;
         }
-        yPos += 3;
+        yPos += 1;
     }
     
-    // ============ HASHES SECTION ============
-    const hasLatestUpdate = (latestStartHash !== genesisStartHash) || (latestEndHash !== genesisEndHash);
-    
-    checkNewPage(45);
-    
-    pdf.setFontSize(11);
-    pdf.setTextColor(44, 62, 80);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
-    yPos += 4;
-    
-    // Genesis Hashes box
-    pdf.setFillColor(232, 245, 233);
-    pdf.rect(20, yPos, 170, 18, 'F');
-    pdf.setFontSize(7);
-    pdf.setTextColor(39, 174, 96);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('🔷 GENESIS HASHES (Original - Immutable Proof)', 25, yPos + 3);
-    
-    pdf.setFontSize(6);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(39, 174, 96);
-    pdf.text('START:', 25, yPos + 7.5);
-    pdf.setFont('courier', 'normal');
-    pdf.setTextColor(0, 0, 0);
-    const startLines1 = pdf.splitTextToSize(genesisStartHash, 140);
-    pdf.text(startLines1, 45, yPos + 7.5);
-    
-    pdf.setFontSize(6);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(39, 174, 96);
-    pdf.text('END:', 25, yPos + 13);
-    pdf.setFont('courier', 'normal');
-    pdf.setTextColor(0, 0, 0);
-    const endLines1 = pdf.splitTextToSize(genesisEndHash, 140);
-    pdf.text(endLines1, 45, yPos + 13);
-    yPos += 20;
-    
-    // Latest Update Hashes box
-    if (hasLatestUpdate) {
-        if (yPos > pageHeight - 25) {
-            pdf.addPage();
-            yPos = 15;
-        }
-        pdf.setFillColor(255, 243, 224);
-        pdf.rect(20, yPos, 170, 18, 'F');
-        pdf.setFontSize(7);
-        pdf.setTextColor(243, 156, 18);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('🟡 LATEST UPDATE HASHES (Current Active Proof)', 25, yPos + 3);
-        
-        pdf.setFontSize(6);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(230, 126, 34);
-        pdf.text('START:', 25, yPos + 7.5);
-        pdf.setFont('courier', 'normal');
-        pdf.setTextColor(0, 0, 0);
-        const startLines2 = pdf.splitTextToSize(latestStartHash, 140);
-        pdf.text(startLines2, 45, yPos + 7.5);
-        
-        pdf.setFontSize(6);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(230, 126, 34);
-        pdf.text('END:', 25, yPos + 13);
-        pdf.setFont('courier', 'normal');
-        pdf.setTextColor(0, 0, 0);
-        const endLines2 = pdf.splitTextToSize(latestEndHash, 140);
-        pdf.text(endLines2, 45, yPos + 13);
-        yPos += 22;
-    } else {
-        yPos += 4;
+// ============ HASHES SECTION - COMPACT ============
+const hasLatestUpdate = (latestStartHash !== genesisStartHash) || (latestEndHash !== genesisEndHash);
+
+checkNewPage(35);
+
+pdf.setFontSize(11);
+pdf.setTextColor(44, 62, 80);
+pdf.setFont('helvetica', 'bold');
+pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
+yPos += 3;
+
+// Genesis Hashes box - REDUCED HEIGHT
+pdf.setFillColor(232, 245, 233);
+pdf.rect(20, yPos, 170, 14, 'F');  // Changed from 18 to 14
+pdf.setFontSize(6.5);
+pdf.setTextColor(39, 174, 96);
+pdf.setFont('helvetica', 'bold');
+pdf.text('GENESIS HASHES (Original - Immutable Proof)', 22, yPos + 2.5);
+
+pdf.setFontSize(5.5);
+pdf.setFont('helvetica', 'bold');
+pdf.setTextColor(39, 174, 96);
+pdf.text('START:', 25, yPos + 6);
+pdf.setFont('courier', 'normal');
+pdf.setTextColor(0, 0, 0);
+const startLines1 = pdf.splitTextToSize(genesisStartHash, 145);
+pdf.text(startLines1, 45, yPos + 6);
+
+pdf.setFontSize(5.5);
+pdf.setFont('helvetica', 'bold');
+pdf.setTextColor(39, 174, 96);
+pdf.text('END:', 25, yPos + 10.5);
+pdf.setFont('courier', 'normal');
+pdf.setTextColor(0, 0, 0);
+const endLines1 = pdf.splitTextToSize(genesisEndHash, 145);
+pdf.text(endLines1, 45, yPos + 10.5);
+yPos += 16;  // Changed from 20 to 16
+
+// Latest Update Hashes box - REDUCED HEIGHT
+if (hasLatestUpdate) {
+    if (yPos > pageHeight - 22) {  // Changed from 25 to 22
+        pdf.addPage();
+        yPos = 15;
     }
+    pdf.setFillColor(255, 243, 224);
+    pdf.rect(20, yPos, 170, 14, 'F');  // Changed from 18 to 14
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(243, 156, 18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('LATEST UPDATE HASHES (Current Active Proof)', 22, yPos + 2.5);
     
-    // ============ FOOTER ============
-    const footerY = pageHeight - 10;
-    pdf.setDrawColor(200, 200, 200);
-    pdf.line(20, footerY - 3, pageWidth - 20, footerY - 3);
-    pdf.setFontSize(8);
-    pdf.setTextColor(149, 165, 166);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Bondos4Ever © 2026 Local Digital Ad & Coupon Marketing System', pageWidth / 2, footerY, { align: 'center' });
+    pdf.setFontSize(5.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(230, 126, 34);
+    pdf.text('START:', 25, yPos + 6);
+    pdf.setFont('courier', 'normal');
+    pdf.setTextColor(0, 0, 0);
+    const startLines2 = pdf.splitTextToSize(latestStartHash, 145);
+    pdf.text(startLines2, 45, yPos + 6);
+    
+    pdf.setFontSize(5.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(230, 126, 34);
+    pdf.text('END:', 25, yPos + 10.5);
+    pdf.setFont('courier', 'normal');
+    pdf.setTextColor(0, 0, 0);
+    const endLines2 = pdf.splitTextToSize(latestEndHash, 145);
+    pdf.text(endLines2, 45, yPos + 10.5);
+    yPos += 18;  // Changed from 22 to 18
+} else {
+    yPos += 2;  // Changed from 4 to 2
+}
+// ============ FOOTER WITH IMAGE ============
+const footerY = pageHeight - 12;
+
+// Draw line
+pdf.setDrawColor(200, 200, 200);
+pdf.line(20, footerY - 3, pageWidth - 20, footerY - 3);
+
+// Add small icon (5mm x 5mm) - using the chart icon
+try {
+    const iconBase64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABRUlEQVQ4T6WTvUoDQRSFv7uLiQpWdpoiWMVKBBVUUFuJhYhY2Aha+AiCj1CwsUqj2FhYWKWN4gP4A2IhWAgqdqQyhJhkd2bFXc0mBkQ4cC/3zDnfPWeoqRog/1gBWGAZaSrgpqqqSaZpGh6PR6mUjqg+xjEGFoAWQKLqC9wB70Cbkh/SNE1P0jT1JUmSQBMEAdLpdB1JkvhRFEWCiY+APeAcuAROgX1gRRRFQZIkQRRFQdM01VQ6nU4QRVHar9cKYA2zLgjTNC2YnWY8Hossy0LTNAVZlsXn82mxWMzj8/mQZVmkaVqz6kCt0GQ5+8h/3DRNQVVVQdM0nmZ+Ph7Pm81m/7Z2uGWvm1RAS0CZWQ9RjO8Oh8MJ0HVdNE1T1FQ6nU4wGo0kSZI4juN/qq9/Ee0DIMr8N18LKYsAAAAASUVORK5CYII=";
+    pdf.addImage(iconBase64, 'PNG', 20, footerY - 2.5, 5, 5);
+} catch(e) {
+    console.log('Icon could not be added');
+}
+
+// Footer text
+pdf.setFontSize(7);
+pdf.setTextColor(149, 165, 166);
+pdf.setFont('helvetica', 'normal');
+pdf.text('Bondos4Ever © 2026 Local Digital Ad and Coupon Marketing System', pageWidth / 2, footerY, { align: 'center' });
     
     // Save file
     const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
