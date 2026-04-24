@@ -2653,13 +2653,14 @@ window.downloadPDF = function() {
     const now = new Date();
     const planName = c.pricing_plan || 'Light';
     
-    let planDescription = '';
+    // Full plan description
+    let fullPlanText = '';
     if (planName === 'Light') {
-        planDescription = '2d×4hrs weekly = 32hrs/month / $35';
+        fullPlanText = 'Light (2 days × 4 hrs weekly = 32 hrs/month / $35)';
     } else if (planName === 'Standard') {
-        planDescription = '4d×6hrs weekly = 96hrs/month / $48';
+        fullPlanText = 'Standard (4 days × 6 hrs weekly = 96 hrs/month / $48)';
     } else if (planName === 'Professional') {
-        planDescription = '6d×8hrs weekly = 192hrs/month / $54';
+        fullPlanText = 'Professional (6 days × 8 hrs weekly = 192 hrs/month / $54)';
     }
     
     // Find ORIGINAL dates
@@ -2699,14 +2700,12 @@ window.downloadPDF = function() {
     let yPos = 15;
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    let isFirstPage = true;
     
     // Helper function to add new page
     function checkNewPage(needed) {
         if (yPos + needed > pageHeight - 15) {
             pdf.addPage();
             yPos = 15;
-            isFirstPage = false;
             return true;
         }
         return false;
@@ -2735,7 +2734,7 @@ window.downloadPDF = function() {
     pdf.text(`Campaign ID: ${c.id}`, 105, yPos + 3, { align: 'center' });
     yPos += 7;
     
-    // ============ CAMPAIGN DETAILS - 3 COLUMN LAYOUT ============
+    // ============ CAMPAIGN DETAILS ============
     pdf.setFontSize(11);
     pdf.setTextColor(44, 62, 80);
     pdf.setFont('helvetica', 'bold');
@@ -2743,7 +2742,7 @@ window.downloadPDF = function() {
     yPos += 4;
     
     pdf.setFillColor(248, 249, 250);
-    const detailsHeight = 50;
+    const detailsHeight = 42;
     pdf.rect(20, yPos, 170, detailsHeight, 'F');
     
     pdf.setFontSize(8);
@@ -2754,7 +2753,6 @@ window.downloadPDF = function() {
     const col1 = 25;
     const col2 = 70;
     const col3 = 110;
-    const col4 = 155;
     
     // Row 1: Station | Customer | Product
     pdf.setFont('helvetica', 'bold');
@@ -2773,12 +2771,15 @@ window.downloadPDF = function() {
     pdf.text(c.product_name || 'Not specified', col3 + 16, rowY);
     rowY += 5;
     
-    // Row 2: Plan | Status | Created
+    // Row 2: Plan (full description) | Status | Created
     pdf.setFont('helvetica', 'bold');
     pdf.text('Plan:', col1, rowY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(planName, col1 + 12, rowY);
+    const planLines = pdf.splitTextToSize(fullPlanText, 38);
+    pdf.text(planLines, col1 + 12, rowY);
+    const planLinesCount = planLines.length;
     
+    // Status and Created - align with first line of plan
     pdf.setFont('helvetica', 'bold');
     pdf.text('Status:', col2, rowY);
     pdf.setFont('helvetica', 'normal');
@@ -2791,14 +2792,15 @@ window.downloadPDF = function() {
     pdf.setFont('helvetica', 'normal');
     const createdDate = c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown';
     pdf.text(createdDate, col3 + 16, rowY);
-    rowY += 5;
     
-    // Separator
+    rowY += 5 + (planLinesCount - 1) * 3;
+    
+    // Separator line
     pdf.setDrawColor(200, 200, 200);
     pdf.line(25, rowY, pageWidth - 25, rowY);
     rowY += 3;
     
-    // Dates section - 2 rows
+    // Row 3: Original Start | Original End
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(100, 100, 100);
     pdf.text('Original Start:', col1, rowY);
@@ -2810,8 +2812,9 @@ window.downloadPDF = function() {
     pdf.text('Original End:', col2, rowY);
     pdf.setFont('helvetica', 'normal');
     pdf.text(originalEndStr, col2 + 24, rowY);
-    rowY += 4;
+    rowY += 5;
     
+    // Row 4: Current Start | Current End
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(52, 152, 219);
     pdf.text('Current Start:', col1, rowY);
@@ -2865,7 +2868,6 @@ window.downloadPDF = function() {
     
     // ============ UPDATE HISTORY TABLE ============
     if (updates && updates.length > 0) {
-        // Table header
         checkNewPage(15);
         pdf.setFontSize(10);
         pdf.setTextColor(243, 156, 18);
@@ -2890,9 +2892,8 @@ window.downloadPDF = function() {
         pdf.setFontSize(6);
         
         const allUpdates = [...updates].reverse();
-        let rowCount = 0;
         
-        for (let u = 0; u < allUpdates.length && rowCount < 20; u++) {
+        for (let u = 0; u < allUpdates.length; u++) {
             const update = allUpdates[u];
             let updateDate = '';
             if (update.timestamp) {
@@ -2951,7 +2952,6 @@ window.downloadPDF = function() {
             if (yPos + rowHeight > pageHeight - 20) {
                 pdf.addPage();
                 yPos = 15;
-                // Redraw header on new page
                 pdf.setFontSize(10);
                 pdf.setTextColor(243, 156, 18);
                 pdf.setFont('helvetica', 'bold');
@@ -2984,12 +2984,13 @@ window.downloadPDF = function() {
             pdf.text(updatedBy, 170, yPos + 2);
             
             yPos += rowHeight;
-            rowCount++;
         }
         yPos += 3;
     }
     
     // ============ HASHES SECTION ============
+    const hasLatestUpdate = (latestStartHash !== genesisStartHash) || (latestEndHash !== genesisEndHash);
+    
     checkNewPage(45);
     
     pdf.setFontSize(11);
@@ -2998,7 +2999,7 @@ window.downloadPDF = function() {
     pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
     yPos += 4;
     
-    // Genesis Hashes box - COMPACT
+    // Genesis Hashes box
     pdf.setFillColor(232, 245, 233);
     pdf.rect(20, yPos, 170, 18, 'F');
     pdf.setFontSize(7);
@@ -3025,8 +3026,7 @@ window.downloadPDF = function() {
     pdf.text(endLines1, 45, yPos + 13);
     yPos += 20;
     
-    // Latest Update Hashes - COMPACT
-    const hasLatestUpdate = (latestStartHash !== genesisStartHash) || (latestEndHash !== genesisEndHash);
+    // Latest Update Hashes box
     if (hasLatestUpdate) {
         if (yPos > pageHeight - 25) {
             pdf.addPage();
