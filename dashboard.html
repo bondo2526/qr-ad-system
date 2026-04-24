@@ -1477,7 +1477,7 @@ async function regenerateCampaignHash(campaignId, hashType, customerName, produc
         }
     };
 
-// Image handling
+// Image handling with SMART warnings for all resolutions
 document.getElementById('imageInput')?.addEventListener('change', e => {
     const files = Array.from(e.target.files);
     if (files.length > 1) {
@@ -1489,36 +1489,56 @@ document.getElementById('imageInput')?.addEventListener('change', e => {
     if (files.length === 1) {
         const file = files[0];
         
-        // ========== ADD FILE SIZE WARNING HERE ==========
-        // Show warning for large files (over 500KB)
-        if (file.size > 500 * 1024) {
-            document.getElementById('fileWarning').innerHTML = '⚠️ Large file (' + (file.size/1024).toFixed(0) + 'KB). Will be compressed automatically.';
-            document.getElementById('fileWarning').style.color = '#ffc107';
-        } else if (file.size > 1024 * 1024) {
-            document.getElementById('fileWarning').innerHTML = '⚠️ Very large file (' + (file.size/1024).toFixed(0) + 'KB). Compression may take a moment.';
-            document.getElementById('fileWarning').style.color = '#ffc107';
-        } else {
-            document.getElementById('fileWarning').innerHTML = '';
-        }
-        // ========== END WARNING ==========
+        // ========== SMART WARNING BASED ON FILE SIZE ==========
+        let warningMessage = '';
+        let warningColor = '#ffc107';
         
+        if (file.size > 5 * 1024 * 1024) {
+            warningMessage = `📸 Ultra HD / 4K image (${(file.size/1024/1024).toFixed(1)}MB). Will be optimized for 4K displays.`;
+            warningColor = '#ff9800';
+        } else if (file.size > 2 * 1024 * 1024) {
+            warningMessage = `📸 Full HD / 4K image (${(file.size/1024).toFixed(0)}KB). Will be optimized for best quality.`;
+            warningColor = '#ffc107';
+        } else if (file.size > 1024 * 1024) {
+            warningMessage = `📸 HD / Full HD image (${(file.size/1024).toFixed(0)}KB). Will be optimized for sharp display.`;
+            warningColor = '#4a9eff';
+        } else if (file.size > 500 * 1024) {
+            warningMessage = `✓ HD ready (${(file.size/1024).toFixed(0)}KB). Will be optimized for clear viewing.`;
+            warningColor = '#28a745';
+        } else if (file.size > 200 * 1024) {
+            warningMessage = `✓ Good quality (${(file.size/1024).toFixed(0)}KB). Keeping original quality.`;
+            warningColor = '#28a745';
+        } else {
+            warningMessage = `✓ Perfect size (${(file.size/1024).toFixed(0)}KB). Ready for all displays.`;
+            warningColor = '#28a745';
+        }
+        
+        document.getElementById('fileWarning').innerHTML = warningMessage;
+        document.getElementById('fileWarning').style.color = warningColor;
+        // ========== END SMART WARNING ==========
+        
+        // Hard limit check (10MB absolute max)
         if (file.size > 10 * 1024 * 1024) {
-            document.getElementById('fileWarning').innerHTML = '⚠️ Image too large! Maximum size is 10MB.';
+            document.getElementById('fileWarning').innerHTML = '❌ Image too large! Maximum size is 10MB.';
             document.getElementById('fileWarning').style.color = '#dc3545';
             document.getElementById('imageInput').value = '';
             return;
         }
+        
+        // File type validation
         if (!file.type.match('image.*')) {
-            document.getElementById('fileWarning').innerHTML = '⚠️ Please select a valid image file (JPG, PNG).';
+            document.getElementById('fileWarning').innerHTML = '❌ Please select a valid image file (JPG, PNG).';
             document.getElementById('fileWarning').style.color = '#dc3545';
             document.getElementById('imageInput').value = '';
             return;
         }
+        
         selectedImage = file;
         renderImagePreview();
     } else {
         selectedImage = null;
         renderImagePreview();
+        document.getElementById('fileWarning').innerHTML = '';
     }
 });
 
@@ -1644,9 +1664,16 @@ document.getElementById('imageInput')?.addEventListener('change', e => {
 
 async function compressImage(file) {
     return new Promise((resolve, reject) => {
-        // Compress anything above 150KB (much lower threshold)
-        if (file.size <= 150 * 1024) {
-            console.log(`📸 ${file.name} is under 150KB - keeping original`);
+        // Detect target quality based on file size
+        let targetSize = 300 * 1024; // Default 300KB
+        let maxWidth = 1200;          // Default 1200px for 4K
+        let qualityStart = 0.85;
+        let minQuality = 0.5;
+        
+        // Determine target based on original file size
+        if (file.size <= 200 * 1024) {
+            // Very small file - keep original
+            console.log(`📸 ${file.name} is under 200KB - keeping original`);
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => {
@@ -1655,11 +1682,41 @@ async function compressImage(file) {
                     data: reader.result,
                     originalSize: file.size,
                     compressedSize: file.size,
-                    wasCompressed: false
+                    wasCompressed: false,
+                    quality: 1.0,
+                    dimensions: 'original'
                 });
             };
             reader.onerror = reject;
             return;
+        }
+        
+        // Adjust target based on file size
+        if (file.size <= 500 * 1024) {
+            targetSize = 350 * 1024;   // 350KB target
+            maxWidth = 1200;
+            qualityStart = 0.85;
+            minQuality = 0.6;
+        } else if (file.size <= 1024 * 1024) { // 1MB
+            targetSize = 450 * 1024;   // 450KB target
+            maxWidth = 1400;
+            qualityStart = 0.8;
+            minQuality = 0.55;
+        } else if (file.size <= 2 * 1024 * 1024) { // 2MB
+            targetSize = 550 * 1024;   // 550KB target
+            maxWidth = 1600;
+            qualityStart = 0.75;
+            minQuality = 0.5;
+        } else if (file.size <= 5 * 1024 * 1024) { // 5MB
+            targetSize = 700 * 1024;   // 700KB target
+            maxWidth = 1920;
+            qualityStart = 0.7;
+            minQuality = 0.45;
+        } else {
+            targetSize = 900 * 1024;   // 900KB max for very large files
+            maxWidth = 2500;
+            qualityStart = 0.65;
+            minQuality = 0.4;
         }
         
         const reader = new FileReader();
@@ -1668,61 +1725,94 @@ async function compressImage(file) {
             const img = new Image();
             img.src = e.target.result;
             img.onload = () => {
-                const targetSize = 120 * 1024; // Target 120KB final size
-                const originalSize = file.size;
-                let quality = 0.8;
                 let width = img.width;
                 let height = img.height;
+                let quality = qualityStart;
                 
-                // Scale down aggressively
-                let scale = 1;
-                if (width > 600) scale = 600 / width;
-                if (height > 600) scale = Math.min(scale, 600 / height);
+                // Detect resolution category for logging
+                let resolutionCategory = '';
+                if (width <= 640 && height <= 480) resolutionCategory = 'SD (Standard)';
+                else if (width <= 1280 && height <= 720) resolutionCategory = 'HD (720p)';
+                else if (width <= 1920 && height <= 1080) resolutionCategory = 'Full HD (1080p)';
+                else if (width <= 2560 && height <= 1440) resolutionCategory = 'Quad HD (1440p)';
+                else if (width <= 3840 && height <= 2160) resolutionCategory = 'Ultra HD (4K)';
+                else resolutionCategory = 'Beyond 4K';
                 
-                width = Math.round(width * scale);
-                height = Math.round(height * scale);
+                console.log(`📸 Original: ${width}x${height} (${resolutionCategory}) - ${(file.size/1024).toFixed(2)}KB`);
+                
+                // Scale down based on original resolution
+                let scaledWidth = width;
+                let scaledHeight = height;
+                let scaleReason = '';
+                
+                if (width > maxWidth) {
+                    const scale = maxWidth / width;
+                    scaledWidth = Math.round(width * scale);
+                    scaledHeight = Math.round(height * scale);
+                    scaleReason = `scaled from ${width}px to ${scaledWidth}px`;
+                } else {
+                    scaleReason = 'kept original size';
+                }
                 
                 const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+                canvas.width = scaledWidth;
+                canvas.height = scaledHeight;
                 const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
+                ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
                 
                 let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
                 let compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
                 let attempts = 0;
+                const maxAttempts = 8;
                 
-                // Aggressively reduce until under target
-                while (compressedSize > targetSize && quality > 0.2 && attempts < 8) {
-                    quality -= 0.1;
+                // Aggressive compression if still too large
+                while (compressedSize > targetSize && quality > minQuality && attempts < maxAttempts) {
+                    quality -= 0.05;
                     compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
                     compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
                     attempts++;
                 }
                 
-                // If still too large, scale down more
-                if (compressedSize > targetSize) {
-                    const smallerCanvas = document.createElement('canvas');
+                // Last resort: scale down more if still too large
+                if (compressedSize > targetSize + 100 * 1024) {
                     const smallerScale = Math.sqrt(targetSize / compressedSize);
-                    smallerCanvas.width = Math.round(width * smallerScale);
-                    smallerCanvas.height = Math.round(height * smallerScale);
-                    const smallerCtx = smallerCanvas.getContext('2d');
-                    smallerCtx.drawImage(canvas, 0, 0, smallerCanvas.width, smallerCanvas.height);
-                    compressedDataUrl = smallerCanvas.toDataURL('image/jpeg', 0.5);
+                    const finalWidth = Math.round(scaledWidth * smallerScale);
+                    const finalHeight = Math.round(scaledHeight * smallerScale);
+                    const finalCanvas = document.createElement('canvas');
+                    finalCanvas.width = finalWidth;
+                    finalCanvas.height = finalHeight;
+                    const finalCtx = finalCanvas.getContext('2d');
+                    finalCtx.drawImage(canvas, 0, 0, finalWidth, finalHeight);
+                    compressedDataUrl = finalCanvas.toDataURL('image/jpeg', 0.5);
                     compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
+                    console.log(`📸 Final rescale: ${scaledWidth}x${scaledHeight} → ${finalWidth}x${finalHeight}`);
                 }
                 
-                const reductionPercent = ((1 - (compressedSize / originalSize)) * 100).toFixed(1);
-                console.log(`📸 ${file.name}: ${(originalSize/1024).toFixed(2)}KB → ${(compressedSize/1024).toFixed(2)}KB (${reductionPercent}% reduction)`);
+                const reductionPercent = ((1 - (compressedSize / file.size)) * 100).toFixed(1);
+                const finalResolution = `${scaledWidth}x${scaledHeight}`;
+                
+                console.log(`📸 Result: ${(file.size/1024).toFixed(2)}KB → ${(compressedSize/1024).toFixed(2)}KB (${reductionPercent}% reduction)`);
+                console.log(`📸 Final size: ${finalResolution} @ quality ${quality.toFixed(2)}`);
+                
+                // Determine quality assessment for user
+                let qualityAssessment = '';
+                if (scaledWidth >= 1920) qualityAssessment = '✅ Excellent for 4K displays';
+                else if (scaledWidth >= 1280) qualityAssessment = '✅ Good for Full HD displays';
+                else if (scaledWidth >= 800) qualityAssessment = '⚠️ Acceptable for HD displays';
+                else qualityAssessment = '⚠️ Best for mobile/small screens';
                 
                 resolve({
                     name: file.name,
                     data: compressedDataUrl,
-                    originalSize: originalSize,
+                    originalSize: file.size,
                     compressedSize: compressedSize,
                     wasCompressed: true,
                     quality: quality,
-                    dimensions: `${width}x${height}`
+                    originalDimensions: `${width}x${height}`,
+                    finalDimensions: finalResolution,
+                    resolutionCategory: resolutionCategory,
+                    qualityAssessment: qualityAssessment,
+                    reductionPercent: reductionPercent
                 });
             };
             img.onerror = reject;
@@ -1929,6 +2019,55 @@ await db.collection('blockchain').add({
             if (planDetails) planDetails.style.display = 'none';
             showAlert('✅ Campaign added successfully!', 'success');
             await loadAdData();
+          
+// ========== DISPLAY COMPRESSION STATS ==========
+if (compressedImage.wasCompressed) {
+    // Create a temporary stats notification
+    const statsDiv = document.createElement('div');
+    statsDiv.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #1a1e24;
+        border-left: 4px solid #4a9eff;
+        padding: 12px 16px;
+        border-radius: 8px;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        font-size: 12px;
+        max-width: 300px;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    let qualityColor = '#28a745';
+    if (compressedImage.reductionPercent > 70) qualityColor = '#ffc107';
+    if (compressedImage.reductionPercent > 85) qualityColor = '#ff9800';
+    
+    statsDiv.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 20px;">📸</span>
+            <div style="flex: 1;">
+                <div style="font-weight: bold; color: #4a9eff;">Image Optimization Complete</div>
+                <div style="font-size: 11px; color: #a0a0a0; margin-top: 4px;">
+                    📏 ${compressedImage.originalDimensions} → ${compressedImage.finalDimensions}<br>
+                    💾 ${(compressedImage.originalSize/1024).toFixed(1)}KB → ${(compressedImage.compressedSize/1024).toFixed(1)}KB<br>
+                    📉 ${compressedImage.reductionPercent}% smaller<br>
+                    ${compressedImage.qualityAssessment}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(statsDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        statsDiv.style.opacity = '0';
+        statsDiv.style.transition = 'opacity 0.3s';
+        setTimeout(() => statsDiv.remove(), 300);
+    }, 8000);
+}
+// ========== END COMPRESSION STATS ==========
         } catch(err) {
             console.error('Error adding campaign:', err);
             showAlert('❌ ' + err.message, 'error');
@@ -2388,6 +2527,7 @@ updateData.update_history = updates;
     
     window.closeModal = function() { document.getElementById('imageModal').style.display = 'none'; };
     let pdfCampaignId = null;
+    
     window.downloadPDF = function() {
     const c = allAdCampaigns.find(x => x.id === pdfCampaignId);
     if (!c) return;
@@ -2484,7 +2624,7 @@ updateData.update_history = updates;
     // Campaign ID
     pdf.setFillColor(248, 249, 250);
     pdf.rect(20, yPos, 170, 5, 'F');
-    pdf.setFontSize(6.5);
+    pdf.setFontSize(8);
     pdf.setTextColor(52, 152, 219);
     pdf.setFont('courier', 'bold');
     pdf.text(`Campaign ID: ${c.id}`, 105, yPos + 3, { align: 'center' });
