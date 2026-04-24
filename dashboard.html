@@ -2731,7 +2731,7 @@ window.downloadPDF = function() {
     pdf.setTextColor(52, 152, 219);
     pdf.setFont('courier', 'bold');
     pdf.text(`Campaign ID: ${c.id}`, 105, yPos + 3, { align: 'center' });
-    yPos += 7;
+    yPos += 8;
     
     // ============ CAMPAIGN DETAILS - EACH FIELD ON ITS OWN LINE ============
     pdf.setFontSize(11);
@@ -2838,7 +2838,7 @@ window.downloadPDF = function() {
     pdf.setTextColor(52, 73, 94);
     pdf.text(currentEndStr, valueX, rowY);
     
-    yPos += detailsHeight + 3;
+    yPos += detailsHeight + 2;
     
     // ============ IMAGE - SMALLER SIZE ============
     if (images.length > 0) {
@@ -2996,7 +2996,7 @@ window.downloadPDF = function() {
             
             yPos += rowHeight;
         }
-        yPos += 1;
+        yPos += 2;
     }
     
 // ============ HASHES SECTION - COMPACT ============
@@ -3071,26 +3071,14 @@ if (hasLatestUpdate) {
 } else {
     yPos += 2;  // Changed from 4 to 2
 }
-// ============ FOOTER WITH IMAGE ============
-const footerY = pageHeight - 12;
-
-// Draw line
-pdf.setDrawColor(200, 200, 200);
-pdf.line(20, footerY - 3, pageWidth - 20, footerY - 3);
-
-// Add small icon (5mm x 5mm) - using the chart icon
-try {
-    const iconBase64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABRUlEQVQ4T6WTvUoDQRSFv7uLiQpWdpoiWMVKBBVUUFuJhYhY2Aha+AiCj1CwsUqj2FhYWKWN4gP4A2IhWAgqdqQyhJhkd2bFXc0mBkQ4cC/3zDnfPWeoqRog/1gBWGAZaSrgpqqqSaZpGh6PR6mUjqg+xjEGFoAWQKLqC9wB70Cbkh/SNE1P0jT1JUmSQBMEAdLpdB1JkvhRFEWCiY+APeAcuAROgX1gRRRFQZIkQRRFQdM01VQ6nU4QRVHar9cKYA2zLgjTNC2YnWY8Hossy0LTNAVZlsXn82mxWMzj8/mQZVmkaVqz6kCt0GQ5+8h/3DRNQVVVQdM0nmZ+Ph7Pm81m/7Z2uGWvm1RAS0CZWQ9RjO8Oh8MJ0HVdNE1T1FQ6nU4wGo0kSZI4juN/qq9/Ee0DIMr8N18LKYsAAAAASUVORK5CYII=";
-    pdf.addImage(iconBase64, 'PNG', 20, footerY - 2.5, 5, 5);
-} catch(e) {
-    console.log('Icon could not be added');
-}
-
-// Footer text
-pdf.setFontSize(7);
-pdf.setTextColor(149, 165, 166);
-pdf.setFont('helvetica', 'normal');
-pdf.text('Bondos4Ever © 2026 Local Digital Ad and Coupon Marketing System', pageWidth / 2, footerY, { align: 'center' });
+    // ============ FOOTER ============
+    const footerY = pageHeight - 10;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(20, footerY - 3, pageWidth - 20, footerY - 3);
+    pdf.setFontSize(8);
+    pdf.setTextColor(149, 165, 166);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Bondos4Ever © 2026 | Local Digital Ad & Coupon Marketing System', pageWidth / 2, footerY, { align: 'center' });
     
     // Save file
     const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
