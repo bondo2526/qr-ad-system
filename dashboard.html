@@ -1140,23 +1140,15 @@ function updateStationDropdowns() {
         applyAdFilters();
     }
 
-    function buildAdCampaignHTML(c, adNumber) {
+  function buildAdCampaignHTML(c, adNumber) {
         try {
             const status = getAdStatus(c);
-            var html = '<div class="campaign-item ' + status + '" data-ad-number="AD #' + adNumber + '">';
+            var html = '<div class="campaign-item ' + status + '">';
             const start = new Date(c.start_datetime);
             const end = new Date(c.end_datetime);
             const images = c.images || [];
             const updates = c.update_history || c.updates || [];
             const hashes = c.hashes || {};
-            
-            let imgsHTML = '';
-            if (images && images.length > 0) {
-                imgsHTML = images.slice(0, 5).map(function(img, idx) {
-                }).join('');
-            } else {
-                imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 No images uploaded</div>';
-            }
             
             let totalOriginalSize = 0;
             let totalCompressedSize = 0;
@@ -1169,98 +1161,100 @@ function updateStationDropdowns() {
             }
             var savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
             
-            html += '<div class="campaign-header-row">';
-            html += '<div style="display:flex;flex-direction:column;gap:4px;">';
-            html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">';
-            html += '<span style="background: linear-gradient(135deg, #4a9eff, #6f42c1); color: white; font-weight: bold; font-size: 14px; padding: 4px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">AD #' + adNumber + '</span>';
-            html += '<span class="campaign-name" style="font-size:24px;">' + (c.name || 'Unknown') + '</span>';
+            // Header row with AD # and status
+            html += '<div class="campaign-header-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+            html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+            html += '<span style="background:linear-gradient(135deg,#4a9eff,#6f42c1);color:white;font-weight:bold;font-size:12px;padding:3px 10px;border-radius:20px;">AD #' + adNumber + '</span>';
+            html += '<span class="campaign-name" style="font-size:18px;font-weight:bold;">' + (c.name || 'Unknown') + '</span>';
+            html += '<span style="font-size:12px;color:#4a9eff;">📦 ' + (c.product_name || 'Not specified') + '</span>';
+            html += '<span style="font-size:11px;color:#28a745;">📋 ' + (c.pricing_plan || 'light').toUpperCase() + '</span>';
+            html += '<span style="font-size:10px;color:#a0a0a0;">⏱️ ' + (c.plan_hours || 32) + 'h | $' + (c.plan_price || 35) + '</span>';
             html += '</div>';
-            html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
-            html += '<div style="margin-top: 5px;">';
-            html += '<span style="font-size:14px;color:#28a745;">📋 Plan: ' + (c.pricing_plan || 'light').toUpperCase() + '</span>';
-            html += '<span style="font-size:12px;color:#a0a0a0;margin-left:10px;">⏱️ ' + (c.plan_hours || 32) + ' hours | 💰 $' + (c.plan_price || 35) + '</span>';
-            html += '</div>';
-            html += '</div>';
-            html += '<span class="campaign-id">' + c.id + '</span>';
-            html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
-            if (updates.length) {
-                html += '<span class="update-badge">↑' + updates.length + ' updates</span>';
-            }
-            html += '</div>';
-            html += '<span class="status-badge ' + status + '">' + status.toUpperCase() + '</span>';
-            html += '</div>';
+            html += '<div style="display:flex;align-items:center;gap:8px;">';
+            html += '<span class="campaign-id" style="font-size:10px;background:#1a1e24;padding:2px 6px;border-radius:4px;">' + c.id.substring(0,12) + '...</span>';
+            html += '<span class="campaign-station" style="font-size:10px;background:#2a2f38;padding:2px 8px;border-radius:20px;">' + (c.station || 'Unknown') + '</span>';
+            if (updates.length) html += '<span class="update-badge" style="font-size:9px;">↑' + updates.length + '</span>';
+            html += '<span class="status-badge ' + status + '" style="font-size:10px;padding:3px 10px;">' + status.toUpperCase() + '</span>';
+            html += '</div></div>';
             
-            html += '<div class="campaign-dates">';
-            html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + (isNaN(start) ? 'Invalid' : formatCompactDate(start)) + '</span></div>';
-            html += '<div class="date-row"><span class="date-label">■ End</span><span class="date-value">' + (isNaN(end) ? 'Invalid' : formatCompactDate(end)) + '</span></div>';
-            html += '<div class="date-row"><span class="date-label">⏱️ Duration</span><span class="date-value">' + (isNaN(start) || isNaN(end) ? 'Unknown' : Math.round((end - start) / 3600000) + ' hours') + '</span></div>';
-            html += '</div>';
-            
-            html += '<div class="campaign-images">' + imgsHTML + '</div>';
-            
-            if (images.length > 0 && totalOriginalSize > 0) {
-                html += '<div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">';
-                html += '<div class="proof-label">📊 COMPRESSION STATS</div>';
-                html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">';
-                html += '<span>Original: ' + (totalOriginalSize/1024).toFixed(1) + ' KB</span>';
-                html += '<span>Compressed: ' + (totalCompressedSize/1024).toFixed(1) + ' KB</span>';
-                html += '<span>Saved: ' + savingsPercent + '%</span>';
-                html += '</div></div>';
-            }
-            
-            html += '<div>';
-            html += '<div class="proof-label">🔐 START HASH</div>';
-            html += '<div class="proof-box">' + (hashes.start?.hash || 'PENDING') + '</div>';
-            if (hashes.start?.timestamp) {
-                html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + formatCompactDate(new Date(hashes.start.timestamp)) + '</div>';
-            }
-            html += '<div class="proof-label">🔐 END HASH</div>';
-            html += '<div class="proof-box">' + (hashes.end?.hash || 'PENDING') + '</div>';
-            if (hashes.end?.timestamp) {
-                html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + formatCompactDate(new Date(hashes.end.timestamp)) + '</div>';
-            }
-            html += '</div>';
-            
-            if (updates.length > 0) {
-                html += '<div style="margin-top:12px;">';
-                html += '<div class="proof-label">📝 UPDATE HISTORY (' + updates.length + ')</div>';
-                var recentUpdates = updates.slice(-3).reverse();
-                for (var u = 0; u < recentUpdates.length; u++) {
-                    var update = recentUpdates[u];
-                    html += '<div class="update-history" style="margin-top:5px;">';
-                    html += '<div style="font-size:11px;color:#f39c12;">📅 ' + (update.timestamp ? formatCompactDate(new Date(update.timestamp)) : 'Unknown date') + '</div>';
-                    html += '<div style="font-size:11px;margin:5px 0;">' + (Array.isArray(update.changes) ? update.changes.join(' | ') : (update.changes || 'No details')) + '</div>';
-                    html += '<div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ' + ((update.updated_by || 'Unknown').substring(0,15)) + '...</div>';
-                    html += '</div>';
+            // Image preview - under Ad ID
+            if (images && images.length > 0) {
+                html += '<div style="margin:8px 0;padding:8px;background:#1a1e24;border-radius:8px;border:1px solid #2a2f38;">';
+                html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">';
+                for (var imgIdx = 0; imgIdx < Math.min(images.length, 4); imgIdx++) {
+                    var img = images[imgIdx];
+                    var imgData = '';
+                    if (typeof img === 'string') imgData = img;
+                    else if (img && img.data) imgData = img.data;
+                    else if (img && img.imgData) imgData = img.imgData;
+                    
+                    if (imgData) {
+                        html += '<img src="' + imgData + '" style="width:50px;height:50px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid #3a4050;" onclick="showImage(\'' + imgData.replace(/'/g, "\\'") + '\')" title="Click to enlarge">';
+                    }
                 }
-                if (updates.length > 3) {
-                    html += '<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+' + (updates.length - 3) + ' more updates</span></div>';
+                if (images.length > 4) {
+                    html += '<span style="font-size:11px;color:#4a9eff;">+' + (images.length - 4) + ' more</span>';
+                }
+                html += '</div></div>';
+            } else {
+                html += '<div style="margin:8px 0;padding:6px;background:#1a1e24;border-radius:6px;font-size:11px;color:#a0a0a0;text-align:center;">📷 No images</div>';
+            }
+            
+            // Dates row
+            html += '<div style="display:flex;justify-content:space-between;background:#1a1e24;padding:6px 10px;border-radius:6px;margin:6px 0;font-size:11px;">';
+            html += '<span>▶ ' + (isNaN(start) ? 'Invalid' : formatCompactDate(start)) + '</span>';
+            html += '<span>■ ' + (isNaN(end) ? 'Invalid' : formatCompactDate(end)) + '</span>';
+            html += '<span>⏱️ ' + (isNaN(start) || isNaN(end) ? 'Unknown' : Math.round((end - start) / 3600000) + 'h') + '</span>';
+            html += '</div>';
+            
+            // Compression stats (compact)
+            if (images.length > 0 && totalOriginalSize > 0) {
+                html += '<div style="background:#1a1e24;padding:5px 10px;border-radius:6px;margin:6px 0;border:1px solid #2a2f38;">';
+                html += '<span style="font-size:10px;color:#4a9eff;">📊 Saved ' + savingsPercent + '%</span>';
+                html += '<span style="float:right;font-size:10px;">' + (totalCompressedSize/1024).toFixed(0) + '/' + (totalOriginalSize/1024).toFixed(0) + ' KB</span>';
+                html += '</div>';
+            }
+            
+            // Hashes (compact)
+            html += '<div style="margin:6px 0;">';
+            html += '<div style="background:#1a1e24;padding:4px 8px;border-radius:4px;margin:2px 0;"><span style="color:#4a9eff;font-size:10px;">🔐 START:</span> <span style="font-size:9px;font-family:monospace;">' + (hashes.start?.hash?.substring(0,20) || 'PENDING') + '...</span></div>';
+            html += '<div style="background:#1a1e24;padding:4px 8px;border-radius:4px;margin:2px 0;"><span style="color:#4a9eff;font-size:10px;">🔐 END:</span> <span style="font-size:9px;font-family:monospace;">' + (hashes.end?.hash?.substring(0,20) || 'PENDING') + '...</span></div>';
+            html += '</div>';
+            
+            // Update history (compact)
+            if (updates.length > 0) {
+                html += '<div style="margin:6px 0;background:#1a1e24;padding:5px 8px;border-radius:6px;">';
+                html += '<span style="font-size:9px;color:#f39c12;">📝 ' + updates.length + ' updates</span>';
+                if (updates.length > 0) {
+                    var lastUpdate = updates[updates.length-1];
+                    if (lastUpdate && lastUpdate.timestamp) {
+                        html += '<span style="float:right;font-size:9px;color:#a0a0a0;">' + formatCompactDate(new Date(lastUpdate.timestamp)) + '</span>';
+                    }
                 }
                 html += '</div>';
             }
             
-            html += '<div style="margin-top:12px;font-size:11px;color:#a0a0a0;">';
-            html += '📸 ' + (c.image_count || images.length) + ' image(s) | ';
-            html += '👤 Created by: ' + ((c.created_by || 'Unknown').substring(0,15)) + '... | ';
-            html += '📅 Created: ' + (c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown');
+            // Footer
+            html += '<div style="margin:6px 0;font-size:9px;color:#a0a0a0;display:flex;justify-content:space-between;">';
+            html += '<span>📸 ' + (c.image_count || images.length) + ' img(s)</span>';
+            html += '<span>👤 ' + ((c.created_by || 'Unknown').substring(0,10)) + '...</span>';
+            html += '<span>📅 ' + (c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown') + '</span>';
             html += '</div>';
             
-            html += '<div class="action-buttons">';
-            html += '<button class="btn-edit" onclick="openEditModal(\'' + c.id + '\')">✏️ Edit</button>';
-            html += '<button class="btn-pdf" onclick="showPDFPreview(\'' + c.id + '\')">📄 PDF Proof</button>';
-            html += '<button class="btn-danger" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
+            // Action buttons
+            html += '<div class="action-buttons" style="display:flex;gap:6px;margin-top:8px;">';
+            html += '<button class="btn-edit" style="padding:4px 10px;font-size:11px;" onclick="openEditModal(\'' + c.id + '\')">✏️ Edit</button>';
+            html += '<button class="btn-pdf" style="padding:4px 10px;font-size:11px;" onclick="showPDFPreview(\'' + c.id + '\')">📄 PDF</button>';
+            html += '<button class="btn-danger" style="padding:4px 10px;font-size:11px;" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
             html += '</div>';
             html += '</div>';
             
             return html;
         } catch (err) {
             console.error('Error building campaign HTML:', err, c);
-            return '<div class="campaign-item expired">' +
-                '<div class="campaign-header-row">' +
-                '<span class="campaign-name">Error loading campaign</span>' +
-                '<span class="campaign-id">' + c.id + '</span>' +
-                '</div>' +
-                '<div style="color:#dc3545;padding:10px;">Failed to display: ' + err.message + '</div>' +
+            return '<div class="campaign-item expired" style="padding:10px;margin:10px 0;background:#2a1a1a;border-radius:8px;">' +
+                '<div style="color:#dc3545;font-size:12px;">❌ Error loading campaign: ' + err.message + '</div>' +
+                '<div style="font-size:10px;color:#a0a0a0;">ID: ' + (c.id || 'unknown') + '</div>' +
                 '</div>';
         }
     }
