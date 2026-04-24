@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Digital Ad & Coupon Dashboard V 10.0 - Testing phase (© 2025 Ad & Coupon System) </title>
+    <title> Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System (Testing Phase) </title>
 
     <!-- Firebase v9 compat for Ad Display System -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -469,7 +469,7 @@
     <div id="loginScreen">
         <div class="login-box">
             <h2>🔐 Unified Dashboard</h2>
-            <p>Digital Ad & Coupon Dashboard V 10.0 - Testing phase (© 2025 Ad & Coupon System)</p>
+            <p>Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System (Testing Phase)</p>
             <input type="password" id="passwordInput" placeholder="Enter dashboard password" onkeypress="if(event.key==='Enter')handleLogin()">
             <button class="login-btn-main" id="loginBtn" onclick="handleLogin()">
                 <span id="loginText">🔓 Login to Dashboard</span>
@@ -483,8 +483,7 @@
         <div class="container">
 
             <div class="header">
-                <h1>📊 Digital Ad & Coupon Dashboard V 10.0 - Testing phase</h1>
-                <h2>© 2025 Ad & Coupon System</h2>
+                <h1>Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System (Testing Phase)</h1>
                 <div class="header-right">
                     <span class="auto-refresh-badge" id="autoRefreshStatus">🔄 Auto-refresh: ON (10s)</span>
                     <span class="user-badge" id="userBadge">Not logged in</span>
@@ -655,7 +654,7 @@
                         <div style="background:#1a1e24;padding:18px;border-radius:10px;margin-top:18px;">
                             <h4 style="color:#4a9eff;margin-bottom:13px;">📊 System Info</h4>
                             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
-                                <div><div style="color:#a0a0a0;">Version</div><div style="color:white;font-weight:bold;">Digital Ad & Coupon Dashboard V 10.0 - Testing phase (© 2025 Ad & Coupon System)</div></div>
+                                <div><div style="color:#a0a0a0;">Version</div><div style="color:white;font-weight:bold;">Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System (Testing Phase)</div></div>
                                 <div><div style="color:#a0a0a0;">Last Login</div><div style="color:white;" id="lastLoginTime">Just now</div></div>
                                 <div><div style="color:#a0a0a0;">User ID</div><div style="color:#4a9eff;" id="userId">-</div></div>
                             </div>
@@ -826,12 +825,6 @@
                 <button class="modal-btn modal-btn-primary" onclick="changeUnifiedPassword()">Change Password</button>
             </div>
         </div>
-     <!-- COPYRIGHT HERE -->
-    <div style="text-align: center; margin-top: 25px; padding-bottom: 10px; font-size: 11px; color: #666;">
-        © 2025 Ad & Coupon System
-    </div>
-    </div>
-
 <script>
     // Firebase Configuration
     const firebaseConfig = {
@@ -2545,7 +2538,7 @@ if (updates && updates.length > 0) {
         <h2 style="color:#2c3e50;margin-bottom:12px;font-size:16px;">🔐 Cryptographic Hashes (SHA-256)</h2>`;
     
     // Genesis Hashes
-    hashesHTML += `<div style="margin-bottom:15px;background:#e8f5e9;padding:12px;border-radius:8px;border-left:4px solid #27ae60;">
+    hashesHTML += `<div style="margin-bottom:12px;background:#e8f5e9;padding:8px 12px;border-radius:8px;border-left:4px solid #27ae60;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
             <span style="background:#27ae60;color:white;display:inline-block;padding:2px 10px;border-radius:15px;font-size:11px;font-weight:bold;">🔷 GENESIS HASHES</span>
             <span style="font-size:10px;color:#555;">(Original - Immutable Proof)</span>
@@ -2562,7 +2555,7 @@ if (updates && updates.length > 0) {
     
     // Latest Update Hashes
     if (hasLatestUpdate) {
-        hashesHTML += `<div style="margin-bottom:15px;background:#fff3e0;padding:12px;border-radius:8px;border-left:4px solid #f39c12;">
+        hashesHTML += `<div style="margin-bottom:12px;background:#fff3e0;padding:8px 12px;border-radius:8px;border-left:4px solid #f39c12;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                 <span style="background:#f39c12;color:white;display:inline-block;padding:2px 10px;border-radius:15px;font-size:11px;font-weight:bold;">🟡 LATEST UPDATE HASHES</span>
                 <span style="font-size:10px;color:#555;">(Current Active Proof)</span>
@@ -2599,16 +2592,15 @@ if (updates && updates.length > 0) {
         </div>
         
         <!-- Campaign Details -->
-        <div style="background:#f8f9fa;border-radius:10px;padding:15px;margin-bottom:15px;border-left:5px solid #3498db;">
-            <h2 style="color:#2c3e50;margin:0 0 10px 0;font-size:16px;">📋 Campaign Details</h2>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
-                <div><strong>Station:</strong> ${c.station || 'N/A'}</div>
-                <div><strong>Customer:</strong> ${c.name}</div>
-                <div><strong>Product:</strong> ${c.product_name || 'Not specified'}</div>
-                <div><strong>Plan:</strong> ${planName} (${planDescription})</div>
-                <div><strong>Status:</strong> <span style="background:${statusColor};color:white;padding:2px 10px;border-radius:15px;font-size:11px;">${status}</span></div>
-                <div><strong>Created:</strong> ${c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown'} by ${(c.created_by || 'Unknown').substring(0,8)}...</div>
-            </div>
+<div style="background:#f8f9fa;border-radius:10px;padding:12px 15px 8px 15px;margin-bottom:12px;border-left:5px solid #3498db;">            <h2 style="color:#2c3e50;margin:0 0 10px 0;font-size:16px;">📋 Campaign Details</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+    <div><strong>Station:</strong> ${c.station || 'N/A'}</div>
+    <div><strong>Customer:</strong> ${c.name}</div>
+    <div><strong>Product:</strong> ${c.product_name || 'Not specified'}</div>
+    <div><strong>Plan:</strong> ${planName} (${planDescription})</div>
+    <div><strong>Status:</strong> <span style="background:${statusColor};color:white;padding:2px 10px;border-radius:15px;font-size:11px;">${status}</span></div>
+    <div><strong>Created:</strong> ${c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown'} by ${(c.created_by || 'Unknown').substring(0,8)}...</div>
+</div>
             <hr style="margin:12px 0;border-color:#e9ecef;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
                 ${datesChanged ? `
@@ -2629,7 +2621,7 @@ if (updates && updates.length > 0) {
         
         <!-- Footer -->
         <div style="margin-top:20px;padding-top:10px;border-top:2px solid #e9ecef;text-align:center;font-size:10px;color:#95a5a6;">
-            <div>Bondos4Ever © 2026_Local Digital Ad & Coupon Marketing System</div>
+            <div>Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System (Testing Phase)</div>
         </div>
     </div>`;
     
@@ -2752,7 +2744,7 @@ window.downloadPDF = function() {
     yPos += 5;
     
     pdf.setFillColor(248, 249, 250);
-    const detailsBoxHeight = datesChanged ? 55 : 48;
+    const detailsBoxHeight = datesChanged ? 48 : 42;
     pdf.rect(20, yPos, 170, detailsBoxHeight, 'F');
     
     pdf.setFontSize(9);
@@ -2772,19 +2764,23 @@ window.downloadPDF = function() {
     pdf.text('Customer:', midX, rowY);
     pdf.setFont('helvetica', 'normal');
     pdf.text(c.name || 'Unknown', midX + 18, rowY);
-    rowY += 6;
+    rowY += 5;
     
-    // Row 2
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Product:', leftX, rowY);
-    pdf.setFont('helvetica', 'normal');
-    const productText = c.product_name || 'Not specified';
-    pdf.text(productText, 60, rowY);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Plan:', midX, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`${planName}`, midX + 18, rowY);
-    rowY += 6;
+// Row 2 - Product and Plan
+pdf.setFont('helvetica', 'bold');
+pdf.text('Product:', leftX, rowY);
+pdf.setFont('helvetica', 'normal');
+const productText = c.product_name || 'Not specified';
+pdf.text(productText, 60, rowY);
+pdf.setFont('helvetica', 'bold');
+pdf.text('Plan:', midX, rowY);
+pdf.setFont('helvetica', 'normal');
+const fullPlanText = `${planName} (${planDescription})`;
+const planLines = pdf.splitTextToSize(fullPlanText, 40);
+pdf.text(planLines, midX + 18, rowY);
+// Adjust rowY if plan description wraps to multiple lines
+const planLinesCount = planLines.length;
+rowY += 5 + (planLinesCount - 1) * 3.5;
     
     // Row 3
     pdf.setFont('helvetica', 'bold');
@@ -2798,12 +2794,12 @@ window.downloadPDF = function() {
     pdf.setFont('helvetica', 'normal');
     const createdDate = c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown';
     pdf.text(createdDate, midX + 18, rowY);
-    rowY += 6;
+    rowY += 5;
     
     // Separator line
     pdf.setDrawColor(200, 200, 200);
     pdf.line(25, rowY, pageWidth - 25, rowY);
-    rowY += 4;
+    rowY += 3;
     
     // Dates section
     if (datesChanged) {
@@ -2893,9 +2889,8 @@ if (updates && updates.length > 0) {
     pdf.setFontSize(12);
     pdf.setTextColor(243, 156, 18);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`Update History (${updates.length} entries)`, 20, yPos);
+    pdf.text(`Update History (${updates.length} entries)`, pageWidth / 2, yPos, { align: 'center' });    
     yPos += 5;
-    
     pdf.setFillColor(243, 156, 18);
     pdf.rect(20, yPos, 170, 5, 'F');
     pdf.setFontSize(7);
@@ -3002,30 +2997,30 @@ if (updates && updates.length > 0) {
     
     // Genesis Hashes box
     pdf.setFillColor(232, 245, 233);
-    pdf.rect(20, yPos, 170, 24, 'F');
+    pdf.rect(20, yPos, 170, 20, 'F');
     pdf.setFontSize(7);
     pdf.setTextColor(39, 174, 96);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('🔷 GENESIS HASHES (Original - Immutable Proof)', 25, yPos + 4);
+    pdf.text(' GENESIS HASHES (Original - Immutable Proof)', 25, yPos + 3.5);
     
     pdf.setFontSize(6);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(39, 174, 96);
-    pdf.text('START:', 25, yPos + 9);
+    pdf.text('START:', 25, yPos + 7.5);
     pdf.setFont('courier', 'normal');
     pdf.setTextColor(0, 0, 0);
     const startLines1 = pdf.splitTextToSize(genesisStartHash, 145);
-    pdf.text(startLines1, 45, yPos + 9);
+    pdf.text(startLines1, 45, yPos + 7.5);
     
     pdf.setFontSize(6);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(39, 174, 96);
-    pdf.text('END:', 25, yPos + 16);
+    pdf.text('END:', 25, yPos + 13.5);
     pdf.setFont('courier', 'normal');
     pdf.setTextColor(0, 0, 0);
     const endLines1 = pdf.splitTextToSize(genesisEndHash, 145);
-    pdf.text(endLines1, 45, yPos + 16);
-    yPos += 26;
+    pdf.text(endLines1, 45, yPos + 13.5);
+    yPos += 22;
     
     // Latest Update Hashes
     if (hasLatestUpdate) {
@@ -3034,30 +3029,30 @@ if (updates && updates.length > 0) {
             yPos = 20;
         }
         pdf.setFillColor(255, 243, 224);
-        pdf.rect(20, yPos, 170, 24, 'F');
+        pdf.rect(20, yPos, 170, 20, 'F');
         pdf.setFontSize(7);
         pdf.setTextColor(243, 156, 18);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('🟡 LATEST UPDATE HASHES (Current Active Proof)', 25, yPos + 4);
+        pdf.text(' LATEST UPDATE HASHES (Current Active Proof)', 25, yPos + 3.5);
         
         pdf.setFontSize(6);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(230, 126, 34);
-        pdf.text('START:', 25, yPos + 9);
+        pdf.text('START:', 25, yPos + 7.5);
         pdf.setFont('courier', 'normal');
         pdf.setTextColor(0, 0, 0);
         const startLines2 = pdf.splitTextToSize(latestStartHash, 145);
-        pdf.text(startLines2, 45, yPos + 9);
+        pdf.text(startLines2, 45, yPos + 7.5);
         
         pdf.setFontSize(6);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(230, 126, 34);
-        pdf.text('END:', 25, yPos + 16);
+        pdf.text('END:', 25, yPos + 13.5);
         pdf.setFont('courier', 'normal');
         pdf.setTextColor(0, 0, 0);
         const endLines2 = pdf.splitTextToSize(latestEndHash, 145);
-        pdf.text(endLines2, 45, yPos + 16);
-        yPos += 28;
+        pdf.text(endLines2, 45, yPos + 13.5);
+        yPos += 24;
     } else {
         yPos += 4;
     }
