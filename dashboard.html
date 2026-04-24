@@ -1459,7 +1459,7 @@ function displayProofs() {
         const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
         return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
     }
-    async function regenerateCampaignHash(campaignId, hashType, customerName, productName, station, dateTime, oldHash, changedFields) {
+async function regenerateCampaignHash(campaignId, hashType, customerName, productName, station, dateTime, oldHash, changesSummary) {
     // Create unique hash input with timestamp to ensure uniqueness
     const hashInput = `${hashType}:${customerName}:${productName}:${station}:${dateTime}:${Date.now()}:${Math.random()}`;
     const newHash = await sha256(hashInput);
@@ -1474,12 +1474,12 @@ function displayProofs() {
         type: 'updated',
         hash_type: hashType,  // 'start' or 'end'
         previous_hash: oldHash || null,
-        changed_fields: changedFields || null,
+        changes_summary: changesSummary || null,
         edited_at: firebase.firestore.FieldValue.serverTimestamp(),
         created_at: firebase.firestore.FieldValue.serverTimestamp()
     });
     
-    console.log(`✅ Regenerated ${hashType} hash for campaign ${campaignId}`);
+    console.log(`✅ Regenerated ${hashType} hash for campaign ${campaignId} - ${changesSummary}`);
     return newHash;
 }
     
@@ -2145,25 +2145,25 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
             updateData.plan_price = newPlanPrice;
         }
         
-        // Check Start Date change
-        let startDateChanged = false;
-        let newStartHash = null;
-        if (oldStart.getTime() !== newStart2.getTime()) {
-            startDateChanged = true;
-            changedFields.push('Start Date');
-            changeDetailsList.push(`Start Date: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`);
-            updateData.start_datetime = newStartDateTimeString;
-        }
-        
-        // Check End Date change
-        let endDateChanged = false;
-        let newEndHash = null;
-        if (oldEnd.getTime() !== newEnd2.getTime()) {
-            endDateChanged = true;
-            changedFields.push('End Date');
-            changeDetailsList.push(`End Date: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`);
-            updateData.end_datetime = newEndDateTimeString;
-        }
+// Check Start Date change
+let startDateChanged = false;
+let newStartHash = null;
+if (oldStart.getTime() !== newStart2.getTime()) {
+    startDateChanged = true;
+    changedFields.push('Start Date');
+    changeDetailsList.push(`Start Date: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`);
+    updateData.start_datetime = newStartDateTimeString;
+}
+
+// Check End Date change (SEPARATE from Start Date)
+let endDateChanged = false;
+let newEndHash = null;
+if (oldEnd.getTime() !== newEnd2.getTime()) {
+    endDateChanged = true;
+    changedFields.push('End Date');
+    changeDetailsList.push(`End Date: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`);
+    updateData.end_datetime = newEndDateTimeString;
+}
         
         if (changedFields.length === 0) {
             const a = document.getElementById('editAlert');
@@ -2177,60 +2177,58 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
             return;
         }
         
-        // REGENERATE HASHES BASED ON WHAT CHANGED
-        const finalCustomerName = newName || oldName;
-        const finalStation = newStation || oldStation;
-        const finalProductName = oldProductName;
-        
-        // Determine if we need to regenerate start hash
-        const needStartRegenerate = startDateChanged || oldName !== newName || oldPlan !== newPlan || oldStation !== newStation;
-        // Determine if we need to regenerate end hash
-        const needEndRegenerate = endDateChanged || oldName !== newName || oldPlan !== newPlan || oldStation !== newStation;
-        
-        // Prepare hash updates
-        let hashUpdates = {};
-        
-        // Regenerate START hash if needed
-        if (needStartRegenerate) {
-            const finalStartDateTime = newStartDateTimeString || old.start_datetime;
-            const changesSummary = changeDetailsList.join(', ');
-            newStartHash = await regenerateCampaignHash(
-                id, 'start', finalCustomerName, finalProductName, finalStation,
-                finalStartDateTime, oldStartHash, changesSummary
-            );
-            hashUpdates.start = {
-                hash: newStartHash,
-                timestamp: finalStartDateTime,
-                previous_hash: oldStartHash,
-                is_updated: true,
-                updated_at: new Date().toISOString()
-            };
-            console.log(`✅ Regenerated START hash for campaign ${id}`);
-        } else if (old.hashes?.start) {
-            // Keep original hash
-            hashUpdates.start = old.hashes.start;
-        }
-        
-        // Regenerate END hash if needed
-        if (needEndRegenerate) {
-            const finalEndDateTime = newEndDateTimeString || old.end_datetime;
-            const changesSummary = changeDetailsList.join(', ');
-            newEndHash = await regenerateCampaignHash(
-                id, 'end', finalCustomerName, finalProductName, finalStation,
-                finalEndDateTime, oldEndHash, changesSummary
-            );
-            hashUpdates.end = {
-                hash: newEndHash,
-                timestamp: finalEndDateTime,
-                previous_hash: oldEndHash,
-                is_updated: true,
-                updated_at: new Date().toISOString()
-            };
-            console.log(`✅ Regenerated END hash for campaign ${id}`);
-        } else if (old.hashes?.end) {
-            // Keep original hash
-            hashUpdates.end = old.hashes.end;
-        }
+// REGENERATE HASHES BASED ON WHAT CHANGED
+const finalCustomerName = newName || oldName;
+const finalStation = newStation || oldStation;
+const finalProductName = oldProductName;
+
+// Determine if we need to regenerate start hash
+const needStartRegenerate = startDateChanged || oldName !== newName || oldPlan !== newPlan || oldStation !== newStation;
+// Determine if we need to regenerate end hash
+const needEndRegenerate = endDateChanged || oldName !== newName || oldPlan !== newPlan || oldStation !== newStation;
+
+// Prepare hash updates
+let hashUpdates = {};
+
+// Regenerate START hash if needed
+if (needStartRegenerate) {
+    const finalStartDateTime = newStartDateTimeString || old.start_datetime;
+    const changesSummary = startDateChanged ? `Start Date changed from ${formatCompactDate(oldStart)} to ${formatCompactDate(newStart2)}` : (oldName !== newName ? 'Customer Name changed' : (oldPlan !== newPlan ? 'Pricing Plan changed' : 'Station changed'));
+    newStartHash = await regenerateCampaignHash(
+        id, 'start', finalCustomerName, finalProductName, finalStation,
+        finalStartDateTime, oldStartHash, changesSummary
+    );
+    hashUpdates.start = {
+        hash: newStartHash,
+        timestamp: finalStartDateTime,
+        previous_hash: oldStartHash,
+        is_updated: true,
+        updated_at: new Date().toISOString()
+    };
+    console.log(`✅ Regenerated START hash for campaign ${id}`);
+} else if (old.hashes?.start) {
+    hashUpdates.start = old.hashes.start;
+}
+
+// Regenerate END hash if needed
+if (needEndRegenerate) {
+    const finalEndDateTime = newEndDateTimeString || old.end_datetime;
+    const changesSummary = endDateChanged ? `End Date changed from ${formatCompactDate(oldEnd)} to ${formatCompactDate(newEnd2)}` : (oldName !== newName ? 'Customer Name changed' : (oldPlan !== newPlan ? 'Pricing Plan changed' : 'Station changed'));
+    newEndHash = await regenerateCampaignHash(
+        id, 'end', finalCustomerName, finalProductName, finalStation,
+        finalEndDateTime, oldEndHash, changesSummary
+    );
+    hashUpdates.end = {
+        hash: newEndHash,
+        timestamp: finalEndDateTime,
+        previous_hash: oldEndHash,
+        is_updated: true,
+        updated_at: new Date().toISOString()
+    };
+    console.log(`✅ Regenerated END hash for campaign ${id}`);
+} else if (old.hashes?.end) {
+    hashUpdates.end = old.hashes.end;
+}
         
         // Preserve original genesis hashes if they exist and weren't replaced
         if (old.hashes?.start?.is_genesis) {
