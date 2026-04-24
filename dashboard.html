@@ -750,18 +750,6 @@
         </div>
     </div>
 
-    <div id="pdfPreview" class="pdf-preview">
-        <div class="pdf-preview-header">
-            <span class="pdf-preview-title" id="pdfTitle">Campaign Proof Report</span>
-            <span class="pdf-preview-close" onclick="closePDFPreview()">&times;</span>
-        </div>
-        <div id="pdfContent" class="pdf-content" style="padding:18px;background:#1a1e24;border-radius:8px;"></div>
-        <div style="display:flex;gap:10px;margin-top:18px;">
-            <button class="btn-primary" onclick="downloadPDF()" style="width:auto;padding:11px 22px;">📥 Download PDF</button>
-            <button class="btn-secondary" onclick="closePDFPreview()" style="padding:11px 22px;">Close</button>
-        </div>
-    </div>
-
 <div id="editModal" class="edit-modal">
     <div class="edit-modal-content">
         <div class="edit-modal-header">
@@ -1243,8 +1231,7 @@ function buildAdCampaignHTML(c, adNumber) {
         html += imgsHTML;
         html += '<div class="action-buttons" style="margin-top:10px;gap:6px;">';
         html += '<button class="btn-sm btn-sm-blue" style="padding:5px 12px;font-size:11px;" onclick="openEditModal(\'' + c.id + '\')">✏️ Edit</button>';
-        html += '<button class="btn-sm" style="background:#28a745;padding:5px 12px;font-size:11px;" onclick="showPDFPreview(\'' + c.id + '\')">📄 PDF</button>';
-        html += '<button class="btn-sm btn-sm-red" style="padding:5px 12px;font-size:11px;" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
+html += '<button class="btn-sm" style="background:#28a745;padding:5px 12px;font-size:11px;" onclick="downloadPDFFromId(\'' + c.id + '\')">📥 PDF</button>';        html += '<button class="btn-sm btn-sm-red" style="padding:5px 12px;font-size:11px;" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
         html += '</div>';
         html += '<div style="font-size:9px;color:#a0a0a0;margin-top:8px;">';
         html += '👤 ' + ((c.created_by || 'Unknown').substring(0,6)) + '...';
@@ -2322,6 +2309,11 @@ updateData.update_history = updates;
         catch(e) { alert('Error: '+e.message); }
     };
 
+    window.downloadPDFFromId = function(id) {
+    pdfCampaignId = id;
+    downloadPDF();
+};
+
     window.showImage = function(url) { 
         try {
             var imageUrl = '';
@@ -2346,292 +2338,8 @@ updateData.update_history = updates;
     };
     
     window.closeModal = function() { document.getElementById('imageModal').style.display = 'none'; };
-
     let pdfCampaignId = null;
-    window.closePDFPreview = function() { 
-    document.getElementById('pdfPreview').classList.remove('active'); 
-    pdfCampaignId = null; 
-};
-    
-window.showPDFPreview = function(id) {
-    const c = allAdCampaigns.find(x => x.id === id);
-    if (!c) return;
-    pdfCampaignId = id;
-    
-    // Get original (genesis) hashes from blockchain
-    const originalStartHashObj = allProofs.find(p => p.campaign_id === id && p.type === 'genesis' && p.hash_type === 'start');
-    const originalEndHashObj = allProofs.find(p => p.campaign_id === id && p.type === 'genesis' && p.hash_type === 'end');
-    const latestStartHashObj = allProofs.find(p => p.campaign_id === id && p.hash_type === 'start');
-    const latestEndHashObj = allProofs.find(p => p.campaign_id === id && p.hash_type === 'end');
-    
-    const genesisStartHash = originalStartHashObj?.hash || c.hashes?.start?.hash || 'PENDING';
-    const genesisEndHash = originalEndHashObj?.hash || c.hashes?.end?.hash || 'PENDING';
-    const latestStartHash = latestStartHashObj?.hash || c.hashes?.start?.hash || 'PENDING';
-    const latestEndHash = latestEndHashObj?.hash || c.hashes?.end?.hash || 'PENDING';
-    
-    document.getElementById('pdfTitle').textContent = `Blockchain Verified Proof Report - ${c.name} (ID: ${c.id.substring(0,8)})`;
-    
-    const images = c.images || [];
-    const updates = c.update_history || c.updates || [];
-    const now = new Date();
-    const planName = c.pricing_plan || 'Light';
-    
-    let planDescription = '';
-    if (planName === 'Light') {
-        planDescription = '2 days × 4 hrs display time weekly = 32 hrs monthly / $35';
-    } else if (planName === 'Standard') {
-        planDescription = '4 days × 6 hrs display time weekly = 96 hrs monthly / $48';
-    } else if (planName === 'Professional') {
-        planDescription = '6 days × 8 hrs display time weekly = 192 hrs monthly / $54';
-    }
-    
-    // Find ORIGINAL dates from genesis records
-    let originalStartDate = null;
-    let originalEndDate = null;
-    let currentStartDate = c.start_datetime ? new Date(c.start_datetime) : null;
-    let currentEndDate = c.end_datetime ? new Date(c.end_datetime) : null;
-    
-    if (originalStartHashObj && originalStartHashObj.created_at) {
-        originalStartDate = originalStartHashObj.created_at.toDate ? originalStartHashObj.created_at.toDate() : null;
-    }
-    if (originalEndHashObj && originalEndHashObj.created_at) {
-        originalEndDate = originalEndHashObj.created_at.toDate ? originalEndHashObj.created_at.toDate() : null;
-    }
-    
-    if (!originalStartDate || !originalEndDate) {
-        const allUpdatesForCampaign = allProofs.filter(p => p.campaign_id === id && p.type === 'genesis');
-        if (allUpdatesForCampaign.length > 0) {
-            const oldestStart = allUpdatesForCampaign.find(p => p.hash_type === 'start');
-            const oldestEnd = allUpdatesForCampaign.find(p => p.hash_type === 'end');
-            if (oldestStart && oldestStart.created_at) originalStartDate = oldestStart.created_at.toDate();
-            if (oldestEnd && oldestEnd.created_at) originalEndDate = oldestEnd.created_at.toDate();
-        }
-    }
-    
-    if (!originalStartDate) originalStartDate = currentStartDate;
-    if (!originalEndDate) originalEndDate = currentEndDate;
-    
-    const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'N/A';
-    const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'N/A';
-    const currentStartStr = currentStartDate ? formatCompactDate(currentStartDate) : 'N/A';
-    const currentEndStr = currentEndDate ? formatCompactDate(currentEndDate) : 'N/A';
-    
-    const datesChanged = (originalStartStr !== currentStartStr) || (originalEndStr !== currentEndStr);
-    const hasLatestUpdate = (latestStartHash !== genesisStartHash) || (latestEndHash !== genesisEndHash);
-    
-    let status = 'UPCOMING';
-    let statusColor = '#ffc107';
-    const nowDate = new Date();
-    if (currentStartDate && currentEndDate) {
-        if (nowDate >= currentStartDate && nowDate <= currentEndDate) {
-            status = 'ACTIVE';
-            statusColor = '#28a745';
-        } else if (nowDate > currentEndDate) {
-            status = 'EXPIRED';
-            statusColor = '#dc3545';
-        }
-    }
-    
-    // Images HTML
-    let imagesHTML = '';
-    if (images.length > 0) {
-        imagesHTML = `<div style="margin:15px 0; text-align:center;">
-            <h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:6px;text-align:center;font-size:14px;">Campaign Image</h3>
-            <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;">
-                <div style="text-align:center;background:white;padding:10px;border-radius:8px;width:160px;margin:0 auto;border:2px solid #000000;">
-                    <img src="${images[0].data || images[0]}" style="width:100%;height:auto;max-height:130px;object-fit:contain;border-radius:5px;">
-                </div>
-            </div>
-        </div>`;
-    }
-    
-    // Update History HTML - PROPER TABLE PLACEMENT UNDER TITLE
-    let updateHistoryHTML = '';
-    if (updates && updates.length > 0) {
-        updateHistoryHTML = `<div style="background:#fff3e0;border-left:5px solid #f39c12;border-radius:8px;margin:15px 0;overflow:hidden;">
-            <div style="background:#f39c12;padding:10px;text-align:center;">
-                <h3 style="color:white;margin:0;font-size:15px;font-weight:bold;">📝 Update History (${updates.length} entries)</h3>
-            </div>
-            <div style="padding:12px;overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:12px;">
-                    <thead>
-                        <tr style="background:#e67e22;color:white;">
-                            <th style="padding:10px;text-align:center;border:1px solid #d35400;">Date/Time</th>
-                            <th style="padding:10px;text-align:center;border:1px solid #d35400;">Field Changed</th>
-                            <th style="padding:10px;text-align:center;border:1px solid #d35400;">Old Value</th>
-                            <th style="padding:10px;text-align:center;border:1px solid #d35400;">New Value</th>
-                            <th style="padding:10px;text-align:center;border:1px solid #d35400;">Updated By</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-        
-        const allUpdates = [...updates].reverse();
-        for (let u = 0; u < allUpdates.length; u++) {
-            const update = allUpdates[u];
-            let updateDate = '';
-            if (update.timestamp) {
-                const d = new Date(update.timestamp);
-                updateDate = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
-            } else {
-                updateDate = 'Unknown';
-            }
-            
-            let fieldName = '';
-            let oldVal = '';
-            let newVal = '';
-            let updatedBy = (update.updated_by || 'Unknown').substring(0, 12);
-            
-            // NEW STRUCTURE: separate fields
-            if (update.changed_field) {
-                fieldName = update.changed_field;
-                oldVal = update.old_value || '-';
-                newVal = update.new_value || '-';
-            } 
-            // OLD STRUCTURE: combined changes (backward compatible)
-            else if (update.changes) {
-                if (update.changes.includes('|')) {
-                    fieldName = 'Multiple Changes';
-                    const parts = update.changes.split('|');
-                    oldVal = parts[0] || '-';
-                    newVal = parts[1] || '-';
-                } else {
-                    const arrowIndex = update.changes.indexOf('→');
-                    if (arrowIndex > -1) {
-                        const beforeArrow = update.changes.substring(0, arrowIndex);
-                        const afterArrow = update.changes.substring(arrowIndex + 1);
-                        const colonIndex = beforeArrow.indexOf(':');
-                        if (colonIndex > -1) {
-                            fieldName = beforeArrow.substring(0, colonIndex).trim();
-                            oldVal = beforeArrow.substring(colonIndex + 1).trim();
-                            newVal = afterArrow.trim();
-                        } else {
-                            fieldName = 'Changes';
-                            oldVal = beforeArrow.trim();
-                            newVal = afterArrow.trim();
-                        }
-                    } else {
-                        fieldName = 'Changes';
-                        newVal = update.changes;
-                        oldVal = '-';
-                    }
-                }
-            } else {
-                fieldName = 'Changes';
-                oldVal = '-';
-                newVal = update.changes || 'Campaign updated';
-            }
-            
-            const bgColor = u % 2 === 0 ? '#f9f9f9' : 'white';
-            updateHistoryHTML += `
-                <tr style="background:${bgColor};border-bottom:1px solid #e9ecef;">
-                    <td style="padding:10px;text-align:center;vertical-align:top;border:1px solid #e9ecef;">${updateDate}</td>
-                    <td style="padding:10px;text-align:center;vertical-align:top;font-weight:bold;border:1px solid #e9ecef;">${fieldName}</td>
-                    <td style="padding:10px;vertical-align:top;border:1px solid #e9ecef;">${oldVal}</td>
-                    <td style="padding:10px;vertical-align:top;border:1px solid #e9ecef;">${newVal}</td>
-                    <td style="padding:10px;text-align:center;vertical-align:top;border:1px solid #e9ecef;">${updatedBy}...</td>
-                </tr>`;
-        }
-        updateHistoryHTML += `</tbody></table></div></div>`;
-    }
-    
-    // Hashes section
-    let hashesHTML = `<div style="background:#f8f9fa;border-radius:10px;padding:12px;margin:12px 0;">
-        <h2 style="color:#2c3e50;margin-bottom:10px;font-size:15px;">🔐 Cryptographic Hashes</h2>`;
-    
-    // Genesis Hashes
-    hashesHTML += `<div style="margin-bottom:10px;background:#e8f5e9;padding:8px 12px;border-radius:8px;border-left:4px solid #27ae60;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <span style="background:#27ae60;color:white;display:inline-block;padding:2px 10px;border-radius:15px;font-size:10px;font-weight:bold;">🔷 GENESIS HASHES</span>
-            <span style="font-size:9px;color:#555;">(Original - Immutable Proof)</span>
-        </div>
-        <div style="margin-bottom:6px;">
-            <div style="font-size:10px;font-weight:bold;color:#27ae60;">START HASH:</div>
-            <div style="background:#2c3e50;color:#00ff00;padding:6px 8px;border-radius:6px;font-family:monospace;font-size:9px;word-break:break-all;">${genesisStartHash}</div>
-        </div>
-        <div>
-            <div style="font-size:10px;font-weight:bold;color:#27ae60;">END HASH:</div>
-            <div style="background:#2c3e50;color:#00ff00;padding:6px 8px;border-radius:6px;font-family:monospace;font-size:9px;word-break:break-all;">${genesisEndHash}</div>
-        </div>
-    </div>`;
-    
-    // Latest Update Hashes
-    if (hasLatestUpdate) {
-        hashesHTML += `<div style="margin-bottom:10px;background:#fff3e0;padding:8px 12px;border-radius:8px;border-left:4px solid #f39c12;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                <span style="background:#f39c12;color:white;display:inline-block;padding:2px 10px;border-radius:15px;font-size:10px;font-weight:bold;">🟡 LATEST UPDATE HASHES</span>
-                <span style="font-size:9px;color:#555;">(Current Active Proof)</span>
-            </div>
-            <div style="margin-bottom:6px;">
-                <div style="font-size:10px;font-weight:bold;color:#e67e22;">START HASH:</div>
-                <div style="background:#2c3e50;color:#ffcc00;padding:6px 8px;border-radius:6px;font-family:monospace;font-size:9px;word-break:break-all;">${latestStartHash}</div>
-            </div>
-            <div>
-                <div style="font-size:10px;font-weight:bold;color:#e67e22;">END HASH:</div>
-                <div style="background:#2c3e50;color:#ffcc00;padding:6px 8px;border-radius:6px;font-family:monospace;font-size:9px;word-break:break-all;">${latestEndHash}</div>
-            </div>
-        </div>`;
-    }
-    
-    hashesHTML += `</div>`;
-    
-    // Build the COMPACT report HTML
-    const reportHTML = `<div style="font-family:'Helvetica',Arial,sans-serif;max-width:900px;margin:0 auto;background:white;padding:20px;box-shadow:0 0 20px rgba(0,0,0,0.1);">
-        
-        <!-- Header -->
-        <div style="text-align:center;margin-bottom:12px;padding-bottom:8px;border-bottom:3px solid #3498db;">
-            <h1 style="color:#2c3e50;font-size:20px;margin:0;">🔗 Blockchain Verified Proof Report</h1>
-            <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:9px;color:#7f8c8d;">
-                <span>📅 Generated: ${formatCompactDate(now)}</span>
-                <span>👤 Generated by: ${(currentUser?.uid || 'Anonymous')}</span>
-            </div>
-        </div>
-        
-        <!-- Campaign ID -->
-        <div style="background:#f8f9fa;padding:6px;border-radius:6px;margin-bottom:12px;text-align:center;border:1px solid #e9ecef;">
-            <span style="color:#6c757d;font-size:10px;">Campaign ID: </span>
-            <span style="font-family:monospace;color:#3498db;font-weight:bold;font-size:10px;">${c.id}</span>
-        </div>
-        
-        <!-- Campaign Details -->
-        <div style="background:#f8f9fa;border-radius:10px;padding:12px 15px 8px 15px;margin-bottom:12px;border-left:5px solid #3498db;">
-            <h2 style="color:#2c3e50;margin:0 0 8px 0;font-size:15px;">📋 Campaign Details</h2>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
-                <div><strong>Station:</strong> ${c.station || 'N/A'}</div>
-                <div><strong>Customer:</strong> ${c.name}</div>
-                <div><strong>Product:</strong> ${c.product_name || 'Not specified'}</div>
-                <div><strong>Plan:</strong> ${planName} (${planDescription})</div>
-                <div><strong>Status:</strong> <span style="background:${statusColor};color:white;padding:2px 8px;border-radius:12px;font-size:10px;">${status}</span></div>
-                <div><strong>Created:</strong> ${c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown'} by ${(c.created_by || 'Unknown').substring(0,8)}...</div>
-            </div>
-            <hr style="margin:8px 0;border-color:#e9ecef;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
-                ${datesChanged ? `
-                    <div><span style="color:#7f8c8d;">📅 Original Start:</span><br><strong>${originalStartStr}</strong></div>
-                    <div><span style="color:#7f8c8d;">📅 Original End:</span><br><strong>${originalEndStr}</strong></div>
-                    <div><span style="color:#3498db;">▶ Current Start:</span><br><strong>${currentStartStr}</strong></div>
-                    <div><span style="color:#3498db;">■ Current End:</span><br><strong>${currentEndStr}</strong></div>
-                ` : `
-                    <div><span>▶ Start Date:</span><br><strong>${currentStartStr}</strong></div>
-                    <div><span>■ End Date:</span><br><strong>${currentEndStr}</strong></div>
-                `}
-            </div>
-        </div>
-        
-        ${imagesHTML}
-        ${updateHistoryHTML}
-        ${hashesHTML}
-        
-        <!-- Footer -->
-        <div style="margin-top:15px;padding-top:8px;border-top:2px solid #e9ecef;text-align:center;font-size:9px;color:#95a5a6;">
-            <div>Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System (Testing Phase)</div>
-        </div>
-    </div>`;
-    
-    document.getElementById('pdfContent').innerHTML = reportHTML;
-    document.getElementById('pdfPreview').classList.add('active');
-};
-
-window.downloadPDF = function() {
+    window.downloadPDF = function() {
     const c = allAdCampaigns.find(x => x.id === pdfCampaignId);
     if (!c) return;
     const { jsPDF } = window.jspdf;
@@ -2738,7 +2446,7 @@ window.downloadPDF = function() {
     pdf.setTextColor(44, 62, 80);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Campaign Details', 20, yPos);
-    yPos += 3;
+    yPos += 5;
     
     pdf.setFillColor(248, 249, 250);
     const detailsHeight = 65;
@@ -2996,7 +2704,7 @@ window.downloadPDF = function() {
             
             yPos += rowHeight;
         }
-        yPos += 1;
+        yPos += 5;
     }
     
 // ============ HASHES SECTION - COMPACT ============
