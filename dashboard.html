@@ -1268,28 +1268,60 @@ function buildAdCampaignHTML(c, adNumber) {
     }
 }
 
-    function displayProofs() {
-        const list = document.getElementById('proofsList');
-        if (!list) return;
-        if (allProofs.length === 0) {
-            list.innerHTML = '<div class="loading-block">No proofs found.</div>';
-            return;
-        }
-        list.innerHTML = allProofs.map(p => `
-            <div class="campaign-item">
-                <div class="campaign-header-row">
-                    <span class="campaign-name">Customer: ${p.customer_name||p.name||'Unknown'} - Product: ${p.product_name || 'Not specified'}</span>
-                    <span class="campaign-id">${p.id}</span>
-                </div>
-                <div class="proof-label">HASH</div>
-                <div class="proof-box">${p.hash||'N/A'}</div>
-                <div style="color:#a0a0a0;font-size:12px;margin-top:8px;">
-                    ${p.created_at ? formatCompactDate(p.created_at.toDate()) : '—'}
-                    ${p.type ? ` · <span style="color:#4a9eff;">${p.type.toUpperCase()}</span>` : ''}
-                </div>
-            </div>
-        `).join('');
+function displayProofs() {
+    const list = document.getElementById('proofsList');
+    if (!list) return;
+    if (allProofs.length === 0) {
+        list.innerHTML = '<div class="loading-block">No proofs found.</div>';
+        return;
     }
+    
+    // Group by campaign to show lineage
+    const proofsByCampaign = {};
+    allProofs.forEach(p => {
+        if (!proofsByCampaign[p.campaign_id]) {
+            proofsByCampaign[p.campaign_id] = [];
+        }
+        proofsByCampaign[p.campaign_id].push(p);
+    });
+    
+    let html = '';
+    for (const [campaignId, proofs] of Object.entries(proofsByCampaign)) {
+        // Sort by created_at
+        proofs.sort((a, b) => {
+            const aDate = a.created_at?.toDate ? a.created_at.toDate() : new Date(0);
+            const bDate = b.created_at?.toDate ? b.created_at.toDate() : new Date(0);
+            return aDate - bDate;
+        });
+        
+        html += `<div class="campaign-item">
+            <div class="campaign-header-row">
+                <span class="campaign-name">Campaign: ${proofs[0]?.customer_name || 'Unknown'} - ${proofs[0]?.product_name || 'Unknown'}</span>
+                <span class="campaign-id">${campaignId}</span>
+            </div>
+            <div style="margin-top: 10px;">`;
+        
+        proofs.forEach(p => {
+            const hashType = p.type === 'genesis' ? '🔷 GENESIS' : '🟡 UPDATED';
+            const hashLabel = p.hash_type === 'start' ? 'START HASH' : 'END HASH';
+            const createdDate = p.created_at?.toDate ? formatCompactDate(p.created_at.toDate()) : 'Unknown';
+            
+            html += `<div style="margin-bottom: 15px; padding: 10px; background: #1a1e24; border-radius: 8px; border-left: 3px solid ${p.type === 'genesis' ? '#28a745' : '#f39c12'};">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">
+                    <span style="font-size: 11px; color: ${p.type === 'genesis' ? '#28a745' : '#f39c12'}; font-weight: bold;">${hashType} - ${hashLabel}</span>
+                    <span style="font-size: 10px; color: #a0a0a0;">📅 ${createdDate}</span>
+                </div>
+                <div class="proof-box" style="font-size: 10px; margin: 5px 0;">${p.hash || 'N/A'}</div>
+                ${p.previous_hash ? `<div style="font-size: 9px; color: #f39c12; margin-top: 3px;">⬆️ Previous: ${p.previous_hash.substring(0, 20)}...</div>` : ''}
+                <div style="font-size: 10px; color: #4a9eff; margin-top: 3px;">📍 Station: ${p.station_name || 'N/A'}</div>
+            </div>`;
+        });
+        
+        html += `</div></div>`;
+    }
+    
+    list.innerHTML = html;
+}
 
     function updateAdStatistics() {
         let total=0, active=0, upcoming=0, expired=0, images=0;
@@ -1427,6 +1459,29 @@ function buildAdCampaignHTML(c, adNumber) {
         const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
         return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
     }
+    async function regenerateCampaignHash(campaignId, hashType, customerName, productName, station, dateTime, oldHash, changedFields) {
+    // Create unique hash input with timestamp to ensure uniqueness
+    const hashInput = `${hashType}:${customerName}:${productName}:${station}:${dateTime}:${Date.now()}:${Math.random()}`;
+    const newHash = await sha256(hashInput);
+    
+    // Store in blockchain with full details
+    await db.collection('blockchain').add({
+        campaign_id: campaignId,
+        customer_name: customerName,
+        product_name: productName,
+        station_name: station,
+        hash: newHash,
+        type: 'updated',
+        hash_type: hashType,  // 'start' or 'end'
+        previous_hash: oldHash || null,
+        changed_fields: changedFields || null,
+        edited_at: firebase.firestore.FieldValue.serverTimestamp(),
+        created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    console.log(`✅ Regenerated ${hashType} hash for campaign ${campaignId}`);
+    return newHash;
+}
     
     window.updateHashPreviews = async function() {
         const name = document.getElementById('customerName')?.value || '';
@@ -1814,22 +1869,26 @@ function buildAdCampaignHTML(c, adNumber) {
                 plan_hours: planHours,
                 plan_price: planPrice
             });
-            await db.collection('blockchain').add({ 
-                campaign_id: docRef.id, 
-                customer_name: name,
-                product_name: productName,
-                hash: startHash, 
-                type: 'start', 
-                created_at: firebase.firestore.FieldValue.serverTimestamp() 
-            });
-            await db.collection('blockchain').add({ 
-                campaign_id: docRef.id, 
-                customer_name: name,
-                product_name: productName,
-                hash: endHash,   
-                type: 'end',   
-                created_at: firebase.firestore.FieldValue.serverTimestamp() 
-            });
+await db.collection('blockchain').add({ 
+    campaign_id: docRef.id, 
+    customer_name: name,
+    product_name: productName,
+    station_name: station,
+    hash: startHash, 
+    type: 'genesis', 
+    hash_type: 'start',
+    created_at: firebase.firestore.FieldValue.serverTimestamp() 
+});
+await db.collection('blockchain').add({ 
+    campaign_id: docRef.id, 
+    customer_name: name,
+    product_name: productName,
+    station_name: station,
+    hash: endHash,   
+    type: 'genesis',
+    hash_type: 'end',   
+    created_at: firebase.firestore.FieldValue.serverTimestamp() 
+});
             document.getElementById('uploadProgress').style.display = 'none';
             selectedImage = null;
             renderImagePreview();
@@ -2004,7 +2063,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         return;
     }
     
-    // Add plan hours validation
+    // Validate plan hours
     if (!validateEditDailyHours()) {
         return;
     }
@@ -2025,6 +2084,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         const newStartRaw2 = document.getElementById('editStartDateTime').value;
         const newEndRaw2 = document.getElementById('editEndDateTime').value;
         
+        // Map plan values
         let newPlanName = 'Light', newPlanHours = 32, newPlanPrice = 35;
         if (newPlan === 'light') {
             newPlanName = 'Light';
@@ -2048,53 +2108,61 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         
         const oldName = old.name || '';
         const oldStation = old.station || '';
+        const oldProductName = old.product_name || '';
         const oldPlan = (old.pricing_plan || 'Light').toLowerCase();
         const oldPlanName = old.pricing_plan || 'Light';
         const oldStart = new Date(old.start_datetime);
         const oldEnd = new Date(old.end_datetime);
+        const oldStartHash = old.hashes?.start?.hash || null;
+        const oldEndHash = old.hashes?.end?.hash || null;
         
         const changedFields = [];
         const updateData = {};
         
+        // Track what changed for the update record
+        const changeDetailsList = [];
+        
+        // Check Customer Name change
         if (oldName !== newName) {
             changedFields.push('Customer Name');
+            changeDetailsList.push(`Customer Name: "${oldName}" → "${newName}"`);
             updateData.name = newName;
         }
         
+        // Check Station change
         if (oldStation !== newStation) {
             changedFields.push('Station');
+            changeDetailsList.push(`Station: "${oldStation}" → "${newStation}"`);
             updateData.station = newStation;
         }
         
+        // Check Pricing Plan change
         if (oldPlan !== newPlan) {
-            changedFields.push('Pricing Plan: "' + oldPlanName + '" → "' + newPlanName + '"');
+            changedFields.push('Pricing Plan');
+            changeDetailsList.push(`Pricing Plan: "${oldPlanName}" → "${newPlanName}"`);
             updateData.pricing_plan = newPlanName;
             updateData.plan_hours = newPlanHours;
             updateData.plan_price = newPlanPrice;
         }
         
+        // Check Start Date change
+        let startDateChanged = false;
+        let newStartHash = null;
         if (oldStart.getTime() !== newStart2.getTime()) {
+            startDateChanged = true;
             changedFields.push('Start Date');
+            changeDetailsList.push(`Start Date: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`);
             updateData.start_datetime = newStartDateTimeString;
-            if (old.hashes?.start) {
-                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
-                updateData.hashes.start = {
-                    ...old.hashes.start,
-                    timestamp: newStartDateTimeString
-                };
-            }
         }
         
+        // Check End Date change
+        let endDateChanged = false;
+        let newEndHash = null;
         if (oldEnd.getTime() !== newEnd2.getTime()) {
+            endDateChanged = true;
             changedFields.push('End Date');
+            changeDetailsList.push(`End Date: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`);
             updateData.end_datetime = newEndDateTimeString;
-            if (old.hashes?.end) {
-                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
-                updateData.hashes.end = {
-                    ...old.hashes.end,
-                    timestamp: newEndDateTimeString
-                };
-            }
         }
         
         if (changedFields.length === 0) {
@@ -2109,27 +2177,97 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
             return;
         }
         
+        // REGENERATE HASHES BASED ON WHAT CHANGED
+        const finalCustomerName = newName || oldName;
+        const finalStation = newStation || oldStation;
+        const finalProductName = oldProductName;
+        
+        // Determine if we need to regenerate start hash
+        const needStartRegenerate = startDateChanged || oldName !== newName || oldPlan !== newPlan || oldStation !== newStation;
+        // Determine if we need to regenerate end hash
+        const needEndRegenerate = endDateChanged || oldName !== newName || oldPlan !== newPlan || oldStation !== newStation;
+        
+        // Prepare hash updates
+        let hashUpdates = {};
+        
+        // Regenerate START hash if needed
+        if (needStartRegenerate) {
+            const finalStartDateTime = newStartDateTimeString || old.start_datetime;
+            const changesSummary = changeDetailsList.join(', ');
+            newStartHash = await regenerateCampaignHash(
+                id, 'start', finalCustomerName, finalProductName, finalStation,
+                finalStartDateTime, oldStartHash, changesSummary
+            );
+            hashUpdates.start = {
+                hash: newStartHash,
+                timestamp: finalStartDateTime,
+                previous_hash: oldStartHash,
+                is_updated: true,
+                updated_at: new Date().toISOString()
+            };
+            console.log(`✅ Regenerated START hash for campaign ${id}`);
+        } else if (old.hashes?.start) {
+            // Keep original hash
+            hashUpdates.start = old.hashes.start;
+        }
+        
+        // Regenerate END hash if needed
+        if (needEndRegenerate) {
+            const finalEndDateTime = newEndDateTimeString || old.end_datetime;
+            const changesSummary = changeDetailsList.join(', ');
+            newEndHash = await regenerateCampaignHash(
+                id, 'end', finalCustomerName, finalProductName, finalStation,
+                finalEndDateTime, oldEndHash, changesSummary
+            );
+            hashUpdates.end = {
+                hash: newEndHash,
+                timestamp: finalEndDateTime,
+                previous_hash: oldEndHash,
+                is_updated: true,
+                updated_at: new Date().toISOString()
+            };
+            console.log(`✅ Regenerated END hash for campaign ${id}`);
+        } else if (old.hashes?.end) {
+            // Keep original hash
+            hashUpdates.end = old.hashes.end;
+        }
+        
+        // Preserve original genesis hashes if they exist and weren't replaced
+        if (old.hashes?.start?.is_genesis) {
+            if (!hashUpdates.start_genesis) hashUpdates.start_genesis = old.hashes.start;
+        } else if (old.hashes?.start && !hashUpdates.start) {
+            hashUpdates.start = old.hashes.start;
+        }
+        
+        if (old.hashes?.end?.is_genesis) {
+            if (!hashUpdates.end_genesis) hashUpdates.end_genesis = old.hashes.end;
+        } else if (old.hashes?.end && !hashUpdates.end) {
+            hashUpdates.end = old.hashes.end;
+        }
+        
+        updateData.hashes = hashUpdates;
+        
+        // Update status based on new dates
         const now = new Date();
         let newStatus = 'upcoming';
-        if (now >= newStart2 && now <= newEnd2) newStatus = 'active';
-        if (now > newEnd2) newStatus = 'expired';
+        const finalStart = new Date(updateData.start_datetime || old.start_datetime);
+        const finalEnd = new Date(updateData.end_datetime || old.end_datetime);
+        if (now >= finalStart && now <= finalEnd) newStatus = 'active';
+        if (now > finalEnd) newStatus = 'expired';
         updateData.status = newStatus;
         
         updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
         updateData.updated_by = currentUser?.uid || 'anonymous';
         
-        const changeDetails = changedFields.map(function(field) {
-            if (field === 'Customer Name') return 'Customer Name: "' + oldName + '" → "' + newName + '"';
-            if (field === 'Station') return 'Station: "' + oldStation + '" → "' + newStation + '"';
-            if (typeof field === 'string' && field.indexOf('Pricing Plan') === 0) return field;
-            if (field === 'Start Date') return 'Start Date: "' + formatCompactDate(oldStart) + '" → "' + formatCompactDate(newStart2) + '"';
-            if (field === 'End Date') return 'End Date: "' + formatCompactDate(oldEnd) + '" → "' + formatCompactDate(newEnd2) + '"';
-            return field;
-        }).join(' | ');
-        
+        // Create update history record
+        const changeDetails = changeDetailsList.join(' | ');
         const updateRecord = {
             changes: changeDetails,
             changed_fields: changedFields,
+            hashes_regenerated: {
+                start: needStartRegenerate,
+                end: needEndRegenerate
+            },
             timestamp: new Date().toISOString(),
             updated_by: currentUser?.uid || 'anonymous'
         };
@@ -2137,6 +2275,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         updates.push(updateRecord);
         updateData.update_history = updates;
         
+        // Save to database
         await db.collection('customers').doc(id).update(updateData);
         
         closeEditModal();
@@ -2144,7 +2283,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         
         const a = document.getElementById('editAlert');
         a.className = 'alert success';
-        a.textContent = '✅ Updated: ' + changedFields.join(', ');
+        a.textContent = '✅ Updated: ' + changeDetailsList.join(', ') + (needStartRegenerate || needEndRegenerate ? ' | 🔐 Hashes regenerated' : '');
         a.style.display = 'block';
         setTimeout(function() { a.style.display = 'none'; }, 4000);
         
