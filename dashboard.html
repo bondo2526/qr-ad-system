@@ -1477,38 +1477,50 @@ async function regenerateCampaignHash(campaignId, hashType, customerName, produc
         }
     };
 
-    // Image handling
-    document.getElementById('imageInput')?.addEventListener('change', e => {
-        const files = Array.from(e.target.files);
-        if (files.length > 1) {
-            document.getElementById('fileWarning').innerHTML = '⚠️ Only 1 image allowed per campaign! Please select only one image.';
+// Image handling
+document.getElementById('imageInput')?.addEventListener('change', e => {
+    const files = Array.from(e.target.files);
+    if (files.length > 1) {
+        document.getElementById('fileWarning').innerHTML = '⚠️ Only 1 image allowed per campaign! Please select only one image.';
+        document.getElementById('fileWarning').style.color = '#dc3545';
+        document.getElementById('imageInput').value = '';
+        return;
+    }
+    if (files.length === 1) {
+        const file = files[0];
+        
+        // ========== ADD FILE SIZE WARNING HERE ==========
+        // Show warning for large files (over 500KB)
+        if (file.size > 500 * 1024) {
+            document.getElementById('fileWarning').innerHTML = '⚠️ Large file (' + (file.size/1024).toFixed(0) + 'KB). Will be compressed automatically.';
+            document.getElementById('fileWarning').style.color = '#ffc107';
+        } else if (file.size > 1024 * 1024) {
+            document.getElementById('fileWarning').innerHTML = '⚠️ Very large file (' + (file.size/1024).toFixed(0) + 'KB). Compression may take a moment.';
+            document.getElementById('fileWarning').style.color = '#ffc107';
+        } else {
+            document.getElementById('fileWarning').innerHTML = '';
+        }
+        // ========== END WARNING ==========
+        
+        if (file.size > 10 * 1024 * 1024) {
+            document.getElementById('fileWarning').innerHTML = '⚠️ Image too large! Maximum size is 10MB.';
             document.getElementById('fileWarning').style.color = '#dc3545';
             document.getElementById('imageInput').value = '';
             return;
         }
-        if (files.length === 1) {
-            const file = files[0];
-            if (file.size > 10 * 1024 * 1024) {
-                document.getElementById('fileWarning').innerHTML = '⚠️ Image too large! Maximum size is 10MB.';
-                document.getElementById('fileWarning').style.color = '#dc3545';
-                document.getElementById('imageInput').value = '';
-                return;
-            }
-            if (!file.type.match('image.*')) {
-                document.getElementById('fileWarning').innerHTML = '⚠️ Please select a valid image file (JPG, PNG).';
-                document.getElementById('fileWarning').style.color = '#dc3545';
-                document.getElementById('imageInput').value = '';
-                return;
-            }
-            document.getElementById('fileWarning').innerHTML = '';
-            document.getElementById('fileWarning').style.color = '#ffc107';
-            selectedImage = file;
-            renderImagePreview();
-        } else {
-            selectedImage = null;
-            renderImagePreview();
+        if (!file.type.match('image.*')) {
+            document.getElementById('fileWarning').innerHTML = '⚠️ Please select a valid image file (JPG, PNG).';
+            document.getElementById('fileWarning').style.color = '#dc3545';
+            document.getElementById('imageInput').value = '';
+            return;
         }
-    });
+        selectedImage = file;
+        renderImagePreview();
+    } else {
+        selectedImage = null;
+        renderImagePreview();
+    }
+});
 
     window.updatePlanDetails = function() {
         const plan = document.getElementById('pricingPlan').value;
@@ -1630,80 +1642,94 @@ async function regenerateCampaignHash(campaignId, hashType, customerName, produc
         document.getElementById('fileWarning').innerHTML = '';
     };
 
-    async function compressImage(file) {
-        return new Promise((resolve, reject) => {
-            if (file.size <= 1024 * 1024) {
-                console.log(`📸 ${file.name} is under 1MB (${(file.size/1024).toFixed(2)}KB) - keeping original`);
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => {
-                    resolve({
-                        name: file.name,
-                        data: reader.result,
-                        originalSize: file.size,
-                        compressedSize: file.size,
-                        wasCompressed: false
-                    });
-                };
-                reader.onerror = reject;
-                return;
-            }
+async function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        // Compress anything above 150KB (much lower threshold)
+        if (file.size <= 150 * 1024) {
+            console.log(`📸 ${file.name} is under 150KB - keeping original`);
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            reader.onload = (e) => {
-                const img = new Image();
-                img.src = e.target.result;
-                img.onload = () => {
-                    const targetSize = 900 * 1024;
-                    const originalSize = file.size;
-                    const reductionNeeded = originalSize / targetSize;
-                    let quality = 1.0;
-                    let width = img.width;
-                    let height = img.height;
-                    if (reductionNeeded > 2.0) {
-                        const scale = Math.sqrt(1 / (reductionNeeded / 1.5));
-                        width = Math.round(img.width * scale);
-                        height = Math.round(img.height * scale);
-                        quality = 0.8;
-                    } else if (reductionNeeded > 1.5) {
-                        const scale = 0.85;
-                        width = Math.round(img.width * scale);
-                        height = Math.round(img.height * scale);
-                        quality = 0.9;
-                    } else {
-                        quality = 0.85;
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                    let compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
-                    let attempts = 0;
-                    while (compressedSize > 1024 * 1024 && quality > 0.5 && attempts < 3) {
-                        quality -= 0.1;
-                        compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                        compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
-                        attempts++;
-                    }
-                    const reductionPercent = ((1 - (compressedSize / originalSize)) * 100).toFixed(1);
-                    console.log(`📸 ${file.name}: ${(originalSize/1024).toFixed(2)}KB → ${(compressedSize/1024).toFixed(2)}KB (${reductionPercent}% reduction)`);
-                    resolve({
-                        name: file.name,
-                        data: compressedDataUrl,
-                        originalSize: originalSize,
-                        compressedSize: compressedSize,
-                        wasCompressed: true,
-                        quality: quality,
-                        dimensions: `${width}x${height}`
-                    });
-                };
-                img.onerror = reject;
+            reader.onload = () => {
+                resolve({
+                    name: file.name,
+                    data: reader.result,
+                    originalSize: file.size,
+                    compressedSize: file.size,
+                    wasCompressed: false
+                });
             };
             reader.onerror = reject;
-        });
-    }
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const targetSize = 120 * 1024; // Target 120KB final size
+                const originalSize = file.size;
+                let quality = 0.8;
+                let width = img.width;
+                let height = img.height;
+                
+                // Scale down aggressively
+                let scale = 1;
+                if (width > 600) scale = 600 / width;
+                if (height > 600) scale = Math.min(scale, 600 / height);
+                
+                width = Math.round(width * scale);
+                height = Math.round(height * scale);
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                let compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
+                let attempts = 0;
+                
+                // Aggressively reduce until under target
+                while (compressedSize > targetSize && quality > 0.2 && attempts < 8) {
+                    quality -= 0.1;
+                    compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
+                    attempts++;
+                }
+                
+                // If still too large, scale down more
+                if (compressedSize > targetSize) {
+                    const smallerCanvas = document.createElement('canvas');
+                    const smallerScale = Math.sqrt(targetSize / compressedSize);
+                    smallerCanvas.width = Math.round(width * smallerScale);
+                    smallerCanvas.height = Math.round(height * smallerScale);
+                    const smallerCtx = smallerCanvas.getContext('2d');
+                    smallerCtx.drawImage(canvas, 0, 0, smallerCanvas.width, smallerCanvas.height);
+                    compressedDataUrl = smallerCanvas.toDataURL('image/jpeg', 0.5);
+                    compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
+                }
+                
+                const reductionPercent = ((1 - (compressedSize / originalSize)) * 100).toFixed(1);
+                console.log(`📸 ${file.name}: ${(originalSize/1024).toFixed(2)}KB → ${(compressedSize/1024).toFixed(2)}KB (${reductionPercent}% reduction)`);
+                
+                resolve({
+                    name: file.name,
+                    data: compressedDataUrl,
+                    originalSize: originalSize,
+                    compressedSize: compressedSize,
+                    wasCompressed: true,
+                    quality: quality,
+                    dimensions: `${width}x${height}`
+                });
+            };
+            img.onerror = reject;
+        };
+        reader.onerror = reject;
+    });
+}
 
     function validateCampaignForm() {
         const customerName = document.getElementById('customerName').value.trim();
@@ -1770,35 +1796,58 @@ async function regenerateCampaignHash(campaignId, hashType, customerName, produc
         btn.disabled = true;
         document.getElementById('submitText').style.display = 'none';
         document.getElementById('submitLoading').style.display = 'inline-block';
-        try {
-            const name = document.getElementById('customerName').value.trim();
-            const station = document.getElementById('stationName').value;
-            const startRaw = document.getElementById('startDateTime').value;
-            const endRaw = document.getElementById('endDateTime').value;
-            const startDateTimeString = startRaw + ':00';
-            const endDateTimeString = endRaw + ':00';
-            const startDT = new Date(startRaw);
-            const endDT = new Date(endRaw);
-            if (!name || !station) throw new Error('Please fill all fields');
-            if (!startRaw || !endRaw) throw new Error('Please select start and end dates');
-            if (endDT <= startDT) throw new Error('End date must be after start date');
-            document.getElementById('uploadProgress').style.display = 'block';
-            document.getElementById('progressPercent').textContent = '50%';
-            document.getElementById('progressFill').style.width = '50%';
-            document.getElementById('progressCurrent').textContent = `Processing ${selectedImage.name}`;
-            const compressedImage = await compressImage(selectedImage);
-            const imagesData = [{
-                name: compressedImage.name,
-                data: compressedImage.data,
-                originalSize: compressedImage.originalSize,
-                compressedSize: compressedImage.compressedSize,
-                wasCompressed: compressedImage.wasCompressed || false
-            }];
-            document.getElementById('progressPercent').textContent = '100%';
-            document.getElementById('progressFill').style.width = '100%';
-            document.getElementById('progressCurrent').textContent = 'Saving...';
-            const startHash = document.getElementById('startHashPreview').textContent;
-            const endHash = document.getElementById('endHashPreview').textContent;
+      try {
+    const name = document.getElementById('customerName').value.trim();
+    const station = document.getElementById('stationName').value;
+    const startRaw = document.getElementById('startDateTime').value;
+    const endRaw = document.getElementById('endDateTime').value;
+    const startDateTimeString = startRaw + ':00';
+    const endDateTimeString = endRaw + ':00';
+    const startDT = new Date(startRaw);
+    const endDT = new Date(endRaw);
+    
+    if (!name || !station) throw new Error('Please fill all fields');
+    if (!startRaw || !endRaw) throw new Error('Please select start and end dates');
+    if (endDT <= startDT) throw new Error('End date must be after start date');
+    
+    document.getElementById('uploadProgress').style.display = 'block';
+    document.getElementById('progressPercent').textContent = '30%';
+    document.getElementById('progressFill').style.width = '30%';
+    document.getElementById('progressCurrent').textContent = `Processing ${selectedImage.name}...`;
+    
+    const compressedImage = await compressImage(selectedImage);
+    const imagesData = [{
+        name: compressedImage.name,
+        data: compressedImage.data,
+        originalSize: compressedImage.originalSize,
+        compressedSize: compressedImage.compressedSize,
+        wasCompressed: compressedImage.wasCompressed || false
+    }];
+    
+    // ========== VALIDATION ==========
+    const imageDataSize = compressedImage.data.length;
+    const estimatedDocSize = imageDataSize + 5000;
+    
+    if (estimatedDocSize > 950 * 1024) {
+        console.error(`Image too large: ${(imageDataSize/1024).toFixed(2)}KB`);
+        showAlert('❌ Image is too large (' + (imageDataSize/1024).toFixed(0) + 'KB). Please use a smaller image (max 500KB original).', 'error');
+        document.getElementById('uploadProgress').style.display = 'none';
+        btn.disabled = false;
+        document.getElementById('submitText').style.display = 'inline';
+        document.getElementById('submitLoading').style.display = 'none';
+        return;
+    }
+    
+    console.log(`✅ Image size OK: ${(imageDataSize/1024).toFixed(2)}KB / 950KB limit`);
+    // ========== END VALIDATION ==========
+    
+    document.getElementById('progressPercent').textContent = '80%';
+    document.getElementById('progressFill').style.width = '80%';
+    document.getElementById('progressCurrent').textContent = 'Saving campaign...';
+    
+    const startHash = document.getElementById('startHashPreview').textContent;
+    const endHash = document.getElementById('endHashPreview').textContent;
+    // ... rest of your code
             const uid = currentUser?.uid || 'anonymous';
             const now = new Date();
             let status = 'upcoming';
