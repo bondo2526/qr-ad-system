@@ -2065,7 +2065,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         }
         
         if (oldPlan !== newPlan) {
-            changedFields.push(`Pricing Plan: "${oldPlanName}" → "${newPlanName}"`);
+            changedFields.push('Pricing Plan: "' + oldPlanName + '" → "' + newPlanName + '"');
             updateData.pricing_plan = newPlanName;
             updateData.plan_hours = newPlanHours;
             updateData.plan_price = newPlanPrice;
@@ -2119,7 +2119,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         const changeDetails = changedFields.map(function(field) {
             if (field === 'Customer Name') return 'Customer Name: "' + oldName + '" → "' + newName + '"';
             if (field === 'Station') return 'Station: "' + oldStation + '" → "' + newStation + '"';
-            if (field.indexOf('Pricing Plan') === 0) return field;
+            if (typeof field === 'string' && field.indexOf('Pricing Plan') === 0) return field;
             if (field === 'Start Date') return 'Start Date: "' + formatCompactDate(oldStart) + '" → "' + formatCompactDate(newStart2) + '"';
             if (field === 'End Date') return 'End Date: "' + formatCompactDate(oldEnd) + '" → "' + formatCompactDate(newEnd2) + '"';
             return field;
@@ -2127,7 +2127,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         
         const updateRecord = {
             changes: changeDetails,
-            changed_fields: changedFields.map(function(f) { return typeof f === 'string' && f.indexOf('Pricing Plan') === 0 ? 'Pricing Plan' : f; }),
+            changed_fields: changedFields,
             timestamp: new Date().toISOString(),
             updated_by: currentUser?.uid || 'anonymous'
         };
@@ -2135,7 +2135,6 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         updates.push(updateRecord);
         updateData.update_history = updates;
         
-        // THIS IS THE LINE THAT WAS CAUSING THE ERROR - now properly inside async function
         await db.collection('customers').doc(id).update(updateData);
         
         closeEditModal();
@@ -2160,59 +2159,6 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         document.getElementById('editSaveLoading').style.display = 'none';
     }
 });
-            
-            const now = new Date();
-            let newStatus = 'upcoming';
-            if (now >= newStart2 && now <= newEnd2) newStatus = 'active';
-            if (now > newEnd2) newStatus = 'expired';
-            updateData.status = newStatus;
-            
-            updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
-            updateData.updated_by = currentUser?.uid || 'anonymous';
-            
-            const changeDetails = changedFields.map(field => {
-                if (field === 'Customer Name') return `${field}: "${oldName}" → "${newName}"`;
-                if (field === 'Station') return `${field}: "${oldStation}" → "${newStation}"`;
-                if (field === 'Start Date') return `${field}: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`;
-                if (field === 'End Date') return `${field}: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`;
-                return field;
-            }).join(' | ');
-            
-            const updateRecord = {
-                changes: changeDetails,
-                changed_fields: changedFields,
-                timestamp: new Date().toISOString(),
-                updated_by: currentUser?.uid || 'anonymous'
-            };
-            
-            updates.push(updateRecord);
-            updateData.update_history = updates;
-            
-            await db.collection('customers').doc(id).update(updateData);
-            
-            closeEditModal();
-            await loadAdData();
-            
-            const a = document.getElementById('editAlert');
-            a.className = 'alert success';
-            a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
-            a.style.display = 'block';
-            setTimeout(() => a.style.display = 'none', 4000);
-            
-        } catch (err) {
-            console.error('Edit error:', err);
-            const a = document.getElementById('editAlert');
-            a.className = 'alert error';
-            a.textContent = '❌ ' + err.message;
-            a.style.display = 'block';
-            setTimeout(() => a.style.display = 'none', 3000);
-        } finally {
-            btn.disabled = false;
-            document.getElementById('editSaveText').style.display = 'inline';
-            document.getElementById('editSaveLoading').style.display = 'none';
-        }
-    });
-
     window.deleteCampaign = async function(id) {
         if (!confirm('Delete this campaign? This cannot be undone.')) return;
         try { await db.collection('customers').doc(id).delete(); await loadAdData(); }
