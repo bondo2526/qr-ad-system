@@ -2656,11 +2656,11 @@ window.downloadPDF = function() {
     // Full plan description
     let fullPlanText = '';
     if (planName === 'Light') {
-        fullPlanText = 'Light (2 days × 4 hrs weekly = 32 hrs/month / $35)';
+        fullPlanText = 'Light (2d×4hrs weekly = 32hrs/month / $35)';
     } else if (planName === 'Standard') {
-        fullPlanText = 'Standard (4 days × 6 hrs weekly = 96 hrs/month / $48)';
+        fullPlanText = 'Standard (4d×6hrs weekly = 96hrs/month / $48)';
     } else if (planName === 'Professional') {
-        fullPlanText = 'Professional (6 days × 8 hrs weekly = 192 hrs/month / $54)';
+        fullPlanText = 'Professional (6d×8hrs weekly = 192hrs/month / $54)';
     }
     
     // Find ORIGINAL dates
@@ -2701,7 +2701,6 @@ window.downloadPDF = function() {
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     
-    // Helper function to add new page
     function checkNewPage(needed) {
         if (yPos + needed > pageHeight - 15) {
             pdf.addPage();
@@ -2734,7 +2733,7 @@ window.downloadPDF = function() {
     pdf.text(`Campaign ID: ${c.id}`, 105, yPos + 3, { align: 'center' });
     yPos += 7;
     
-    // ============ CAMPAIGN DETAILS ============
+    // ============ CAMPAIGN DETAILS - EACH FIELD ON ITS OWN LINE ============
     pdf.setFontSize(11);
     pdf.setTextColor(44, 62, 80);
     pdf.setFont('helvetica', 'bold');
@@ -2742,103 +2741,115 @@ window.downloadPDF = function() {
     yPos += 4;
     
     pdf.setFillColor(248, 249, 250);
-    const detailsHeight = 42;
+    const detailsHeight = 65;
     pdf.rect(20, yPos, 170, detailsHeight, 'F');
     
-    pdf.setFontSize(8);
+    pdf.setFontSize(9);
     pdf.setTextColor(52, 73, 94);
     pdf.setFont('helvetica', 'normal');
     
     let rowY = yPos + 4;
-    const col1 = 25;
-    const col2 = 70;
-    const col3 = 110;
+    const labelX = 25;
+    const valueX = 55;
     
-    // Row 1: Station | Customer | Product
+    // Line 1: Station
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Station:', col1, rowY);
+    pdf.text('Station:', labelX, rowY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(c.station || 'N/A', col1 + 15, rowY);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Customer:', col2, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(c.name || 'Unknown', col2 + 18, rowY);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Product:', col3, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(c.product_name || 'Not specified', col3 + 16, rowY);
+    pdf.text(c.station || 'N/A', valueX, rowY);
     rowY += 5;
     
-    // Row 2: Plan (full description) | Status | Created
+    // Line 2: Customer
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Plan:', col1, rowY);
+    pdf.text('Customer:', labelX, rowY);
     pdf.setFont('helvetica', 'normal');
-    const planLines = pdf.splitTextToSize(fullPlanText, 38);
-    pdf.text(planLines, col1 + 12, rowY);
-    const planLinesCount = planLines.length;
+    pdf.text(c.name || 'Unknown', valueX, rowY);
+    rowY += 5;
     
-    // Status and Created - align with first line of plan
+    // Line 3: Product
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Status:', col2, rowY);
+    pdf.text('Product:', labelX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.product_name || 'Not specified', valueX, rowY);
+    rowY += 5;
+    
+    // Line 4: Plan (full description)
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Plan:', labelX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    const planLines = pdf.splitTextToSize(fullPlanText, 130);
+    pdf.text(planLines, valueX, rowY);
+    rowY += 5 + (planLines.length - 1) * 4;
+    
+    // Line 5: Status
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Status:', labelX, rowY);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-    pdf.text(status, col2 + 15, rowY);
+    pdf.text(status, valueX, rowY);
     pdf.setTextColor(52, 73, 94);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Created:', col3, rowY);
-    pdf.setFont('helvetica', 'normal');
-    const createdDate = c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown';
-    pdf.text(createdDate, col3 + 16, rowY);
-    
-    rowY += 5 + (planLinesCount - 1) * 3;
-    
-    // Separator line
-    pdf.setDrawColor(200, 200, 200);
-    pdf.line(25, rowY, pageWidth - 25, rowY);
-    rowY += 3;
-    
-    // Row 3: Original Start | Original End
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(100, 100, 100);
-    pdf.text('Original Start:', col1, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(52, 73, 94);
-    pdf.text(originalStartStr, col1 + 28, rowY);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Original End:', col2, rowY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(originalEndStr, col2 + 24, rowY);
     rowY += 5;
     
-    // Row 4: Current Start | Current End
+    // Line 6: Created
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(52, 152, 219);
-    pdf.text('Current Start:', col1, rowY);
+    pdf.text('Created:', labelX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    const createdDate = c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown';
+    pdf.text(createdDate, valueX, rowY);
+    rowY += 5;
+    
+    // Separator
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(25, rowY, pageWidth - 25, rowY);
+    rowY += 4;
+    
+    // Line 7: Original Start
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Original Start:', labelX, rowY);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(52, 73, 94);
-    pdf.text(currentStartStr, col1 + 26, rowY);
+    pdf.text(originalStartStr, valueX, rowY);
+    rowY += 5;
     
+    // Line 8: Original End
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Current End:', col2, rowY);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Original End:', labelX, rowY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(currentEndStr, col2 + 22, rowY);
+    pdf.setTextColor(52, 73, 94);
+    pdf.text(originalEndStr, valueX, rowY);
+    rowY += 5;
+    
+    // Line 9: Current Start
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(52, 152, 219);
+    pdf.text('Current Start:', labelX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(52, 73, 94);
+    pdf.text(currentStartStr, valueX, rowY);
+    rowY += 5;
+    
+    // Line 10: Current End
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(52, 152, 219);
+    pdf.text('Current End:', labelX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(52, 73, 94);
+    pdf.text(currentEndStr, valueX, rowY);
     
     yPos += detailsHeight + 3;
     
-    // ============ IMAGE ============
+    // ============ IMAGE - SMALLER SIZE ============
     if (images.length > 0) {
-        checkNewPage(45);
+        checkNewPage(40);
         pdf.setFontSize(11);
         pdf.setTextColor(44, 62, 80);
         pdf.setFont('helvetica', 'bold');
         pdf.text('Campaign Image', 105, yPos, { align: 'center' });
         yPos += 5;
         
-        const imgSize = 45;
+        const imgSize = 35; // Reduced from 45 to 35
         const startX = (pageWidth - imgSize) / 2;
         
         for (let i = 0; i < Math.min(images.length, 1); i++) {
@@ -2863,7 +2874,7 @@ window.downloadPDF = function() {
                 console.error('Failed to add image to PDF:', e);
             }
         }
-        yPos += imgSize + 6;
+        yPos += imgSize + 5;
     }
     
     // ============ UPDATE HISTORY TABLE ============
@@ -2876,16 +2887,16 @@ window.downloadPDF = function() {
         yPos += 5;
         
         pdf.setFillColor(243, 156, 18);
-        pdf.rect(20, yPos, 170, 6, 'F');
+        pdf.rect(20, yPos, 170, 5, 'F');
         pdf.setFontSize(7);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Date/Time', 22, yPos + 4);
-        pdf.text('Field', 55, yPos + 4);
-        pdf.text('Old Value', 85, yPos + 4);
-        pdf.text('New Value', 125, yPos + 4);
-        pdf.text('By', 170, yPos + 4);
-        yPos += 6;
+        pdf.text('Date/Time', 22, yPos + 3.5);
+        pdf.text('Field', 55, yPos + 3.5);
+        pdf.text('Old Value', 85, yPos + 3.5);
+        pdf.text('New Value', 125, yPos + 3.5);
+        pdf.text('By', 170, yPos + 3.5);
+        yPos += 5.5;
         
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
@@ -2958,16 +2969,16 @@ window.downloadPDF = function() {
                 pdf.text(`Update History (continued)`, 105, yPos, { align: 'center' });
                 yPos += 5;
                 pdf.setFillColor(243, 156, 18);
-                pdf.rect(20, yPos, 170, 6, 'F');
+                pdf.rect(20, yPos, 170, 5, 'F');
                 pdf.setFontSize(7);
                 pdf.setTextColor(255, 255, 255);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text('Date/Time', 22, yPos + 4);
-                pdf.text('Field', 55, yPos + 4);
-                pdf.text('Old Value', 85, yPos + 4);
-                pdf.text('New Value', 125, yPos + 4);
-                pdf.text('By', 170, yPos + 4);
-                yPos += 6;
+                pdf.text('Date/Time', 22, yPos + 3.5);
+                pdf.text('Field', 55, yPos + 3.5);
+                pdf.text('Old Value', 85, yPos + 3.5);
+                pdf.text('New Value', 125, yPos + 3.5);
+                pdf.text('By', 170, yPos + 3.5);
+                yPos += 5.5;
                 pdf.setTextColor(0, 0, 0);
                 pdf.setFontSize(6);
             }
