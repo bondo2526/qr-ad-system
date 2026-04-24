@@ -3115,7 +3115,7 @@ window.createCouponCampaign = async function() {
     // ========== QR CODE GENERATION FUNCTIONS ==========
     
 // Generate a clean claim link (no visible parameters)
-async function generateClaimLink(advertiserName, productName, location) {
+window.generateClaimLink = async function(advertiserName, productName, location) {
     try {
         // ========== STEP 1: Verify Campaign Exists ==========
         const campaignDoc = await db.collection('ad_campaigns').doc(advertiserName).get();
@@ -3160,7 +3160,6 @@ async function generateClaimLink(advertiserName, productName, location) {
         }
         
         // ========== STEP 6: CHECK IF QR CODE ALREADY EXISTS ==========
-        // Query qr_links collection for existing link with same ad and product
         const existingQrQuery = await db.collection('qr_links')
             .where('ad', '==', advertiserName)
             .where('product', '==', productName)
@@ -3169,7 +3168,6 @@ async function generateClaimLink(advertiserName, productName, location) {
         
         if (!existingQrQuery.empty) {
             const existingDoc = existingQrQuery.docs[0];
-            const existingData = existingDoc.data();
             const existingId = existingDoc.id;
             const existingUrl = `${window.location.origin}/qr-ad-system/?c=${existingId}`;
             
@@ -3182,18 +3180,15 @@ async function generateClaimLink(advertiserName, productName, location) {
             );
             
             if (!userConfirm) {
-                // Copy existing link to clipboard
                 await navigator.clipboard.writeText(existingUrl);
                 alert(`✅ Existing QR link copied to clipboard!\n\nLink: ${existingUrl}`);
                 return existingUrl;
             }
-            // If user confirms, continue to create new link
         }
         
         // ========== STEP 7: All checks passed - Generate QR Link ==========
         const uniqueId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 5);
         
-        // Store in Firestore
         await db.collection('qr_links').doc(uniqueId).set({
             ad: advertiserName,
             product: productName,
@@ -3208,11 +3203,9 @@ async function generateClaimLink(advertiserName, productName, location) {
             }
         });
         
-        // Return clean URL
         const claimUrl = `${window.location.origin}/qr-ad-system/?c=${uniqueId}`;
         console.log("✅ New QR Link generated!");
         
-        // Copy to clipboard
         await navigator.clipboard.writeText(claimUrl);
         alert(`✅ NEW QR Code created and link copied!\n\nLink: ${claimUrl}\n\nProduct: ${productName}\nAdvertiser: ${advertiserName}`);
         
@@ -3223,20 +3216,18 @@ async function generateClaimLink(advertiserName, productName, location) {
         alert('Error generating claim link: ' + error.message);
         return null;
     }
-}
+};
 
-    // Generate QR code for a product
-    async function generateProductQRCode(advertiserName, productName) {
-        // Get the station from the campaign
+// Generate QR code for a product
+window.generateProductQRCode = async function(advertiserName, productName) {
+    try {
         const campaignDoc = await db.collection('ad_campaigns').doc(advertiserName).get();
         const station = campaignDoc.exists ? (campaignDoc.data().station || 'Station 1') : 'Station 1';
         
-        const claimUrl = await generateClaimLink(advertiserName, productName, station);
+        const claimUrl = await window.generateClaimLink(advertiserName, productName, station);
         if (claimUrl) {
-            // Generate QR code using free API
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(claimUrl)}`;
             
-            // Open QR code in new window
             const qrWindow = window.open();
             qrWindow.document.write(`
                 <html>
@@ -3294,7 +3285,7 @@ async function generateClaimLink(advertiserName, productName, location) {
                         <img src="${qrCodeUrl}" style="width: 250px; height: 250px;">
                     </div>
                     <div class="link">
-                     ${claimUrl}
+                        ${claimUrl}
                     </div>
                     <div class="info">
                         ✅ Campaign is ACTIVE | Product is AVAILABLE
@@ -3309,13 +3300,16 @@ async function generateClaimLink(advertiserName, productName, location) {
                 </html>
             `);
             
-            // Also copy to clipboard as fallback
             await navigator.clipboard.writeText(claimUrl);
-            
             return claimUrl;
         }
         return null;
+    } catch (error) {
+        console.error('Error generating QR code:', error);
+        alert('Error generating QR code: ' + error.message);
+        return null;
     }
+};
 
     window.generateProductQRCode = generateProductQRCode;
 
