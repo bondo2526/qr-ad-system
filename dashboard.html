@@ -2603,12 +2603,456 @@ window.showPDFPreview = function(id) {
         
         <!-- Footer -->
         <div style="margin-top:20px;padding-top:10px;border-top:2px solid #e9ecef;text-align:center;font-size:8px;color:#95a5a6;">
-            <div>Bondos4Ever © 2026_Local Digital Ad & Coupon Marketing System</div>
+            <div>Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System</div>
         </div>
     </div>`;
     
     document.getElementById('pdfContent').innerHTML = reportHTML;
     document.getElementById('pdfPreview').classList.add('active');
+    closePDFPreview();
+};
+    window.downloadPDF = function() {
+    const c = allAdCampaigns.find(x => x.id === pdfCampaignId);
+    if (!c) return;
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    
+    // Get original (genesis) hashes from blockchain
+    const originalStartHashObj = allProofs.find(p => p.campaign_id === pdfCampaignId && p.type === 'genesis' && p.hash_type === 'start');
+    const originalEndHashObj = allProofs.find(p => p.campaign_id === pdfCampaignId && p.type === 'genesis' && p.hash_type === 'end');
+    const latestStartHashObj = allProofs.find(p => p.campaign_id === pdfCampaignId && p.hash_type === 'start');
+    const latestEndHashObj = allProofs.find(p => p.campaign_id === pdfCampaignId && p.hash_type === 'end');
+    
+    const genesisStartHash = originalStartHashObj?.hash || c.hashes?.start?.hash || 'PENDING';
+    const genesisEndHash = originalEndHashObj?.hash || c.hashes?.end?.hash || 'PENDING';
+    const latestStartHash = latestStartHashObj?.hash || c.hashes?.start?.hash || 'PENDING';
+    const latestEndHash = latestEndHashObj?.hash || c.hashes?.end?.hash || 'PENDING';
+    
+    const images = c.images || [];
+    const updates = c.update_history || c.updates || [];
+    const now = new Date();
+    const planName = c.pricing_plan || 'Light';
+    const planHours = c.plan_hours || 32;
+    const planPrice = c.plan_price || 35;
+    
+    let planDescription = '';
+    if (planName === 'Light') {
+        planDescription = '2 days × 4 hrs display time weekly = 32 hrs monthly / $35';
+    } else if (planName === 'Standard') {
+        planDescription = '4 days × 6 hrs display time weekly = 96 hrs monthly / $48';
+    } else if (planName === 'Professional') {
+        planDescription = '6 days × 8 hrs display time weekly = 192 hrs monthly / $54';
+    }
+    
+    // Find ORIGINAL dates from genesis records
+    let originalStartDate = null;
+    let originalEndDate = null;
+    let currentStartDate = c.start_datetime ? new Date(c.start_datetime) : null;
+    let currentEndDate = c.end_datetime ? new Date(c.end_datetime) : null;
+    
+    if (originalStartHashObj && originalStartHashObj.created_at) {
+        originalStartDate = originalStartHashObj.created_at.toDate ? originalStartHashObj.created_at.toDate() : null;
+    }
+    if (originalEndHashObj && originalEndHashObj.created_at) {
+        originalEndDate = originalEndHashObj.created_at.toDate ? originalEndHashObj.created_at.toDate() : null;
+    }
+    
+    if (!originalStartDate || !originalEndDate) {
+        const allUpdatesForCampaign = allProofs.filter(p => p.campaign_id === pdfCampaignId && p.type === 'genesis');
+        if (allUpdatesForCampaign.length > 0) {
+            const oldestStart = allUpdatesForCampaign.find(p => p.hash_type === 'start');
+            const oldestEnd = allUpdatesForCampaign.find(p => p.hash_type === 'end');
+            if (oldestStart && oldestStart.created_at) originalStartDate = oldestStart.created_at.toDate();
+            if (oldestEnd && oldestEnd.created_at) originalEndDate = oldestEnd.created_at.toDate();
+        }
+    }
+    
+    if (!originalStartDate) originalStartDate = currentStartDate;
+    if (!originalEndDate) originalEndDate = currentEndDate;
+    
+    const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'N/A';
+    const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'N/A';
+    const currentStartStr = currentStartDate ? formatCompactDate(currentStartDate) : 'N/A';
+    const currentEndStr = currentEndDate ? formatCompactDate(currentEndDate) : 'N/A';
+    const datesChanged = (originalStartStr !== currentStartStr) || (originalEndStr !== currentEndStr);
+    const hasLatestUpdate = (latestStartHash !== genesisStartHash) || (latestEndHash !== genesisEndHash);
+    
+    let status = 'UPCOMING';
+    let statusColor = [255, 193, 7];
+    if (currentStartDate && currentEndDate) {
+        const nowDate = new Date();
+        if (nowDate >= currentStartDate && nowDate <= currentEndDate) {
+            status = 'ACTIVE';
+            statusColor = [40, 167, 69];
+        } else if (nowDate > currentEndDate) {
+            status = 'EXPIRED';
+            statusColor = [220, 53, 69];
+        }
+    }
+    
+    let yPos = 15;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    // Title
+    pdf.setFontSize(18);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Blockchain Verified Proof Report', 105, yPos, { align: 'center' });
+    yPos += 7;
+    
+    // Header with Generated and Generated by on same line
+    pdf.setFontSize(8);
+    pdf.setTextColor(127, 140, 141);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Generated: ${formatCompactDate(now)}`, 20, yPos);
+    pdf.text(`Generated by: ${(currentUser?.uid || 'Anonymous').substring(0,8)}...`, pageWidth - 20, yPos, { align: 'right' });
+    yPos += 5;
+    
+    // Campaign ID
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(20, yPos, 170, 5, 'F');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(52, 152, 219);
+    pdf.setFont('courier', 'bold');
+    const campaignIdLines = pdf.splitTextToSize(`Campaign ID: ${c.id}`, 160);
+    pdf.text(campaignIdLines, 105, yPos + 3, { align: 'center' });
+    yPos += 7;
+    
+    // Campaign Details box
+    pdf.setFontSize(11);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Campaign Details', 20, yPos);
+    yPos += 5;
+    
+    pdf.setFillColor(248, 249, 250);
+    const detailsBoxHeight = datesChanged ? 50 : 40;
+    pdf.rect(20, yPos, 170, detailsBoxHeight, 'F');
+    
+    pdf.setFontSize(9);
+    pdf.setTextColor(52, 73, 94);
+    pdf.setFont('helvetica', 'normal');
+    
+    let rowY = yPos + 5;
+    const leftX = 25;
+    const midX = 105;
+    
+    // Row 1
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Station:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.station || 'N/A', 60, rowY);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Customer:', midX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(c.name || 'Unknown', midX + 18, rowY);
+    rowY += 5;
+    
+    // Row 2
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Product:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    const productText = c.product_name || 'Not specified';
+    const productLines = pdf.splitTextToSize(productText, 35);
+    pdf.text(productLines, 60, rowY);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Plan:', midX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${planName}`, midX + 18, rowY);
+    rowY += 5;
+    
+    // Row 3
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Status:', leftX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+    pdf.text(status, 60, rowY);
+    pdf.setTextColor(52, 73, 94);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Created:', midX, rowY);
+    pdf.setFont('helvetica', 'normal');
+    const createdDate = c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()).substring(0, 20) : 'Unknown';
+    pdf.text(createdDate, midX + 18, rowY);
+    rowY += 5;
+    
+    // Separator line
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(25, rowY, pageWidth - 25, rowY);
+    rowY += 3;
+    
+    // Dates section
+    if (datesChanged) {
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 100, 100);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Original Start:', leftX, rowY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(originalStartStr, 55, rowY);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Original End:', midX, rowY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(originalEndStr, midX + 22, rowY);
+        rowY += 4;
+        pdf.setTextColor(52, 152, 219);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Current Start:', leftX, rowY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(currentStartStr, 55, rowY);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Current End:', midX, rowY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(currentEndStr, midX + 22, rowY);
+    } else {
+        pdf.setFontSize(8);
+        pdf.setTextColor(52, 73, 94);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Start Date:', leftX, rowY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(currentStartStr, 50, rowY);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('End Date:', midX, rowY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(currentEndStr, midX + 18, rowY);
+    }
+    
+    yPos += detailsBoxHeight + 5;
+    
+    // Images
+    if (images.length > 0) {
+        if (yPos > pageHeight - 40) {
+            pdf.addPage();
+            yPos = 20;
+        }
+        pdf.setFontSize(11);
+        pdf.setTextColor(44, 62, 80);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Campaign Image', 105, yPos, { align: 'center' });
+        yPos += 5;
+        
+        const imgSize = 45;
+        const imagesPerRow = Math.min(2, images.length);
+        const totalWidth = imagesPerRow * imgSize + (imagesPerRow - 1) * 15;
+        const startX = (pageWidth - totalWidth) / 2;
+        
+        for (let i = 0; i < Math.min(images.length, 4); i++) {
+            try {
+                const img = images[i];
+                let imageData = null;
+                if (typeof img === 'string') {
+                    imageData = img;
+                } else if (img && img.data) {
+                    imageData = img.data;
+                }
+                if (imageData && imageData.indexOf('data:image') === 0) {
+                    const base64Data = imageData.split(',')[1];
+                    if (base64Data) {
+                        const col = i % imagesPerRow;
+                        const row = Math.floor(i / imagesPerRow);
+                        const x = startX + (col * (imgSize + 15));
+                        const y = yPos + (row * (imgSize + 10));
+                        pdf.setDrawColor(0, 0, 0);
+                        pdf.setLineWidth(0.3);
+                        pdf.rect(x, y, imgSize, imgSize);
+                        pdf.addImage(base64Data, 'JPEG', x, y, imgSize, imgSize);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to add image to PDF:', e);
+            }
+        }
+        const rowsUsed = Math.ceil(Math.min(images.length, 4) / imagesPerRow);
+        yPos += rowsUsed * (imgSize + 10) + 5;
+    }
+    
+    // Update History
+    if (updates && updates.length > 0) {
+        if (yPos > pageHeight - 45) {
+            pdf.addPage();
+            yPos = 20;
+        }
+        pdf.setFontSize(11);
+        pdf.setTextColor(243, 156, 18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Update History (${updates.length} entries)`, 20, yPos);
+        yPos += 4;
+        
+        pdf.setFillColor(243, 156, 18);
+        pdf.rect(20, yPos, 170, 4, 'F');
+        pdf.setFontSize(5);
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Date/Time', 22, yPos + 2.5);
+        pdf.text('Field', 48, yPos + 2.5);
+        pdf.text('Old Value', 75, yPos + 2.5);
+        pdf.text('New Value', 115, yPos + 2.5);
+        pdf.text('By', 160, yPos + 2.5);
+        yPos += 5;
+        
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(4.5);
+        
+        const allUpdates = [...updates].reverse();
+        for (let u = 0; u < Math.min(allUpdates.length, 12); u++) {
+            const update = allUpdates[u];
+            let updateDate = '';
+            if (update.timestamp) {
+                const d = new Date(update.timestamp);
+                updateDate = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+            } else {
+                updateDate = 'Unknown';
+            }
+            const updatedBy = (update.updated_by || 'Unknown').substring(0, 5);
+            let fieldName = '', oldVal = '', newVal = '';
+            
+            if (update.changes && typeof update.changes === 'string') {
+                const changeStr = update.changes;
+                const arrowIndex = changeStr.indexOf('→');
+                if (arrowIndex > -1) {
+                    const beforeArrow = changeStr.substring(0, arrowIndex);
+                    const afterArrow = changeStr.substring(arrowIndex + 1);
+                    const colonIndex = beforeArrow.indexOf(':');
+                    if (colonIndex > -1) {
+                        fieldName = beforeArrow.substring(0, colonIndex).trim().substring(0, 12);
+                        oldVal = beforeArrow.substring(colonIndex + 1).trim().substring(0, 25);
+                        newVal = afterArrow.trim().substring(0, 25);
+                    } else {
+                        fieldName = 'Changes';
+                        oldVal = beforeArrow.trim().substring(0, 20);
+                        newVal = afterArrow.trim().substring(0, 20);
+                    }
+                } else {
+                    fieldName = 'Changes';
+                    newVal = changeStr.substring(0, 40);
+                    oldVal = '-';
+                }
+            } else {
+                fieldName = 'Changes';
+                oldVal = '-';
+                newVal = (update.changes || 'Campaign updated').substring(0, 40);
+            }
+            
+            if (u % 2 === 0) {
+                pdf.setFillColor(245, 245, 245);
+                pdf.rect(20, yPos - 1, 170, 4.5, 'F');
+            }
+            
+            pdf.text(updateDate, 22, yPos + 2.5);
+            pdf.text(fieldName.substring(0, 10), 48, yPos + 2.5);
+            
+            const oldLines = pdf.splitTextToSize(oldVal, 32);
+            pdf.text(oldLines, 75, yPos + 2.5);
+            const newLines = pdf.splitTextToSize(newVal, 32);
+            pdf.text(newLines, 115, yPos + 2.5);
+            pdf.text(updatedBy, 160, yPos + 2.5);
+            
+            yPos += 5;
+            if (yPos > pageHeight - 20) {
+                pdf.addPage();
+                yPos = 20;
+            }
+        }
+        yPos += 3;
+    }
+    
+    // Hashes Section
+    if (yPos > pageHeight - 55) {
+        pdf.addPage();
+        yPos = 20;
+    }
+    
+    pdf.setFontSize(11);
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Cryptographic Hashes (SHA-256)', 20, yPos);
+    yPos += 5;
+    
+    // Genesis Hashes box
+    pdf.setFillColor(232, 245, 233);
+    pdf.rect(20, yPos, 170, 22, 'F');
+    pdf.setFontSize(7);
+    pdf.setTextColor(39, 174, 96);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('🔷 GENESIS HASHES (Original - Immutable Proof)', 25, yPos + 3.5);
+    
+    pdf.setFontSize(6);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(39, 174, 96);
+    pdf.text('START:', 25, yPos + 8);
+    pdf.setFont('courier', 'normal');
+    pdf.setTextColor(0, 0, 0);
+    const startLines1 = pdf.splitTextToSize(genesisStartHash, 140);
+    pdf.text(startLines1, 45, yPos + 8);
+    
+    pdf.setFontSize(6);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(39, 174, 96);
+    pdf.text('END:', 25, yPos + 13);
+    pdf.setFont('courier', 'normal');
+    pdf.setTextColor(0, 0, 0);
+    const endLines1 = pdf.splitTextToSize(genesisEndHash, 140);
+    pdf.text(endLines1, 45, yPos + 13);
+    yPos += 24;
+    
+    // Latest Update Hashes (if different)
+    if (hasLatestUpdate) {
+        if (yPos > pageHeight - 30) {
+            pdf.addPage();
+            yPos = 20;
+        }
+        pdf.setFillColor(255, 243, 224);
+        pdf.rect(20, yPos, 170, 22, 'F');
+        pdf.setFontSize(7);
+        pdf.setTextColor(243, 156, 18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('🟡 LATEST UPDATE HASHES (Current Active Proof)', 25, yPos + 3.5);
+        
+        pdf.setFontSize(6);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(230, 126, 34);
+        pdf.text('START:', 25, yPos + 8);
+        pdf.setFont('courier', 'normal');
+        pdf.setTextColor(0, 0, 0);
+        const startLines2 = pdf.splitTextToSize(latestStartHash, 140);
+        pdf.text(startLines2, 45, yPos + 8);
+        
+        pdf.setFontSize(6);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(230, 126, 34);
+        pdf.text('END:', 25, yPos + 13);
+        pdf.setFont('courier', 'normal');
+        pdf.setTextColor(0, 0, 0);
+        const endLines2 = pdf.splitTextToSize(latestEndHash, 140);
+        pdf.text(endLines2, 45, yPos + 13);
+        yPos += 26;
+    } else {
+        yPos += 2;
+    }
+    
+    // Footer
+    const footerY = pageHeight - 12;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(20, footerY - 4, pageWidth - 20, footerY - 4);
+    pdf.setFontSize(6);
+    pdf.setTextColor(149, 165, 166);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Bondos4Ever © 2026_Local Digital Ad & Coupon Marketing System', pageWidth / 2, footerY, { align: 'center' });
+    
+    // Save file
+    const safeName = (c.name || 'campaign').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+    const prodname = c.product_name || 'product';
+    const campaignIdShort = c.id ? c.id.substring(0, 8) : 'unknown';
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+    const fileName = `${safeName}_${prodname}__${dateStr}_${campaignIdShort}_proof_report.pdf`;
+    pdf.save(fileName);
+    closePDFPreview();
 };
     
     window.exportAdToExcel = function() {
