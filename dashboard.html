@@ -1904,13 +1904,8 @@ function validateDailyHours() {
 function validateEditDailyHours() {
     const startDateTime = document.getElementById('editStartDateTime').value;
     const endDateTime = document.getElementById('editEndDateTime').value;
-    
-    const campaignId = document.getElementById('editCampaignId').value;
-    const campaign = allAdCampaigns.find(x => x.id === campaignId);
-    
-    if (!campaign) return true;
-    
-    const selectedPlan = campaign.pricing_plan || 'light';
+    const planSelect = document.getElementById('editPricingPlan');
+    const selectedPlan = planSelect ? planSelect.value : 'light';
     
     if (!startDateTime || !endDateTime) return true;
     
@@ -1920,23 +1915,25 @@ function validateEditDailyHours() {
     let requiredHours = 0;
     let planName = '';
     
-    if (selectedPlan === 'light' || selectedPlan === 'Light') {
+    if (selectedPlan === 'light') {
         requiredHours = 4;
         planName = 'Light';
-    } else if (selectedPlan === 'standard' || selectedPlan === 'Standard') {
+    } else if (selectedPlan === 'standard') {
         requiredHours = 6;
         planName = 'Standard';
-    } else if (selectedPlan === 'professional' || selectedPlan === 'Professional') {
+    } else if (selectedPlan === 'professional') {
         requiredHours = 8;
         planName = 'Professional';
     } else {
         return true;
     }
     
+    // Calculate total duration in milliseconds
     const totalDurationMs = endDate - startDate;
     const totalDurationHours = totalDurationMs / (1000 * 60 * 60);
     const requiredMs = requiredHours * 60 * 60 * 1000;
     
+    // Check if total duration exactly matches required hours
     if (totalDurationMs !== requiredMs) {
         const diffMinutes = Math.round((totalDurationMs - requiredMs) / (1000 * 60));
         const sign = diffMinutes > 0 ? '+' : '';
@@ -2004,6 +2001,11 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async fu
         a.style.display = 'block';
         setTimeout(() => a.style.display = 'none', 3000);
         document.getElementById('editEndDateTime').focus();
+        return;
+    }
+    
+    // Add plan hours validation
+    if (!validateEditDailyHours()) {
         return;
     }
     
