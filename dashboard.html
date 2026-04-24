@@ -2409,7 +2409,7 @@ if (oldStart.getTime() !== newStart2.getTime()) {
         pdfCampaignId = null; 
     };
     
-    window.downloadPDF = function() {
+window.downloadPDF = function() {
         const c = allAdCampaigns.find(x => x.id === pdfCampaignId);
         if (!c) return;
         const { jsPDF } = window.jspdf;
@@ -2432,6 +2432,8 @@ if (oldStart.getTime() !== newStart2.getTime()) {
         let firstEnd = c.end_datetime ? new Date(c.end_datetime) : null;
         let lastStart = c.start_datetime ? new Date(c.start_datetime) : null;
         let lastEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+        let firstPlan = c.pricing_plan || 'Light';
+        let lastPlan = c.pricing_plan || 'Light';
         let lastStartStr = lastStart ? formatCompactDate(lastStart) : 'N/A';
         let lastEndStr = lastEnd ? formatCompactDate(lastEnd) : 'N/A';
         if (updates && updates.length > 0) {
@@ -2448,12 +2450,19 @@ if (oldStart.getTime() !== newStart2.getTime()) {
                         const oldEndDate = new Date(endOldMatch[1]);
                         if (oldEndDate < firstEnd) firstEnd = oldEndDate;
                     }
+                    // Track pricing plan changes
+                    const planOldMatch = changeStr.match(/Pricing Plan: "([^"]+)" → "([^"]+)"/);
+                    if (planOldMatch && firstPlan) {
+                        const oldPlan = planOldMatch[1];
+                        if (oldPlan !== firstPlan) firstPlan = oldPlan;
+                    }
                 }
             }
         }
         if (updates.length === 0) {
             firstStart = c.start_datetime ? new Date(c.start_datetime) : null;
             firstEnd = c.end_datetime ? new Date(c.end_datetime) : null;
+            firstPlan = c.pricing_plan || 'Light';
         }
         const firstStartStr = firstStart ? formatCompactDate(firstStart) : 'N/A';
         const firstEndStr = firstEnd ? formatCompactDate(firstEnd) : 'N/A';
@@ -2498,7 +2507,7 @@ if (oldStart.getTime() !== newStart2.getTime()) {
             }
         }
         pdf.setFillColor(248, 249, 250);
-        pdf.rect(20, yPos, 170, 76, 'F');
+        pdf.rect(20, yPos, 170, 88, 'F');
         pdf.setFontSize(9);
         pdf.setTextColor(52, 73, 94);
         const leftX = 25;
@@ -2520,12 +2529,19 @@ if (oldStart.getTime() !== newStart2.getTime()) {
         pdf.text(c.product_name || 'Not specified', rightX, rowY);
         rowY += 6;
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Monthly Pricing Plan:', leftX, rowY);
+        pdf.text('Original Plan:', leftX, rowY);
         pdf.setFont('helvetica', 'normal');
-        const planText = `${planName} (${planDescription})`;
-        const planLines = pdf.splitTextToSize(planText, 90);
-        pdf.text(planLines, rightX, rowY);
-        rowY += (planLines.length * 4);
+        let firstPlanDesc = '';
+        if (firstPlan === 'Light') firstPlanDesc = 'Light Plan - 32 hrs/month / $35';
+        else if (firstPlan === 'Standard') firstPlanDesc = 'Standard Plan - 96 hrs/month / $48';
+        else if (firstPlan === 'Professional') firstPlanDesc = 'Professional Plan - 192 hrs/month / $54';
+        pdf.text(firstPlanDesc, rightX, rowY);
+        rowY += 6;
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Current Plan:', leftX, rowY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`${planName} (${planDescription})`, rightX, rowY);
+        rowY += 6;
         pdf.setFont('helvetica', 'bold');
         pdf.text('Status:', leftX, rowY);
         pdf.setFont('helvetica', 'normal');
@@ -2566,7 +2582,7 @@ if (oldStart.getTime() !== newStart2.getTime()) {
         const createdBy = (c.created_by || 'Unknown').substring(0, 11);
         const createdDate = c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : (c.created_at || 'Unknown');
         pdf.text(`${createdBy}... at ${createdDate}`, rightX, rowY);
-        yPos += 82;
+        yPos += 94;
         if (images.length > 0) {
             pdf.setFontSize(12);
             pdf.setTextColor(44, 62, 80);
@@ -2663,6 +2679,21 @@ if (oldStart.getTime() !== newStart2.getTime()) {
                             const endNewTime = endMatch[2].match(/(\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?)/i);
                             oldVal = `Start: ${startOldDate ? startOldDate[0] : '?'} ${startOldTime ? startOldTime[0] : ''} | End: ${endOldDate ? endOldDate[0] : '?'} ${endOldTime ? endOldTime[0] : ''}`;
                             newVal = `Start: ${startNewDate ? startNewDate[0] : '?'} ${startNewTime ? startNewTime[0] : ''} | End: ${endNewDate ? endNewDate[0] : '?'} ${endNewTime ? endNewTime[0] : ''}`;
+                        }
+                    } else if (changeStr.includes('Pricing Plan')) {
+                        fieldName = 'Pricing Plan';
+                        const planMatch = changeStr.match(/Pricing Plan: "([^"]+)" → "([^"]+)"/);
+                        if (planMatch) {
+                            let oldPlanName = planMatch[1];
+                            let newPlanName = planMatch[2];
+                            if (oldPlanName === 'Light') oldVal = 'Light Plan - 32 hrs / $35';
+                            else if (oldPlanName === 'Standard') oldVal = 'Standard Plan - 96 hrs / $48';
+                            else if (oldPlanName === 'Professional') oldVal = 'Professional Plan - 192 hrs / $54';
+                            else oldVal = oldPlanName;
+                            if (newPlanName === 'Light') newVal = 'Light Plan - 32 hrs / $35';
+                            else if (newPlanName === 'Standard') newVal = 'Standard Plan - 96 hrs / $48';
+                            else if (newPlanName === 'Professional') newVal = 'Professional Plan - 192 hrs / $54';
+                            else newVal = newPlanName;
                         }
                     } else {
                         const arrowIndex = changeStr.indexOf('→');
