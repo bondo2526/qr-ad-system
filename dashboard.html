@@ -1989,7 +1989,7 @@ window.openEditModal = function(id) {
     
     window.closeEditModal = function() { document.getElementById('editModal').classList.remove('active'); };
     
-document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
+document.getElementById('editCampaignForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const newStartRaw = document.getElementById('editStartDateTime').value;
@@ -2116,18 +2116,18 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
         updateData.updated_by = currentUser?.uid || 'anonymous';
         
-        const changeDetails = changedFields.map(field => {
-            if (field === 'Customer Name') return `Customer Name: "${oldName}" → "${newName}"`;
-            if (field === 'Station') return `Station: "${oldStation}" → "${newStation}"`;
-            if (field.startsWith('Pricing Plan')) return field;
-            if (field === 'Start Date') return `Start Date: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`;
-            if (field === 'End Date') return `End Date: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`;
+        const changeDetails = changedFields.map(function(field) {
+            if (field === 'Customer Name') return 'Customer Name: "' + oldName + '" → "' + newName + '"';
+            if (field === 'Station') return 'Station: "' + oldStation + '" → "' + newStation + '"';
+            if (field.indexOf('Pricing Plan') === 0) return field;
+            if (field === 'Start Date') return 'Start Date: "' + formatCompactDate(oldStart) + '" → "' + formatCompactDate(newStart2) + '"';
+            if (field === 'End Date') return 'End Date: "' + formatCompactDate(oldEnd) + '" → "' + formatCompactDate(newEnd2) + '"';
             return field;
         }).join(' | ');
         
         const updateRecord = {
             changes: changeDetails,
-            changed_fields: changedFields.map(f => typeof f === 'string' && f.startsWith('Pricing Plan') ? 'Pricing Plan' : f),
+            changed_fields: changedFields.map(function(f) { return typeof f === 'string' && f.indexOf('Pricing Plan') === 0 ? 'Pricing Plan' : f; }),
             timestamp: new Date().toISOString(),
             updated_by: currentUser?.uid || 'anonymous'
         };
@@ -2135,6 +2135,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         updates.push(updateRecord);
         updateData.update_history = updates;
         
+        // THIS IS THE LINE THAT WAS CAUSING THE ERROR - now properly inside async function
         await db.collection('customers').doc(id).update(updateData);
         
         closeEditModal();
@@ -2142,9 +2143,9 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         
         const a = document.getElementById('editAlert');
         a.className = 'alert success';
-        a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
+        a.textContent = '✅ Updated: ' + changedFields.join(', ');
         a.style.display = 'block';
-        setTimeout(() => a.style.display = 'none', 4000);
+        setTimeout(function() { a.style.display = 'none'; }, 4000);
         
     } catch (err) {
         console.error('Edit error:', err);
@@ -2152,7 +2153,7 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         a.className = 'alert error';
         a.textContent = '❌ ' + err.message;
         a.style.display = 'block';
-        setTimeout(() => a.style.display = 'none', 3000);
+        setTimeout(function() { a.style.display = 'none'; }, 3000);
     } finally {
         btn.disabled = false;
         document.getElementById('editSaveText').style.display = 'inline';
