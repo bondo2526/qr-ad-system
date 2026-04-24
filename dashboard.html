@@ -2023,7 +2023,6 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const newStartRaw2 = document.getElementById('editStartDateTime').value;
         const newEndRaw2 = document.getElementById('editEndDateTime').value;
         
-        // Map plan values
         let newPlanName = 'Light', newPlanHours = 32, newPlanPrice = 35;
         if (newPlan === 'light') {
             newPlanName = 'Light';
@@ -2049,8 +2048,6 @@ document.getElementById('editCampaignForm')?.addEventListener('submit', async e 
         const oldStation = old.station || '';
         const oldPlan = (old.pricing_plan || 'Light').toLowerCase();
         const oldPlanName = old.pricing_plan || 'Light';
-        const oldPlanHours = old.plan_hours || 32;
-        const oldPlanPrice = old.plan_price || 35;
         const oldStart = new Date(old.start_datetime);
         const oldEnd = new Date(old.end_datetime);
         
