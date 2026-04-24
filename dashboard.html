@@ -2245,33 +2245,58 @@ if (needEndRegenerate) {
         
         updateData.hashes = hashUpdates;
         
-        // Update status based on new dates
-        const now = new Date();
-        let newStatus = 'upcoming';
-        const finalStart = new Date(updateData.start_datetime || old.start_datetime);
-        const finalEnd = new Date(updateData.end_datetime || old.end_datetime);
-        if (now >= finalStart && now <= finalEnd) newStatus = 'active';
-        if (now > finalEnd) newStatus = 'expired';
-        updateData.status = newStatus;
-        
-        updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
-        updateData.updated_by = currentUser?.uid || 'anonymous';
-        
-        // Create update history record
-        const changeDetails = changeDetailsList.join(' | ');
-        const updateRecord = {
-            changes: changeDetails,
-            changed_fields: changedFields,
-            hashes_regenerated: {
-                start: needStartRegenerate,
-                end: needEndRegenerate
-            },
-            timestamp: new Date().toISOString(),
-            updated_by: currentUser?.uid || 'anonymous'
-        };
-        
-        updates.push(updateRecord);
-        updateData.update_history = updates;
+// After detecting all changes, create SEPARATE update records for each field
+const now = new Date();
+let newStatus = 'upcoming';
+const finalStart = new Date(updateData.start_datetime || old.start_datetime);
+const finalEnd = new Date(updateData.end_datetime || old.end_datetime);
+if (now >= finalStart && now <= finalEnd) newStatus = 'active';
+if (now > finalEnd) newStatus = 'expired';
+updateData.status = newStatus;
+
+updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
+updateData.updated_by = currentUser?.uid || 'anonymous';
+
+// Create SEPARATE update records for each changed field
+for (let i = 0; i < changedFields.length; i++) {
+    const field = changedFields[i];
+    const changeDetail = changeDetailsList[i];
+    
+    // Determine what the actual field name is
+    let actualFieldName = field;
+    let oldValueDisplay = '';
+    let newValueDisplay = '';
+    
+    if (field === 'Customer Name') {
+        oldValueDisplay = oldName;
+        newValueDisplay = newName;
+    } else if (field === 'Station') {
+        oldValueDisplay = oldStation;
+        newValueDisplay = newStation;
+    } else if (field === 'Pricing Plan') {
+        oldValueDisplay = oldPlanName;
+        newValueDisplay = newPlanName;
+    } else if (field === 'Start Date') {
+        oldValueDisplay = formatCompactDate(oldStart);
+        newValueDisplay = formatCompactDate(newStart2);
+    } else if (field === 'End Date') {
+        oldValueDisplay = formatCompactDate(oldEnd);
+        newValueDisplay = formatCompactDate(newEnd2);
+    }
+    
+    const updateRecord = {
+        changes: changeDetail,
+        changed_field: actualFieldName,
+        old_value: oldValueDisplay,
+        new_value: newValueDisplay,
+        timestamp: new Date().toISOString(),
+        updated_by: currentUser?.uid || 'anonymous'
+    };
+    
+    updates.push(updateRecord);
+}
+
+updateData.update_history = updates;
         
         // Save to database
         await db.collection('customers').doc(id).update(updateData);
@@ -2427,43 +2452,59 @@ window.showPDFPreview = function(id) {
         </div>`;
     }
     
-    // Update History HTML - FULL VALUES, NO SHORTENING
-    let updateHistoryHTML = '';
-    if (updates && updates.length > 0) {
-        updateHistoryHTML = `<div style="background:#fff3e0;border-left:5px solid #f39c12;padding:12px;border-radius:8px;margin:15px 0;">
-            <h3 style="color:#e67e22;margin-bottom:10px;font-size:15px;text-align:center;">📝 Update History (${updates.length} entries)</h3>
-            <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:12px;">
-                    <thead>
-                        <tr style="background:#f39c12;color:white;">
-                            <th style="padding:10px;text-align:center;">Date/Time</th>
-                            <th style="padding:10px;text-align:center;">Field</th>
-                            <th style="padding:10px;text-align:center;">Old Value</th>
-                            <th style="padding:10px;text-align:center;">New Value</th>
-                            <th style="padding:10px;text-align:center;">By</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-        const allUpdates = [...updates].reverse();
-        for (let u = 0; u < allUpdates.length; u++) {
-            const update = allUpdates[u];
-            let updateDate = '';
-            if (update.timestamp) {
-                const d = new Date(update.timestamp);
-                updateDate = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+// Update History HTML - SEPARATE rows for each change
+let updateHistoryHTML = '';
+if (updates && updates.length > 0) {
+    updateHistoryHTML = `<div style="background:#fff3e0;border-left:5px solid #f39c12;padding:12px;border-radius:8px;margin:15px 0;">
+        <h3 style="color:#e67e22;margin-bottom:10px;font-size:15px;text-align:center;">📝 Update History (${updates.length} entries)</h3>
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                    <tr style="background:#f39c12;color:white;">
+                        <th style="padding:10px;text-align:center;">Date/Time</th>
+                        <th style="padding:10px;text-align:center;">Field Changed</th>
+                        <th style="padding:10px;text-align:center;">Old Value</th>
+                        <th style="padding:10px;text-align:center;">New Value</th>
+                        <th style="padding:10px;text-align:center;">Updated By</th>
+                    <tr>
+                </thead>
+                <tbody>`;
+    
+    const allUpdates = [...updates].reverse();
+    for (let u = 0; u < allUpdates.length; u++) {
+        const update = allUpdates[u];
+        let updateDate = '';
+        if (update.timestamp) {
+            const d = new Date(update.timestamp);
+            updateDate = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+        } else {
+            updateDate = 'Unknown';
+        }
+        
+        let fieldName = '';
+        let oldVal = '';
+        let newVal = '';
+        let updatedBy = (update.updated_by || 'Unknown').substring(0, 12);
+        
+        // NEW STRUCTURE: separate fields
+        if (update.changed_field) {
+            fieldName = update.changed_field;
+            oldVal = update.old_value || '-';
+            newVal = update.new_value || '-';
+        } 
+        // OLD STRUCTURE: combined changes (backward compatible)
+        else if (update.changes) {
+            if (update.changes.includes('|')) {
+                // Combined record like "Start Date: old → new | End Date: old → new"
+                fieldName = 'Multiple Changes';
+                const parts = update.changes.split('|');
+                oldVal = parts[0] || '-';
+                newVal = parts[1] || '-';
             } else {
-                updateDate = 'Unknown';
-            }
-            const updatedBy = update.updated_by || 'Unknown';
-            let fieldName = '';
-            let oldVal = '';
-            let newVal = '';
-            if (update.changes && typeof update.changes === 'string') {
-                const changeStr = update.changes;
-                const arrowIndex = changeStr.indexOf('→');
+                const arrowIndex = update.changes.indexOf('→');
                 if (arrowIndex > -1) {
-                    const beforeArrow = changeStr.substring(0, arrowIndex);
-                    const afterArrow = changeStr.substring(arrowIndex + 1);
+                    const beforeArrow = update.changes.substring(0, arrowIndex);
+                    const afterArrow = update.changes.substring(arrowIndex + 1);
                     const colonIndex = beforeArrow.indexOf(':');
                     if (colonIndex > -1) {
                         fieldName = beforeArrow.substring(0, colonIndex).trim();
@@ -2476,26 +2517,28 @@ window.showPDFPreview = function(id) {
                     }
                 } else {
                     fieldName = 'Changes';
-                    newVal = changeStr;
+                    newVal = update.changes;
                     oldVal = '-';
                 }
-            } else {
-                fieldName = 'Changes';
-                oldVal = '-';
-                newVal = update.changes || 'Campaign updated';
             }
-            const bgColor = u % 2 === 0 ? '#f9f9f9' : 'white';
-            updateHistoryHTML += `
-                <tr style="border-bottom:1px solid #e9ecef;background:${bgColor};">
-                    <td style="padding:10px;text-align:center;vertical-align:top;">${updateDate}</td>
-                    <td style="padding:10px;text-align:center;vertical-align:top;font-weight:bold;">${fieldName}</td>
-                    <td style="padding:10px;vertical-align:top;">${oldVal}</td>
-                    <td style="padding:10px;vertical-align:top;">${newVal}</td>
-                    <td style="padding:10px;text-align:center;vertical-align:top;">${updatedBy.substring(0,8)}...</td>
-                </tr>`;
+        } else {
+            fieldName = 'Changes';
+            oldVal = '-';
+            newVal = update.changes || 'Campaign updated';
         }
-        updateHistoryHTML += `</tbody></table></div></div>`;
+        
+        const bgColor = u % 2 === 0 ? '#f9f9f9' : 'white';
+        updateHistoryHTML += `
+            <tr style="border-bottom:1px solid #e9ecef;background:${bgColor};">
+                <td style="padding:10px;text-align:center;vertical-align:top;">${updateDate}</td>
+                <td style="padding:10px;text-align:center;vertical-align:top;font-weight:bold;">${fieldName}</td>
+                <td style="padding:10px;vertical-align:top;">${oldVal}</td>
+                <td style="padding:10px;vertical-align:top;">${newVal}</td>
+                <td style="padding:10px;text-align:center;vertical-align:top;">${updatedBy}...</td>
+            </tr>`;
     }
+    updateHistoryHTML += `</tbody>}</div></div>`;
+}
     
     // Hashes section
     let hashesHTML = `<div style="background:#f8f9fa;border-radius:10px;padding:15px;margin:15px 0;">
@@ -2841,119 +2884,109 @@ window.downloadPDF = function() {
         yPos += imgSize + 10;
     }
     
-    // Update History
-    if (updates && updates.length > 0) {
-        if (yPos > pageHeight - 50) {
+// Update History - SEPARATE rows for each change
+if (updates && updates.length > 0) {
+    if (yPos > pageHeight - 50) {
+        pdf.addPage();
+        yPos = 20;
+    }
+    pdf.setFontSize(12);
+    pdf.setTextColor(243, 156, 18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Update History (${updates.length} entries)`, 20, yPos);
+    yPos += 5;
+    
+    pdf.setFillColor(243, 156, 18);
+    pdf.rect(20, yPos, 170, 5, 'F');
+    pdf.setFontSize(7);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Date/Time', 22, yPos + 3.5);
+    pdf.text('Field', 50, yPos + 3.5);
+    pdf.text('Old Value', 80, yPos + 3.5);
+    pdf.text('New Value', 120, yPos + 3.5);
+    pdf.text('By', 160, yPos + 3.5);
+    yPos += 6;
+    
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6);
+    
+    const allUpdates = [...updates].reverse();
+    for (let u = 0; u < allUpdates.length; u++) {
+        const update = allUpdates[u];
+        let updateDate = '';
+        if (update.timestamp) {
+            const d = new Date(update.timestamp);
+            updateDate = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+        } else {
+            updateDate = 'Unknown';
+        }
+        
+        let fieldName = update.changed_field || 'Changes';
+        let oldVal = update.old_value || '-';
+        let newVal = update.new_value || '-';
+        const updatedBy = update.updated_by || 'Unknown';
+        
+        // If old structure (combined changes)
+        if (!update.changed_field && update.changes && update.changes.includes('|')) {
+            fieldName = 'Multiple Changes';
+            oldVal = update.changes.split('|')[0] || '-';
+            newVal = update.changes.split('|')[1] || '-';
+        } else if (!update.changed_field && update.changes) {
+            fieldName = 'Changes';
+            const parts = update.changes.split('→');
+            if (parts.length === 2) {
+                oldVal = parts[0].trim();
+                newVal = parts[1].trim();
+            } else {
+                newVal = update.changes;
+            }
+        }
+        
+        const oldLines = pdf.splitTextToSize(oldVal, 32);
+        const newLines = pdf.splitTextToSize(newVal, 32);
+        const maxLines = Math.max(1, oldLines.length, newLines.length);
+        const rowHeight = maxLines * 3.5 + 2;
+        
+        if (yPos + rowHeight > pageHeight - 20) {
             pdf.addPage();
             yPos = 20;
+            pdf.setFontSize(12);
+            pdf.setTextColor(243, 156, 18);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`Update History (${allUpdates.length} entries) - Continued`, 20, yPos);
+            yPos += 5;
+            pdf.setFillColor(243, 156, 18);
+            pdf.rect(20, yPos, 170, 5, 'F');
+            pdf.setFontSize(7);
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Date/Time', 22, yPos + 3.5);
+            pdf.text('Field', 50, yPos + 3.5);
+            pdf.text('Old Value', 80, yPos + 3.5);
+            pdf.text('New Value', 120, yPos + 3.5);
+            pdf.text('By', 160, yPos + 3.5);
+            yPos += 6;
+            pdf.setTextColor(0, 0, 0);
+            pdf.setFontSize(6);
         }
-        pdf.setFontSize(12);
-        pdf.setTextColor(243, 156, 18);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`Update History (${updates.length} entries)`, 20, yPos);
-        yPos += 5;
         
-        pdf.setFillColor(243, 156, 18);
-        pdf.rect(20, yPos, 170, 5, 'F');
-        pdf.setFontSize(7);
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Date/Time', 22, yPos + 3.5);
-        pdf.text('Field', 50, yPos + 3.5);
-        pdf.text('Old Value', 80, yPos + 3.5);
-        pdf.text('New Value', 120, yPos + 3.5);
-        pdf.text('By', 160, yPos + 3.5);
-        yPos += 6;
-        
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(6);
-        
-        const allUpdates = [...updates].reverse();
-        for (let u = 0; u < allUpdates.length; u++) {
-            const update = allUpdates[u];
-            let updateDate = '';
-            if (update.timestamp) {
-                const d = new Date(update.timestamp);
-                updateDate = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
-            } else {
-                updateDate = 'Unknown';
-            }
-            const updatedBy = update.updated_by || 'Unknown';
-            let fieldName = '';
-            let oldVal = '';
-            let newVal = '';
-            
-            if (update.changes && typeof update.changes === 'string') {
-                const changeStr = update.changes;
-                const arrowIndex = changeStr.indexOf('→');
-                if (arrowIndex > -1) {
-                    const beforeArrow = changeStr.substring(0, arrowIndex);
-                    const afterArrow = changeStr.substring(arrowIndex + 1);
-                    const colonIndex = beforeArrow.indexOf(':');
-                    if (colonIndex > -1) {
-                        fieldName = beforeArrow.substring(0, colonIndex).trim();
-                        oldVal = beforeArrow.substring(colonIndex + 1).trim();
-                        newVal = afterArrow.trim();
-                    } else {
-                        fieldName = 'Changes';
-                        oldVal = beforeArrow.trim();
-                        newVal = afterArrow.trim();
-                    }
-                } else {
-                    fieldName = 'Changes';
-                    newVal = changeStr;
-                    oldVal = '-';
-                }
-            } else {
-                fieldName = 'Changes';
-                oldVal = '-';
-                newVal = update.changes || 'Campaign updated';
-            }
-            
-            const oldLines = pdf.splitTextToSize(oldVal, 32);
-            const newLines = pdf.splitTextToSize(newVal, 32);
-            const maxLines = Math.max(1, oldLines.length, newLines.length);
-            const rowHeight = maxLines * 3.5 + 2;
-            
-            if (yPos + rowHeight > pageHeight - 20) {
-                pdf.addPage();
-                yPos = 20;
-                pdf.setFontSize(12);
-                pdf.setTextColor(243, 156, 18);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text(`Update History (${allUpdates.length} entries) - Continued`, 20, yPos);
-                yPos += 5;
-                pdf.setFillColor(243, 156, 18);
-                pdf.rect(20, yPos, 170, 5, 'F');
-                pdf.setFontSize(7);
-                pdf.setTextColor(255, 255, 255);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text('Date/Time', 22, yPos + 3.5);
-                pdf.text('Field', 50, yPos + 3.5);
-                pdf.text('Old Value', 80, yPos + 3.5);
-                pdf.text('New Value', 120, yPos + 3.5);
-                pdf.text('By', 160, yPos + 3.5);
-                yPos += 6;
-                pdf.setTextColor(0, 0, 0);
-                pdf.setFontSize(6);
-            }
-            
-            if (u % 2 === 0) {
-                pdf.setFillColor(245, 245, 245);
-                pdf.rect(20, yPos - 1, 170, rowHeight, 'F');
-            }
-            
-            pdf.text(updateDate, 22, yPos + 2);
-            pdf.text(fieldName.substring(0, 18), 50, yPos + 2);
-            pdf.text(oldLines, 80, yPos + 2);
-            pdf.text(newLines, 120, yPos + 2);
-            pdf.text(updatedBy.substring(0, 12), 160, yPos + 2);
-            
-            yPos += rowHeight + 1;
+        if (u % 2 === 0) {
+            pdf.setFillColor(245, 245, 245);
+            pdf.rect(20, yPos - 1, 170, rowHeight, 'F');
         }
-        yPos += 5;
+        
+        pdf.text(updateDate, 22, yPos + 2);
+        pdf.text(fieldName.substring(0, 18), 50, yPos + 2);
+        pdf.text(oldLines, 80, yPos + 2);
+        pdf.text(newLines, 120, yPos + 2);
+        pdf.text(updatedBy.substring(0, 12), 160, yPos + 2);
+        
+        yPos += rowHeight + 1;
     }
+    yPos += 5;
+}
     
     // Hashes Section
     if (yPos > pageHeight - 65) {
