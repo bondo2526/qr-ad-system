@@ -763,40 +763,51 @@
         </div>
     </div>
 
-    <div id="editModal" class="edit-modal">
-        <div class="edit-modal-content">
-            <div class="edit-modal-header">
-                <span class="edit-modal-title">✏️ Edit Campaign</span>
-                <span class="edit-modal-close" onclick="closeEditModal()">&times;</span>
-            </div>
-            <div id="editAlert" class="alert" style="margin-bottom:18px;"></div>
-            <form id="editCampaignForm">
-                <input type="hidden" id="editCampaignId">
-                <div class="form-group" style="margin-bottom:18px;">
-                    <label>Station Name</label>
-                    <select id="editStationName" required>
-                        <option>Station 1</option><option>Station 2</option>
-                        <option>Station 3</option><option>Station 4</option><option>Station 5</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom:18px;">
-                    <label>Customer Name</label>
-                    <input type="text" id="editCustomerName" required>
-                </div>
-                <div class="datetime-row" style="margin-bottom:18px;">
-                    <div><label>Start Date &amp; Time</label><input type="datetime-local" id="editStartDateTime" required></div>
-                    <div><label>End Date &amp; Time</label><input type="datetime-local" id="editEndDateTime" required></div>
-                </div>
-                <div style="display:flex;gap:10px;margin-top:24px;">
-                    <button type="submit" class="btn-save" style="flex:1;padding:13px;border-radius:10px;font-size:15px;" id="editSaveBtn">
-                        <span id="editSaveText">Save Changes</span>
-                        <span id="editSaveLoading" class="loading" style="display:none;"></span>
-                    </button>
-                    <button type="button" class="btn-cancel" style="flex:1;padding:13px;border-radius:10px;font-size:15px;" onclick="closeEditModal()">Cancel</button>
-                </div>
-            </form>
+<div id="editModal" class="edit-modal">
+    <div class="edit-modal-content">
+        <div class="edit-modal-header">
+            <span class="edit-modal-title">✏️ Edit Campaign</span>
+            <span class="edit-modal-close" onclick="closeEditModal()">&times;</span>
         </div>
+        <div id="editAlert" class="alert" style="margin-bottom:18px;"></div>
+        <form id="editCampaignForm">
+            <input type="hidden" id="editCampaignId">
+            <div class="form-group" style="margin-bottom:18px;">
+                <label>Station Name</label>
+                <select id="editStationName" required>
+                    <option>Station 1</option><option>Station 2</option>
+                    <option>Station 3</option><option>Station 4</option><option>Station 5</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:18px;">
+                <label>📋 Pricing Plan</label>
+                <select id="editPricingPlan" required onchange="updateEditPlanDetails()">
+                    <option value="light">Light Plan - $35 (32 hours/month)</option>
+                    <option value="standard">Standard Plan - $48 (96 hours/month)</option>
+                    <option value="professional">Professional Plan - $54 (192 hours/month)</option>
+                </select>
+                <div id="editPlanDetails" style="margin-top: 8px; padding: 8px; background: #1a1e24; border-radius: 6px; font-size: 12px; display: none;">
+                    <span id="editPlanHours"></span> | <span id="editPlanPrice"></span>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:18px;">
+                <label>Customer Name</label>
+                <input type="text" id="editCustomerName" required>
+            </div>
+            <div class="datetime-row" style="margin-bottom:18px;">
+                <div><label>Start Date &amp; Time</label><input type="datetime-local" id="editStartDateTime" required></div>
+                <div><label>End Date &amp; Time</label><input type="datetime-local" id="editEndDateTime" required></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:24px;">
+                <button type="submit" class="btn-save" style="flex:1;padding:13px;border-radius:10px;font-size:15px;" id="editSaveBtn">
+                    <span id="editSaveText">Save Changes</span>
+                    <span id="editSaveLoading" class="loading" style="display:none;"></span>
+                </button>
+                <button type="button" class="btn-cancel" style="flex:1;padding:13px;border-radius:10px;font-size:15px;" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </form>
     </div>
+</div>
 
     <div id="imageModal" class="modal" onclick="closeModal()">
         <span class="modal-close">&times;</span>
@@ -1140,130 +1151,122 @@ function updateStationDropdowns() {
         applyAdFilters();
     }
 
-    function buildAdCampaignHTML(c, adNumber) {
-        try {
-            const status = getAdStatus(c);
-            var html = '<div class="campaign-item ' + status + '" data-ad-number="AD #' + adNumber + '">';
-            const start = new Date(c.start_datetime);
-            const end = new Date(c.end_datetime);
-            const images = c.images || [];
-            const updates = c.update_history || c.updates || [];
-            const hashes = c.hashes || {};
-            
-            let imgsHTML = '';
-            if (images && images.length > 0) {
-                imgsHTML = images.slice(0, 5).map(function(img, idx) {
-                }).join('');
-            } else {
-                imgsHTML = '<div style="color:#a0a0a0;font-size:12px;padding:10px 0;">📷 No images uploaded</div>';
+function buildAdCampaignHTML(c, adNumber) {
+    try {
+        const status = getAdStatus(c);
+        var html = '<div class="campaign-item ' + status + '">';
+        const start = new Date(c.start_datetime);
+        const end = new Date(c.end_datetime);
+        const images = c.images || [];
+        const updates = c.update_history || c.updates || [];
+        const hashes = c.hashes || {};
+        
+        let imgsHTML = '';
+        if (images && images.length > 0) {
+            imgsHTML = '<div class="campaign-images" style="margin: 8px 0;">';
+            images.slice(0, 3).forEach(function(img, idx) {
+                const imgData = img.data || img;
+                imgsHTML += `<img src="${imgData}" class="campaign-thumb" style="width:45px;height:45px;border-radius:6px;cursor:pointer;" onclick="showImage('${imgData.replace(/'/g, "\\'")}')">`;
+            });
+            imgsHTML += '</div>';
+        }
+        
+        let totalOriginalSize = 0;
+        let totalCompressedSize = 0;
+        for (var i = 0; i < images.length; i++) {
+            var img = images[i];
+            if (img) {
+                totalOriginalSize += img.originalSize || 0;
+                totalCompressedSize += img.compressedSize || 0;
             }
-            
-            let totalOriginalSize = 0;
-            let totalCompressedSize = 0;
-            for (var i = 0; i < images.length; i++) {
-                var img = images[i];
-                if (img) {
-                    totalOriginalSize += img.originalSize || 0;
-                    totalCompressedSize += img.compressedSize || 0;
-                }
-            }
-            var savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
-            
-            html += '<div class="campaign-header-row">';
-            html += '<div style="display:flex;flex-direction:column;gap:4px;">';
-            html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">';
-            html += '<span style="background: linear-gradient(135deg, #4a9eff, #6f42c1); color: white; font-weight: bold; font-size: 14px; padding: 4px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">AD #' + adNumber + '</span>';
-            html += '<span class="campaign-name" style="font-size:24px;">' + (c.name || 'Unknown') + '</span>';
-            html += '</div>';
-            html += '<span style="font-size:20px;color:#4a9eff;">📦 Product: ' + (c.product_name || 'Not specified') + '</span>';
-            html += '<div style="margin-top: 5px;">';
-            html += '<span style="font-size:14px;color:#28a745;">📋 Plan: ' + (c.pricing_plan || 'light').toUpperCase() + '</span>';
-            html += '<span style="font-size:12px;color:#a0a0a0;margin-left:10px;">⏱️ ' + (c.plan_hours || 32) + ' hours | 💰 $' + (c.plan_price || 35) + '</span>';
-            html += '</div>';
-            html += '</div>';
-            html += '<span class="campaign-id">' + c.id + '</span>';
-            html += '<span class="campaign-station">' + (c.station || 'Unknown') + '</span>';
-            if (updates.length) {
-                html += '<span class="update-badge">↑' + updates.length + ' updates</span>';
-            }
-            html += '</div>';
-            html += '<span class="status-badge ' + status + '">' + status.toUpperCase() + '</span>';
-            html += '</div>';
-            
-            html += '<div class="campaign-dates">';
-            html += '<div class="date-row"><span class="date-label">▶ Start</span><span class="date-value">' + (isNaN(start) ? 'Invalid' : formatCompactDate(start)) + '</span></div>';
-            html += '<div class="date-row"><span class="date-label">■ End</span><span class="date-value">' + (isNaN(end) ? 'Invalid' : formatCompactDate(end)) + '</span></div>';
-            html += '<div class="date-row"><span class="date-label">⏱️ Duration</span><span class="date-value">' + (isNaN(start) || isNaN(end) ? 'Unknown' : Math.round((end - start) / 3600000) + ' hours') + '</span></div>';
-            html += '</div>';
-            
-            html += '<div class="campaign-images">' + imgsHTML + '</div>';
-            
-            if (images.length > 0 && totalOriginalSize > 0) {
-                html += '<div style="background:#1a1e24;padding:10px;border-radius:8px;margin:10px 0;border:1px solid #3a4050;">';
-                html += '<div class="proof-label">📊 COMPRESSION STATS</div>';
-                html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;">';
-                html += '<span>Original: ' + (totalOriginalSize/1024).toFixed(1) + ' KB</span>';
-                html += '<span>Compressed: ' + (totalCompressedSize/1024).toFixed(1) + ' KB</span>';
-                html += '<span>Saved: ' + savingsPercent + '%</span>';
-                html += '</div></div>';
-            }
-            
-            html += '<div>';
-            html += '<div class="proof-label">🔐 START HASH</div>';
-            html += '<div class="proof-box">' + (hashes.start?.hash || 'PENDING') + '</div>';
-            if (hashes.start?.timestamp) {
-                html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + formatCompactDate(new Date(hashes.start.timestamp)) + '</div>';
-            }
-            html += '<div class="proof-label">🔐 END HASH</div>';
-            html += '<div class="proof-box">' + (hashes.end?.hash || 'PENDING') + '</div>';
-            if (hashes.end?.timestamp) {
-                html += '<div style="font-size:10px;color:#a0a0a0;margin-top:-8px;margin-bottom:8px;">Generated: ' + formatCompactDate(new Date(hashes.end.timestamp)) + '</div>';
-            }
-            html += '</div>';
-            
-            if (updates.length > 0) {
-                html += '<div style="margin-top:12px;">';
-                html += '<div class="proof-label">📝 UPDATE HISTORY (' + updates.length + ')</div>';
-                var recentUpdates = updates.slice(-3).reverse();
-                for (var u = 0; u < recentUpdates.length; u++) {
-                    var update = recentUpdates[u];
-                    html += '<div class="update-history" style="margin-top:5px;">';
-                    html += '<div style="font-size:11px;color:#f39c12;">📅 ' + (update.timestamp ? formatCompactDate(new Date(update.timestamp)) : 'Unknown date') + '</div>';
-                    html += '<div style="font-size:11px;margin:5px 0;">' + (Array.isArray(update.changes) ? update.changes.join(' | ') : (update.changes || 'No details')) + '</div>';
-                    html += '<div style="font-size:9px;color:#a0a0a0;">👤 Updated by: ' + ((update.updated_by || 'Unknown').substring(0,15)) + '...</div>';
-                    html += '</div>';
-                }
-                if (updates.length > 3) {
-                    html += '<div style="text-align:center;margin-top:5px;"><span style="font-size:10px;color:#4a9eff;">+' + (updates.length - 3) + ' more updates</span></div>';
-                }
+        }
+        var savingsPercent = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1) : 0;
+        
+        // Compact layout - similar to image provided
+        html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">';
+        
+        // Left side - Main info
+        html += '<div style="flex:2;min-width:200px;">';
+        html += '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">';
+        html += '<span style="background: linear-gradient(135deg, #4a9eff, #6f42c1); color: white; font-weight: bold; font-size: 16px; padding: 3px 10px; border-radius: 20px;">AD #' + adNumber + '</span>';
+        html += '<span style="font-size:26px;font-weight:bold;color:white;">' + (c.name || 'Unknown') + '</span>';
+        html += '<span style="font-size:18px;color:#4a9eff;">📦 ' + (c.product_name || 'Not specified') + '</span>';
+        html += '</div>';
+        
+        // Pricing plan line
+        const planName = (c.pricing_plan || 'light').toUpperCase();
+        const planHours = c.plan_hours || 32;
+        const planPrice = c.plan_price || 35;
+        html += '<div style="margin:5px 0 8px 0;">';
+        html += '<span style="font-size:16px;color:#28a745;font-weight:bold;">📋 ' + planName + '</span>';
+        html += '<span style="font-size:13px;color:#a0a0a0;margin-left:12px;">⏱️ ' + planHours + 'h | 💰 $' + planPrice + '</span>';
+        html += '</div>';
+        
+        // Date line - compact single line
+        html += '<div style="font-size:14px;color:#a0a0a0;margin:6px 0;">';
+        html += '<span>▶ ' + (isNaN(start) ? 'Invalid' : formatCompactDate(start)) + '</span>';
+        html += '<span style="margin:0 8px">→</span>';
+        html += '<span>■ ' + (isNaN(end) ? 'Invalid' : formatCompactDate(end)) + '</span>';
+        html += '<span style="margin-left:12px;color:#4a9eff;">⏱️ ' + (isNaN(start) || isNaN(end) ? 'Unknown' : Math.round((end - start) / 3600000) + 'h') + '</span>';
+        html += '</div>';
+        
+        // Compression info (compact)
+        if (images.length > 0 && totalOriginalSize > 0) {
+            html += '<div style="font-size:11px;color:#28a745;margin:4px 0;">📊 Compression saved ' + savingsPercent + '%</div>';
+        }
+        
+        // Hashes section - compact
+        html += '<div style="margin:8px 0;">';
+        html += '<div style="font-size:10px;color:#4a9eff;">🔐 START HASH:</div>';
+        html += '<div style="font-family:monospace;font-size:11px;color:#00ff00;background:#1a1e24;padding:4px 8px;border-radius:5px;word-break:break-all;">' + (hashes.start?.hash || 'PENDING') + '</div>';
+        html += '<div style="font-size:10px;color:#4a9eff;margin-top:5px;">🔐 END HASH:</div>';
+        html += '<div style="font-family:monospace;font-size:11px;color:#00ff00;background:#1a1e24;padding:4px 8px;border-radius:5px;word-break:break-all;">' + (hashes.end?.hash || 'PENDING') + '</div>';
+        html += '</div>';
+        
+        // Update history - compact
+        if (updates.length > 0) {
+            html += '<div style="margin-top:8px;font-size:11px;">';
+            html += '<div style="color:#f39c12;font-weight:bold;">📝 UPDATE HISTORY (' + updates.length + ')</div>';
+            var recentUpdates = updates.slice(-2).reverse();
+            for (var u = 0; u < recentUpdates.length; u++) {
+                var update = recentUpdates[u];
+                html += '<div style="background:#1a1e24;padding:5px 8px;margin:4px 0;border-radius:5px;">';
+                html += '<div style="color:#ffc107;font-size:10px;">' + (update.timestamp ? formatCompactDate(new Date(update.timestamp)) : 'Unknown date') + '</div>';
+                html += '<div style="font-size:10px;">' + (Array.isArray(update.changes) ? update.changes.join(' | ') : (update.changes || 'No details')) + '</div>';
+                html += '<div style="font-size:8px;color:#a0a0a0;">By: ' + ((update.updated_by || 'Unknown').substring(0,8)) + '...</div>';
                 html += '</div>';
             }
-            
-            html += '<div style="margin-top:12px;font-size:11px;color:#a0a0a0;">';
-            html += '📸 ' + (c.image_count || images.length) + ' image(s) | ';
-            html += '👤 Created by: ' + ((c.created_by || 'Unknown').substring(0,15)) + '... | ';
-            html += '📅 Created: ' + (c.created_at?.toDate ? formatCompactDate(c.created_at.toDate()) : 'Unknown');
             html += '</div>';
-            
-            html += '<div class="action-buttons">';
-            html += '<button class="btn-edit" onclick="openEditModal(\'' + c.id + '\')">✏️ Edit</button>';
-            html += '<button class="btn-pdf" onclick="showPDFPreview(\'' + c.id + '\')">📄 PDF Proof</button>';
-            html += '<button class="btn-danger" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
-            html += '</div>';
-            html += '</div>';
-            
-            return html;
-        } catch (err) {
-            console.error('Error building campaign HTML:', err, c);
-            return '<div class="campaign-item expired">' +
-                '<div class="campaign-header-row">' +
-                '<span class="campaign-name">Error loading campaign</span>' +
-                '<span class="campaign-id">' + c.id + '</span>' +
-                '</div>' +
-                '<div style="color:#dc3545;padding:10px;">Failed to display: ' + err.message + '</div>' +
-                '</div>';
         }
+        
+        html += '</div>'; // end left side
+        
+        // Right side - Status and buttons
+        html += '<div style="text-align:right;min-width:140px;">';
+        html += '<span class="status-badge ' + status + '" style="font-size:13px;padding:4px 12px;">' + status.toUpperCase() + '</span>';
+        html += '<div style="margin-top:8px;">';
+        html += '<span class="campaign-station" style="font-size:11px;">📍 ' + (c.station || 'Unknown') + '</span>';
+        html += '</div>';
+        html += imgsHTML;
+        html += '<div class="action-buttons" style="margin-top:10px;gap:6px;">';
+        html += '<button class="btn-sm btn-sm-blue" style="padding:5px 12px;font-size:11px;" onclick="openEditModal(\'' + c.id + '\')">✏️ Edit</button>';
+        html += '<button class="btn-sm" style="background:#28a745;padding:5px 12px;font-size:11px;" onclick="showPDFPreview(\'' + c.id + '\')">📄 PDF</button>';
+        html += '<button class="btn-sm btn-sm-red" style="padding:5px 12px;font-size:11px;" onclick="deleteCampaign(\'' + c.id + '\')">🗑️ Delete</button>';
+        html += '</div>';
+        html += '<div style="font-size:9px;color:#a0a0a0;margin-top:8px;">';
+        html += '👤 ' + ((c.created_by || 'Unknown').substring(0,6)) + '...';
+        html += '</div>';
+        html += '</div>'; // end right side
+        
+        html += '</div>'; // end flex container
+        html += '</div>';
+        
+        return html;
+    } catch (err) {
+        console.error('Error building campaign HTML:', err, c);
+        return '<div class="campaign-item expired"><div style="padding:15px;color:#dc3545;">Error loading campaign: ' + err.message + '</div></div>';
     }
+}
 
     function displayProofs() {
         const list = document.getElementById('proofsList');
@@ -1542,6 +1545,28 @@ function updateStationDropdowns() {
             }
         }
     };
+    window.updateEditPlanDetails = function() {
+    const plan = document.getElementById('editPricingPlan').value;
+    const planDetails = document.getElementById('editPlanDetails');
+    const planHoursSpan = document.getElementById('editPlanHours');
+    const planPriceSpan = document.getElementById('editPlanPrice');
+    
+    if (plan === 'light') {
+        planDetails.style.display = 'block';
+        planHoursSpan.innerHTML = '⏱️ 32 hours total (4 hrs/day)';
+        planPriceSpan.innerHTML = '💰 $35';
+    } else if (plan === 'standard') {
+        planDetails.style.display = 'block';
+        planHoursSpan.innerHTML = '⏱️ 96 hours total (6 hrs/day)';
+        planPriceSpan.innerHTML = '💰 $48';
+    } else if (plan === 'professional') {
+        planDetails.style.display = 'block';
+        planHoursSpan.innerHTML = '⏱️ 192 hours total (8 hrs/day)';
+        planPriceSpan.innerHTML = '💰 $54';
+    } else {
+        planDetails.style.display = 'none';
+    }
+};
     
     function renderImagePreview() {
         const grid = document.getElementById('imagePreview');
@@ -1931,126 +1956,212 @@ function validateEditDailyHours() {
         renderImagePreview();
     }
 
-    window.openEditModal = function(id) {
-        const c = allAdCampaigns.find(x => x.id === id);
-        if (!c) return;
-        document.getElementById('editCampaignId').value = id;
-        document.getElementById('editCustomerName').value = c.name || '';
-        document.getElementById('editStationName').value = c.station || 'Station 1';
-        const startDate = new Date(c.start_datetime);
-        const endDate = new Date(c.end_datetime);
-        const formatDateTime = (date) => {
-            if (isNaN(date)) return '';
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
-        };
-        document.getElementById('editStartDateTime').value = formatDateTime(startDate);
-        document.getElementById('editEndDateTime').value = formatDateTime(endDate);
-        document.getElementById('editModal').classList.add('active');
+window.openEditModal = function(id) {
+    const c = allAdCampaigns.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('editCampaignId').value = id;
+    document.getElementById('editCustomerName').value = c.name || '';
+    document.getElementById('editStationName').value = c.station || 'Station 1';
+    
+    // Set pricing plan dropdown
+    const currentPlan = (c.pricing_plan || 'light').toLowerCase();
+    const planSelect = document.getElementById('editPricingPlan');
+    if (planSelect) {
+        planSelect.value = currentPlan;
+        updateEditPlanDetails();
+    }
+    
+    const startDate = new Date(c.start_datetime);
+    const endDate = new Date(c.end_datetime);
+    const formatDateTime = (date) => {
+        if (isNaN(date)) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
+    document.getElementById('editStartDateTime').value = formatDateTime(startDate);
+    document.getElementById('editEndDateTime').value = formatDateTime(endDate);
+    document.getElementById('editModal').classList.add('active');
+};
     
     window.closeEditModal = function() { document.getElementById('editModal').classList.remove('active'); };
     
-    document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
+document.getElementById('editCampaignForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    
+    const newStartRaw = document.getElementById('editStartDateTime').value;
+    const newEndRaw = document.getElementById('editEndDateTime').value;
+    const newStart = new Date(newStartRaw);
+    const newEnd = new Date(newEndRaw);
+    
+    if (newEnd <= newStart) {
+        const a = document.getElementById('editAlert');
+        a.className = 'alert error';
+        a.textContent = '❌ End Date & Time must be after Start Date & Time';
+        a.style.display = 'block';
+        setTimeout(() => a.style.display = 'none', 3000);
+        document.getElementById('editEndDateTime').focus();
+        return;
+    }
+    
+    const id = document.getElementById('editCampaignId').value;
+    const btn = document.getElementById('editSaveBtn');
+    btn.disabled = true;
+    document.getElementById('editSaveText').style.display = 'none';
+    document.getElementById('editSaveLoading').style.display = 'inline-block';
+    
+    try {
+        const old = allAdCampaigns.find(x => x.id === id) || {};
+        const updates = old.update_history || old.updates || [];
         
-        const newStartRaw = document.getElementById('editStartDateTime').value;
-        const newEndRaw = document.getElementById('editEndDateTime').value;
-        const newStart = new Date(newStartRaw);
-        const newEnd = new Date(newEndRaw);
+        const newName = document.getElementById('editCustomerName').value.trim();
+        const newStation = document.getElementById('editStationName').value;
+        const newPlan = document.getElementById('editPricingPlan').value;
+        const newStartRaw2 = document.getElementById('editStartDateTime').value;
+        const newEndRaw2 = document.getElementById('editEndDateTime').value;
         
-        if (newEnd <= newStart) {
+        // Map plan values
+        let newPlanName = 'Light', newPlanHours = 32, newPlanPrice = 35;
+        if (newPlan === 'light') {
+            newPlanName = 'Light';
+            newPlanHours = 32;
+            newPlanPrice = 35;
+        } else if (newPlan === 'standard') {
+            newPlanName = 'Standard';
+            newPlanHours = 96;
+            newPlanPrice = 48;
+        } else if (newPlan === 'professional') {
+            newPlanName = 'Professional';
+            newPlanHours = 192;
+            newPlanPrice = 54;
+        }
+        
+        const newStartDateTimeString = newStartRaw2 + ':00';
+        const newEndDateTimeString = newEndRaw2 + ':00';
+        
+        const newStart2 = new Date(newStartRaw2);
+        const newEnd2 = new Date(newEndRaw2);
+        
+        const oldName = old.name || '';
+        const oldStation = old.station || '';
+        const oldPlan = (old.pricing_plan || 'Light').toLowerCase();
+        const oldPlanName = old.pricing_plan || 'Light';
+        const oldPlanHours = old.plan_hours || 32;
+        const oldPlanPrice = old.plan_price || 35;
+        const oldStart = new Date(old.start_datetime);
+        const oldEnd = new Date(old.end_datetime);
+        
+        const changedFields = [];
+        const updateData = {};
+        
+        if (oldName !== newName) {
+            changedFields.push('Customer Name');
+            updateData.name = newName;
+        }
+        
+        if (oldStation !== newStation) {
+            changedFields.push('Station');
+            updateData.station = newStation;
+        }
+        
+        if (oldPlan !== newPlan) {
+            changedFields.push(`Pricing Plan: "${oldPlanName}" → "${newPlanName}"`);
+            updateData.pricing_plan = newPlanName;
+            updateData.plan_hours = newPlanHours;
+            updateData.plan_price = newPlanPrice;
+        }
+        
+        if (oldStart.getTime() !== newStart2.getTime()) {
+            changedFields.push('Start Date');
+            updateData.start_datetime = newStartDateTimeString;
+            if (old.hashes?.start) {
+                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
+                updateData.hashes.start = {
+                    ...old.hashes.start,
+                    timestamp: newStartDateTimeString
+                };
+            }
+        }
+        
+        if (oldEnd.getTime() !== newEnd2.getTime()) {
+            changedFields.push('End Date');
+            updateData.end_datetime = newEndDateTimeString;
+            if (old.hashes?.end) {
+                if (!updateData.hashes) updateData.hashes = { ...old.hashes };
+                updateData.hashes.end = {
+                    ...old.hashes.end,
+                    timestamp: newEndDateTimeString
+                };
+            }
+        }
+        
+        if (changedFields.length === 0) {
             const a = document.getElementById('editAlert');
-            a.className = 'alert error';
-            a.textContent = '❌ End Date & Time must be after Start Date & Time';
+            a.className = 'alert warning';
+            a.textContent = '⚠️ No changes detected. Nothing was updated.';
             a.style.display = 'block';
             setTimeout(() => a.style.display = 'none', 3000);
-            document.getElementById('editEndDateTime').focus();
+            btn.disabled = false;
+            document.getElementById('editSaveText').style.display = 'inline';
+            document.getElementById('editSaveLoading').style.display = 'none';
             return;
         }
         
-        if (!validateEditDailyHours()) {
-            return;
-        }
+        const now = new Date();
+        let newStatus = 'upcoming';
+        if (now >= newStart2 && now <= newEnd2) newStatus = 'active';
+        if (now > newEnd2) newStatus = 'expired';
+        updateData.status = newStatus;
         
-        const id = document.getElementById('editCampaignId').value;
-        const btn = document.getElementById('editSaveBtn');
-        btn.disabled = true;
-        document.getElementById('editSaveText').style.display = 'none';
-        document.getElementById('editSaveLoading').style.display = 'inline-block';
+        updateData.updated_at = firebase.firestore.FieldValue.serverTimestamp();
+        updateData.updated_by = currentUser?.uid || 'anonymous';
         
-        try {
-            const old = allAdCampaigns.find(x => x.id === id) || {};
-            const updates = old.update_history || old.updates || [];
-            
-            const newName = document.getElementById('editCustomerName').value.trim();
-            const newStation = document.getElementById('editStationName').value;
-            const newStartRaw2 = document.getElementById('editStartDateTime').value;
-            const newEndRaw2 = document.getElementById('editEndDateTime').value;
-            
-            const newStartDateTimeString = newStartRaw2 + ':00';
-            const newEndDateTimeString = newEndRaw2 + ':00';
-            
-            const newStart2 = new Date(newStartRaw2);
-            const newEnd2 = new Date(newEndRaw2);
-            
-            const oldName = old.name || '';
-            const oldStation = old.station || '';
-            const oldStart = new Date(old.start_datetime);
-            const oldEnd = new Date(old.end_datetime);
-            
-            const changedFields = [];
-            const updateData = {};
-            
-            if (oldName !== newName) {
-                changedFields.push('Customer Name');
-                updateData.name = newName;
-            }
-            
-            if (oldStation !== newStation) {
-                changedFields.push('Station');
-                updateData.station = newStation;
-            }
-            
-            if (oldStart.getTime() !== newStart2.getTime()) {
-                changedFields.push('Start Date');
-                updateData.start_datetime = newStartDateTimeString;
-                if (old.hashes?.start) {
-                    if (!updateData.hashes) updateData.hashes = { ...old.hashes };
-                    updateData.hashes.start = {
-                        ...old.hashes.start,
-                        timestamp: newStartDateTimeString
-                    };
-                }
-            }
-            
-            if (oldEnd.getTime() !== newEnd2.getTime()) {
-                changedFields.push('End Date');
-                updateData.end_datetime = newEndDateTimeString;
-                if (old.hashes?.end) {
-                    if (!updateData.hashes) updateData.hashes = { ...old.hashes };
-                    updateData.hashes.end = {
-                        ...old.hashes.end,
-                        timestamp: newEndDateTimeString
-                    };
-                }
-            }
-            
-            if (changedFields.length === 0) {
-                const a = document.getElementById('editAlert');
-                a.className = 'alert warning';
-                a.textContent = '⚠️ No changes detected. Nothing was updated.';
-                a.style.display = 'block';
-                setTimeout(() => a.style.display = 'none', 3000);
-                btn.disabled = false;
-                document.getElementById('editSaveText').style.display = 'inline';
-                document.getElementById('editSaveLoading').style.display = 'none';
-                return;
-            }
+        const changeDetails = changedFields.map(field => {
+            if (field === 'Customer Name') return `Customer Name: "${oldName}" → "${newName}"`;
+            if (field === 'Station') return `Station: "${oldStation}" → "${newStation}"`;
+            if (field.startsWith('Pricing Plan')) return field;
+            if (field === 'Start Date') return `Start Date: "${formatCompactDate(oldStart)}" → "${formatCompactDate(newStart2)}"`;
+            if (field === 'End Date') return `End Date: "${formatCompactDate(oldEnd)}" → "${formatCompactDate(newEnd2)}"`;
+            return field;
+        }).join(' | ');
+        
+        const updateRecord = {
+            changes: changeDetails,
+            changed_fields: changedFields.map(f => typeof f === 'string' && f.startsWith('Pricing Plan') ? 'Pricing Plan' : f),
+            timestamp: new Date().toISOString(),
+            updated_by: currentUser?.uid || 'anonymous'
+        };
+        
+        updates.push(updateRecord);
+        updateData.update_history = updates;
+        
+        await db.collection('customers').doc(id).update(updateData);
+        
+        closeEditModal();
+        await loadAdData();
+        
+        const a = document.getElementById('editAlert');
+        a.className = 'alert success';
+        a.textContent = `✅ Updated: ${changedFields.join(', ')}`;
+        a.style.display = 'block';
+        setTimeout(() => a.style.display = 'none', 4000);
+        
+    } catch (err) {
+        console.error('Edit error:', err);
+        const a = document.getElementById('editAlert');
+        a.className = 'alert error';
+        a.textContent = '❌ ' + err.message;
+        a.style.display = 'block';
+        setTimeout(() => a.style.display = 'none', 3000);
+    } finally {
+        btn.disabled = false;
+        document.getElementById('editSaveText').style.display = 'inline';
+        document.getElementById('editSaveLoading').style.display = 'none';
+    }
+});
             
             const now = new Date();
             let newStatus = 'upcoming';
