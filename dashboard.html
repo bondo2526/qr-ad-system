@@ -932,6 +932,7 @@ function updateStationFilters() {
 }
     
 // Add new station
+// Add new station
 window.addNewStation = async function() {
     const newStation = prompt('Enter new station name:', '');
     if (newStation && newStation.trim()) {
@@ -941,9 +942,24 @@ window.addNewStation = async function() {
             return;
         }
         stationsList.push(stationName);
-        await db.collection('settings').doc('stations').set({ stations: stationsList });
+        
+        // Save with timestamp
+        await db.collection('settings').doc('stations').set({ 
+            stations: stationsList,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: currentUser?.uid || 'anonymous'
+        });
+        
+        // Also log individual station creation
+        await db.collection('station_logs').add({
+            stationName: stationName,
+            action: 'created',
+            createdBy: currentUser?.uid || 'anonymous',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
         updateStationDropdowns();
-        updateStationFilters();  // ADD THIS LINE
+        updateStationFilters();
         alert(`✅ Station "${stationName}" added successfully!`);
     }
 };
@@ -1671,54 +1687,72 @@ window.exportHashLogToPDF = function() {
         applyAdFilters();
     };
 
-    function applyAdFilters() {
-        const list = document.getElementById('campaignsAdList');
-        if (!list) return;
+function applyAdFilters() {
+    const list = document.getElementById('campaignsAdList');
+    if (!list) return;
+    
+    // Get all filter values
+    const statusFilter = currentFilter;
+    const stationFilter = currentStationFilter;
+    const advName = document.getElementById('advNameFilter')?.value.toLowerCase() || '';
+    const productName = document.getElementById('productNameFilter')?.value.toLowerCase() || '';
+    
+    // Apply ALL filters together
+    let campaigns = allAdCampaigns.filter(c => {
+        // Status filter
+        const st = getAdStatus(c);
+        if (statusFilter !== 'all' && st !== statusFilter) return false;
         
-        let campaigns = allAdCampaigns.filter(c => {
-            const st = getAdStatus(c);
-            if (currentFilter !== 'all' && st !== currentFilter) return false;
-            if (currentStationFilter !== 'all' && c.station !== currentStationFilter) return false;
-            if (advNameFilterValue) {
-                const advName = (c.name || '').toLowerCase();
-                if (!advName.includes(advNameFilterValue)) return false;
-            }
-            if (productNameFilterValue) {
-                const prodName = (c.product_name || '').toLowerCase();
-                if (!prodName.includes(productNameFilterValue)) return false;
-            }
-            return true;
-        });
+        // Station filter
+        if (stationFilter !== 'all' && c.station !== stationFilter) return false;
         
-        const filteredCount = campaigns.length;
-        const totalCount = allAdCampaigns.length;
-        const statsDiv = document.getElementById('filterStats');
-        const filteredCountSpan = document.getElementById('filteredCount');
-        const totalCountSpan = document.getElementById('totalCount');
-        
-        if (filteredCountSpan) filteredCountSpan.textContent = filteredCount;
-        if (totalCountSpan) totalCountSpan.textContent = totalCount;
-        
-        if (statsDiv) {
-            if (advNameFilterValue || productNameFilterValue || currentFilter !== 'all' || currentStationFilter !== 'all') {
-                statsDiv.style.display = 'block';
-            } else {
-                statsDiv.style.display = 'none';
-            }
+        // Advertiser/Customer name filter
+        if (advName) {
+            const customerName = (c.name || '').toLowerCase();
+            if (!customerName.includes(advName)) return false;
         }
         
-        if (campaigns.length === 0) {
-            list.innerHTML = '<div class="loading-block">No campaigns found matching your filters.</div>';
-            return;
+        // Product name filter
+        if (productName) {
+            const prodName = (c.product_name || '').toLowerCase();
+            if (!prodName.includes(productName)) return false;
         }
         
-        let html = '';
-        campaigns.forEach((campaign, index) => {
-            const adNumber = index + 1;
-            html += buildAdCampaignHTML(campaign, adNumber);
-        });
-        list.innerHTML = html;
+        return true;
+    });
+    
+    // Update stats display
+    const filteredCount = campaigns.length;
+    const totalCount = allAdCampaigns.length;
+    const statsDiv = document.getElementById('filterStats');
+    const filteredCountSpan = document.getElementById('filteredCount');
+    const totalCountSpan = document.getElementById('totalCount');
+    
+    if (filteredCountSpan) filteredCountSpan.textContent = filteredCount;
+    if (totalCountSpan) totalCountSpan.textContent = totalCount;
+    
+    if (statsDiv) {
+        if (advName || productName || statusFilter !== 'all' || stationFilter !== 'all') {
+            statsDiv.style.display = 'block';
+        } else {
+            statsDiv.style.display = 'none';
+        }
     }
+    
+    // Display results
+    if (campaigns.length === 0) {
+        list.innerHTML = '<div class="loading-block">No campaigns found matching your filters.</div>';
+        return;
+    }
+    
+    let html = '';
+    campaigns.forEach((campaign) => {
+        const originalIndex = allAdCampaigns.findIndex(c => c.id === campaign.id);
+        const adNumber = originalIndex + 1;
+        html += buildAdCampaignHTML(campaign, adNumber);
+    });
+    list.innerHTML = html;
+}
 
     window.filterCampaigns = function(filter) {
         currentFilter = filter;
@@ -2872,21 +2906,30 @@ updateData.update_history = updates;
         fullPlanText = 'Professional (6d×8hrs weekly = 192hrs/month / $54)';
     }
     
-    // Find ORIGINAL dates
-    let originalStartDate = null;
-    let originalEndDate = null;
-    let currentStartDate = c.start_datetime ? new Date(c.start_datetime) : null;
-    let currentEndDate = c.end_datetime ? new Date(c.end_datetime) : null;
-    
-    if (originalStartHashObj && originalStartHashObj.created_at) {
-        originalStartDate = originalStartHashObj.created_at.toDate ? originalStartHashObj.created_at.toDate() : null;
-    }
-    if (originalEndHashObj && originalEndHashObj.created_at) {
-        originalEndDate = originalEndHashObj.created_at.toDate ? originalEndHashObj.created_at.toDate() : null;
-    }
-    
-    if (!originalStartDate) originalStartDate = currentStartDate;
-    if (!originalEndDate) originalEndDate = currentEndDate;
+// Find ORIGINAL dates
+let originalStartDate = null;
+let originalEndDate = null;
+let currentStartDate = c.start_datetime ? new Date(c.start_datetime) : null;
+let currentEndDate = c.end_datetime ? new Date(c.end_datetime) : null;
+
+if (originalStartHashObj && originalStartHashObj.created_at) {
+    originalStartDate = originalStartHashObj.created_at.toDate ? originalStartHashObj.created_at.toDate() : null;
+}
+if (originalEndHashObj && originalEndHashObj.created_at) {
+    originalEndDate = originalEndHashObj.created_at.toDate ? originalEndHashObj.created_at.toDate() : null;
+}
+
+// If no genesis hash found, try to get from campaign's original data
+if (!originalStartDate && c.hashes?.start?.timestamp) {
+    originalStartDate = new Date(c.hashes.start.timestamp);
+}
+if (!originalEndDate && c.hashes?.end?.timestamp) {
+    originalEndDate = new Date(c.hashes.end.timestamp);
+}
+
+// Fallback to current dates only if absolutely nothing exists
+if (!originalStartDate) originalStartDate = currentStartDate;
+if (!originalEndDate) originalEndDate = currentEndDate;
     
     const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'N/A';
     const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'N/A';
