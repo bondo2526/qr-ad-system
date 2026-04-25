@@ -217,7 +217,23 @@
 
         .filter-bar { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
         .filter-btn { padding:7px 18px; border:1px solid #3a4050; background:#2a2f38; color:#a0a0a0; border-radius:20px; cursor:pointer; transition:all .3s; font-size:13px; }
-        .filter-btn:hover { background:#3a4050; color:white; }
+/* Hover effect for ALL filter buttons */
+.filter-btn:hover, .station-filter:hover {
+    background: #4a9eff !important;
+    color: white !important;
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}        /* Press/click effect for filter buttons */
+.filter-btn:active {
+    transform: translateY(0px) !important;
+    background: #2a5a9e !important;
+}
+
+/* Press/click effect for station filter buttons */
+.station-filter:active {
+    transform: translateY(0px) !important;
+    background: #2a5a9e !important;
+}
 .filter-btn.active {
     background: #4a9eff !important;
     color: white !important;
@@ -606,12 +622,6 @@
     <button class="filter-btn" data-filter="active" onclick="filterCampaigns('active')">Active</button>
     <button class="filter-btn" data-filter="upcoming" onclick="filterCampaigns('upcoming')">Upcoming</button>
     <button class="filter-btn" data-filter="expired" onclick="filterCampaigns('expired')">Expired</button>
-    <button class="filter-btn active" 
-    onclick="filterCampaigns('all')" 
-    onmouseover="this.style.background='#4a9eff'" 
-    onmouseout="this.style.background=''">
-    test
-</button>
 </div>
 <div class="filter-bar" style="margin-top:8px;" id="stationFilterButtons">
     <button class="filter-btn station-filter" onclick="filterByStation('all')">All Stations</button>
