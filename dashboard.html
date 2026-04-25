@@ -149,6 +149,8 @@
             border-radius: 10px; font-size: 15px; font-weight: 600;
             cursor: pointer; transition: all .3s; box-shadow: 0 4px 15px rgba(74,158,255,.3);
         }
+        .bn-excel {background: #1e7e34; color:white; border:none; padding:14px 28px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .3s; }
+        .bn-pdf { background: #28a745; color:white; border:none; padding:14px 28px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .3s; }
         .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(74,158,255,.4); }
         .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
         .btn-secondary { background: #2a2f38; color: white; border: 1px solid #3a4050; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all .3s; }
@@ -621,15 +623,18 @@
                     </div>
                 </div>
 
-<div id="tab-proofs" class="tab-pane">
-    <div class="section-title">⛓️ Blockchain Hash Log</div>
+                <div id="tab-proofs" class="tab-pane">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+        <div class="section-title" style="margin:0;">⛓️ Blockchain Hash Log</div>
+        <button class="btn-excel" onclick="exportHashLogToExcel()">📊 Export Excel</button>
+    </div>
     <div style="margin-bottom: 15px;">
         <input type="text" id="hashLogSearch" class="filter-input" placeholder="🔍 Search by campaign ID, customer, product, or station..." style="width: 100%;" onkeyup="filterHashLog()">
     </div>
     <div id="proofsList" class="campaigns-list">
         <div class="loading-block"><div class="spinner-large"></div>Loading...</div>
     </div>
-</div>
+    </div>
 
                 <div id="tab-stats" class="tab-pane">
                     <div class="section-title">📊 Ad System Statistics</div>
@@ -700,8 +705,8 @@
                 </div>
             </div>
             <button class="btn-primary" onclick="createCouponCampaign()" style="white-space:nowrap;">➕ Create Campaign</button>
-            <button class="btn-excel" onclick="exportCouponCampaignsToExcel()">📊 Export Excel</button>
-            <button class="btn-pdf" onclick="exportCouponCampaignsToPDF()">📄 Export PDF</button>
+            <button class="bn-excel" onclick="exportCouponCampaignsToExcel()">📊 Export Excel</button>
+            <button class="bn-pdf" onclick="exportCouponCampaignsToPDF()">📄 Export PDF</button>
         </div>
     </div>
     
@@ -1364,6 +1369,62 @@ function filterHashLog() {
         noResultsMsg.remove();
     }
 }
+// Export Hash Log to Excel
+window.exportHashLogToExcel = function() {
+    if (!allProofs.length) { alert('No hash records to export!'); return; }
+    
+    const now = new Date();
+    const formattedDate = formatCompactDate(now);
+    
+    const headers = [
+        'Campaign ID', 'Customer Name', 'Product Name', 'Station Name',
+        'Hash Type', 'Hash Value', 'Previous Hash', 'Status', 'Created At'
+    ];
+    
+    const data = allProofs.map(p => {
+        const hashTypeLabel = p.type === 'genesis' ? '🔷 GENESIS' : '🟡 UPDATED';
+        const hashLabel = p.hash_type === 'start' ? 'START HASH' : 'END HASH';
+        const fullType = `${hashTypeLabel} - ${hashLabel}`;
+        const createdDate = p.created_at?.toDate ? formatCompactDate(p.created_at.toDate()) : 'Unknown';
+        
+        return [
+            p.campaign_id || 'N/A',
+            p.customer_name || 'Unknown',
+            p.product_name || 'Unknown',
+            p.station_name || 'N/A',
+            fullType,
+            p.hash || 'N/A',
+            p.previous_hash || '-',
+            p.type === 'genesis' ? 'Original' : 'Updated',
+            createdDate
+        ];
+    });
+    
+    // Sort by created date (newest first)
+    data.sort((a, b) => {
+        const dateA = new Date(a[8]);
+        const dateB = new Date(b[8]);
+        return dateB - dateA;
+    });
+    
+    const finalData = [
+        ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
+        [`Generated: ${formattedDate}`],
+        [''],
+        headers,
+        ...data
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(finalData);
+    ws['!cols'] = [
+        {wch:25}, {wch:20}, {wch:20}, {wch:15},
+        {wch:22}, {wch:50}, {wch:50}, {wch:12}, {wch:22}
+    ];
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Blockchain Hash Log');
+    XLSX.writeFile(wb, `hash_log_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
     function updateAdStatistics() {
         let total=0, active=0, upcoming=0, expired=0, images=0;
         allAdCampaigns.forEach(c => {
@@ -3057,6 +3118,9 @@ if (hasLatestUpdate) {
 window.exportAdToExcel = function() {
     if (!allAdCampaigns.length) { alert('No data to export'); return; }
     
+    const now = new Date();
+    const formattedDate = formatCompactDate(now);
+    
     // Helper function to get full plan description
     function getFullPlanDescription(planName) {
         const plan = (planName || 'Light').toLowerCase();
@@ -3066,10 +3130,22 @@ window.exportAdToExcel = function() {
         return planName || 'Light';
     }
     
-    // Helper to get latest hash from blockchain
+    // Helper to get latest hash from blockchain (not genesis)
     function getLatestHash(campaignId, hashType) {
-        const hashRecord = allProofs.find(p => p.campaign_id === campaignId && p.hash_type === hashType);
-        return hashRecord?.hash || 'PENDING';
+        const records = allProofs.filter(p => p.campaign_id === campaignId && p.hash_type === hashType);
+        if (records.length === 0) return 'PENDING';
+        records.sort((a, b) => {
+            const aDate = a.created_at?.toDate ? a.created_at.toDate() : new Date(0);
+            const bDate = b.created_at?.toDate ? b.created_at.toDate() : new Date(0);
+            return bDate - aDate;
+        });
+        return records[0]?.hash || 'PENDING';
+    }
+    
+    // Helper to get genesis hash
+    function getGenesisHash(campaignId, hashType) {
+        const genesisRecord = allProofs.find(p => p.campaign_id === campaignId && p.type === 'genesis' && p.hash_type === hashType);
+        return genesisRecord?.hash || 'PENDING';
     }
     
     const headers = [
@@ -3080,8 +3156,8 @@ window.exportAdToExcel = function() {
     ];
     
     const data = allAdCampaigns.map(c => {
-        const genesisStartHash = c.hashes?.start?.hash || 'PENDING';
-        const genesisEndHash = c.hashes?.end?.hash || 'PENDING';
+        const genesisStartHash = getGenesisHash(c.id, 'start');
+        const genesisEndHash = getGenesisHash(c.id, 'end');
         const latestStartHash = getLatestHash(c.id, 'start');
         const latestEndHash = getLatestHash(c.id, 'end');
         
@@ -3103,6 +3179,8 @@ window.exportAdToExcel = function() {
     
     const finalData = [
         ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
+        [`Generated: ${formattedDate}`],
+        [''],
         headers,
         ...data
     ];
@@ -4003,10 +4081,10 @@ window.exportCouponCampaignsToExcel = function() {
     // Build single sheet data
     const sheetData = [];
     
-    // Header
+    // Header with copyright and generated date
     sheetData.push(['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)']);
-    sheetData.push(['Generated:', formattedDate]);
-    sheetData.push([]);
+    sheetData.push([`Generated: ${formattedDate}`]);
+    sheetData.push(['']);
     
     // For each campaign, add its summary and products
     for (const campaign of allCouponCampaigns) {
@@ -4025,7 +4103,7 @@ window.exportCouponCampaignsToExcel = function() {
         const status = campaign.isActive !== false ? 'Active' : 'Deactivated';
         const createdAt = campaign.createdAt?.toDate ? formatCompactDate(campaign.createdAt.toDate()) : 'Unknown';
         
-        // Campaign Summary Row (highlighted)
+        // Campaign Summary Row
         sheetData.push([`📊 CAMPAIGN: ${campaign.advertiserName || 'Unknown'} (${status})`]);
         sheetData.push(['Station:', campaign.station || 'N/A', 'Total Products:', totalProducts, 'Total Redeemed:', totalRedeemed, 'Total Remaining:', totalRemaining, 'Created:', createdAt]);
         sheetData.push([]);
@@ -4077,9 +4155,6 @@ window.exportCouponCampaignsToExcel = function() {
         {wch:12},  // Remaining
         {wch:22}   // Status
     ];
-    
-    // Merge cells for campaign headers (optional)
-    if (!ws['!merges']) ws['!merges'] = [];
     
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Coupon Campaigns');
