@@ -3066,24 +3066,40 @@ window.exportAdToExcel = function() {
         return planName || 'Light';
     }
     
+    // Helper to get latest hash from blockchain
+    function getLatestHash(campaignId, hashType) {
+        const hashRecord = allProofs.find(p => p.campaign_id === campaignId && p.hash_type === hashType);
+        return hashRecord?.hash || 'PENDING';
+    }
+    
     const headers = [
         'Campaign ID', 'Station Name', 'Customer Name', 'Product Name', 
-        'Pricing Plan', 'Start Date/Time', 'End Date/Time', 'Status', 
-        'Start Hash', 'End Hash'
+        'Pricing Plan', 'Start Date/Time', 'End Date/Time', 'Status',
+        'Genesis Start Hash', 'Genesis End Hash', 
+        'Latest Start Hash', 'Latest End Hash'
     ];
     
-    const data = allAdCampaigns.map(c => [
-        c.id,
-        c.station || 'N/A',
-        c.name || 'Unknown',
-        c.product_name || 'Not specified',
-        getFullPlanDescription(c.pricing_plan || c.plan_name || 'Light'),  // Full description
-        c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
-        c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
-        getAdStatus(c).toUpperCase(),
-        c.hashes?.start?.hash || 'PENDING',
-        c.hashes?.end?.hash || 'PENDING'
-    ]);
+    const data = allAdCampaigns.map(c => {
+        const genesisStartHash = c.hashes?.start?.hash || 'PENDING';
+        const genesisEndHash = c.hashes?.end?.hash || 'PENDING';
+        const latestStartHash = getLatestHash(c.id, 'start');
+        const latestEndHash = getLatestHash(c.id, 'end');
+        
+        return [
+            c.id,
+            c.station || 'N/A',
+            c.name || 'Unknown',
+            c.product_name || 'Not specified',
+            getFullPlanDescription(c.pricing_plan || c.plan_name || 'Light'),
+            c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
+            c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
+            getAdStatus(c).toUpperCase(),
+            genesisStartHash,
+            genesisEndHash,
+            latestStartHash,
+            latestEndHash
+        ];
+    });
     
     const finalData = [
         ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
@@ -3095,7 +3111,7 @@ window.exportAdToExcel = function() {
     ws['!cols'] = [
         {wch:25}, {wch:15}, {wch:20}, {wch:20}, 
         {wch:45}, {wch:22}, {wch:22}, {wch:12}, 
-        {wch:45}, {wch:45}
+        {wch:45}, {wch:45}, {wch:45}, {wch:45}
     ];
     
     const wb = XLSX.utils.book_new();
@@ -3827,14 +3843,17 @@ function filterCouponCampaigns() {
 window.exportClaimsToExcel = function() {
     if (!filteredClaims.length) { alert('No data to export!'); return; }
     
+    const now = new Date();
+    const formattedDate = formatCompactDate(now);
+    
     const headers = [
         'Date', 'Advertiser', 'Product', 'Location', 
         'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires At'
     ];
     
     const data = filteredClaims.map(c => {
-        const now = new Date();
-        const exp = c.expiresAt < now;
+        const nowDate = new Date();
+        const exp = c.expiresAt < nowDate;
         let status = 'Claimed';
         if (c.redeemed) status = 'Redeemed';
         else if (exp) status = 'Expired';
@@ -3854,6 +3873,7 @@ window.exportClaimsToExcel = function() {
     
     const finalData = [
         ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
+        [`Generated: ${formattedDate}`],
         headers,
         ...data
     ];
@@ -3973,17 +3993,23 @@ window.exportClaimsToPDF = function() {
     doc.save(fileName);
 };
     
-// Export Coupon Campaigns to Excel with Product Details (Same as UI)
+// Export Coupon Campaigns to Excel - Single Sheet with Summary + Products
 window.exportCouponCampaignsToExcel = function() {
     if (!allCouponCampaigns.length) { alert('No coupon campaigns to export!'); return; }
     
-    // Create a separate sheet for each campaign with product details
-    const wb = XLSX.utils.book_new();
     const now = new Date();
+    const formattedDate = formatCompactDate(now);
     
-    // Summary Sheet
-    const summaryHeaders = ['Advertiser Name', 'Station', 'Total Products', 'Total Redeemed', 'Total Remaining', 'Status', 'Created At'];
-    const summaryData = allCouponCampaigns.map(campaign => {
+    // Build single sheet data
+    const sheetData = [];
+    
+    // Header
+    sheetData.push(['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)']);
+    sheetData.push(['Generated:', formattedDate]);
+    sheetData.push([]);
+    
+    // For each campaign, add its summary and products
+    for (const campaign of allCouponCampaigns) {
         let totalProducts = 0;
         let totalRedeemed = 0;
         let totalRemaining = 0;
@@ -3999,96 +4025,64 @@ window.exportCouponCampaignsToExcel = function() {
         const status = campaign.isActive !== false ? 'Active' : 'Deactivated';
         const createdAt = campaign.createdAt?.toDate ? formatCompactDate(campaign.createdAt.toDate()) : 'Unknown';
         
-        return [
-            campaign.advertiserName || 'Unknown',
-            campaign.station || 'N/A',
-            totalProducts,
-            totalRedeemed,
-            totalRemaining,
-            status,
-            createdAt
-        ];
-    });
-    
-    // Add Summary Sheet
-    const summarySheet = XLSX.utils.aoa_to_sheet([
-        ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
-        [''],
-        ['COUPON CAMPAIGNS SUMMARY REPORT'],
-        ['Generated:', formatCompactDate(now)],
-        ['Total Campaigns:', allCouponCampaigns.length],
-        [''],
-        summaryHeaders,
-        ...summaryData
-    ]);
-    summarySheet['!cols'] = [{wch:25}, {wch:15}, {wch:12}, {wch:12}, {wch:12}, {wch:12}, {wch:22}];
-    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
-    
-    // Product Details Sheet (Same as UI table)
-    const productHeaders = ['Advertiser', 'Station', 'Product Name', 'Total', 'Redeemed', 'Remaining', 'Status', 'Action'];
-    const productData = [];
-    
-    for (const campaign of allCouponCampaigns) {
-        const isCampaignActive = campaign.isActive !== false;
-        const station = campaign.station || 'N/A';
-        const advertiserName = campaign.advertiserName || 'Unknown';
+        // Campaign Summary Row (highlighted)
+        sheetData.push([`📊 CAMPAIGN: ${campaign.advertiserName || 'Unknown'} (${status})`]);
+        sheetData.push(['Station:', campaign.station || 'N/A', 'Total Products:', totalProducts, 'Total Redeemed:', totalRedeemed, 'Total Remaining:', totalRemaining, 'Created:', createdAt]);
+        sheetData.push([]);
         
+        // Products Header
+        sheetData.push(['Product Name', 'Total', 'Redeemed', 'Remaining', 'Status']);
+        
+        // Products Data
         if (campaign.products && campaign.products.length > 0) {
             for (const product of campaign.products) {
                 const rem = product.remaining || (product.totalProducts - (product.redeemedCount || 0));
+                const isCampaignActive = campaign.isActive !== false;
                 const isProductActive = product.isActive !== false;
-                let status = '';
-                let action = '';
+                let productStatus = '';
                 
                 if (!isCampaignActive) {
-                    status = 'Campaign Deactivated';
-                    action = 'N/A';
+                    productStatus = 'Campaign Deactivated';
                 } else if (!isProductActive) {
-                    status = 'Product Deactivated';
-                    action = 'Activate';
+                    productStatus = 'Product Deactivated';
                 } else if (rem > 0) {
-                    status = 'Active';
-                    action = 'Deactivate';
+                    productStatus = 'Active';
                 } else {
-                    status = 'Sold Out';
-                    action = 'N/A';
+                    productStatus = 'Sold Out';
                 }
                 
-                productData.push([
-                    advertiserName,
-                    station,
+                sheetData.push([
                     product.productName || 'Unknown',
                     product.totalProducts || 0,
                     product.redeemedCount || 0,
                     rem,
-                    status,
-                    action
+                    productStatus
                 ]);
             }
         } else {
-            productData.push([
-                advertiserName,
-                station,
-                'No products',
-                0,
-                0,
-                0,
-                isCampaignActive ? 'No products added' : 'Campaign Deactivated',
-                'Add Product'
-            ]);
+            sheetData.push(['No products', 0, 0, 0, 'N/A']);
         }
+        
+        sheetData.push([]); // Empty row between campaigns
+        sheetData.push([]); // Extra spacing
     }
     
-    const productSheet = XLSX.utils.aoa_to_sheet([
-        ['PRODUCT DETAILS (Same as UI Table)'],
-        [''],
-        productHeaders,
-        ...productData
-    ]);
-    productSheet['!cols'] = [{wch:25}, {wch:15}, {wch:25}, {wch:10}, {wch:10}, {wch:10}, {wch:22}, {wch:12}];
-    XLSX.utils.book_append_sheet(wb, productSheet, 'Product Details');
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
     
-    // Save file
+    // Set column widths
+    ws['!cols'] = [
+        {wch:30},  // Product Name
+        {wch:10},  // Total
+        {wch:12},  // Redeemed
+        {wch:12},  // Remaining
+        {wch:22}   // Status
+    ];
+    
+    // Merge cells for campaign headers (optional)
+    if (!ws['!merges']) ws['!merges'] = [];
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Coupon Campaigns');
     XLSX.writeFile(wb, `coupon_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
     
