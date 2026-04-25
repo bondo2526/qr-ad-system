@@ -2993,25 +2993,45 @@ if (hasLatestUpdate) {
     closePDFPreview();
 };
     
-    window.exportAdToExcel = function() {
-        if (!allAdCampaigns.length) { alert('No data to export'); return; }
-        const data = allAdCampaigns.map(c => ({
-            'Campaign ID': c.id,
-            'Station Name': c.station || 'N/A',
-            'Customer Name': c.name || 'Unknown',
-            'Product Name': c.product_name || 'Not specified',
-            'Pricing Plan': (c.pricing_plan || c.plan_name || 'Light').toUpperCase(),
-            'Start Date/Time': c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
-            'End Date/Time': c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
-            'Status': getAdStatus(c).toUpperCase(),
-            'Start Hash': c.hashes?.start?.hash || 'PENDING',
-            'End Hash': c.hashes?.end?.hash || 'PENDING'
-        }));
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Ad Campaigns');
-        XLSX.writeFile(wb, `ad_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
-    };
+window.exportAdToExcel = function() {
+    if (!allAdCampaigns.length) { alert('No data to export'); return; }
+    const data = allAdCampaigns.map(c => ({
+        'Campaign ID': c.id,
+        'Station Name': c.station || 'N/A',
+        'Customer Name': c.name || 'Unknown',
+        'Product Name': c.product_name || 'Not specified',
+        'Pricing Plan': (c.pricing_plan || c.plan_name || 'Light').toUpperCase(),
+        'Start Date/Time': c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
+        'End Date/Time': c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
+        'Status': getAdStatus(c).toUpperCase(),
+        'Start Hash': c.hashes?.start?.hash || 'PENDING',
+        'End Hash': c.hashes?.end?.hash || 'PENDING'
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(data);
+    
+    // ========== ADD COPYRIGHT HEADER ==========
+    // Add copyright text at the top
+    const copyrightText = [['Bondos4Ever © 2026 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'], ['']];
+    const copyrightSheet = XLSX.utils.aoa_to_sheet(copyrightText);
+    
+    // Merge the copyright header with data
+    const finalData = [
+        ['Bondos4Ever © 2026 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
+        [''],
+        ...data.map(row => Object.values(row))
+    ];
+    const finalSheet = XLSX.utils.aoa_to_sheet(finalData);
+    
+    // Set column widths
+    finalSheet['!cols'] = [
+        {wch:25}, {wch:15}, {wch:20}, {wch:20}, {wch:15}, {wch:22}, {wch:22}, {wch:12}, {wch:45}, {wch:45}
+    ];
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, finalSheet, 'Ad Campaigns');
+    XLSX.writeFile(wb, `ad_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
 
     // COUPON SYSTEM
     let allClaims = [];
@@ -3699,111 +3719,148 @@ window.generateProductQRCode = async function(advertiserName, productName) {
         const el=document.getElementById('loadingClaims'); if(el) el.style.display=show?'block':'none';
     }
 
-    window.exportClaimsToExcel = function() {
-        if (!filteredClaims.length) { alert('No data to export!'); return; }
-        const data = filteredClaims.map(c => {
-            const now=new Date(), exp=c.expiresAt<now;
-            let status='Claimed'; if(c.redeemed) status='Redeemed'; else if(exp) status='Expired';
-            return { Date:fmtDate(c.claimedAt), Customer:c.advertiserName||'Unknown', Product:c.productName||'Unknown',
-                Location:c.hostName||'Unknown', 'Coupon Code':c.couponCode||'N/A', Status:status,
-                Redeemed:c.redeemed?'Yes':'No', 'Redeemed At':c.redeemedAt?fmtDate(c.redeemedAt):'',
-                'Expires At':fmtDate(c.expiresAt) };
-        });
-        const ws=XLSX.utils.json_to_sheet(data);
-        const wb=XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Claims');
-        XLSX.writeFile(wb, `claims_${new Date().toISOString().slice(0,10)}.xlsx`);
-    };
+window.exportClaimsToExcel = function() {
+    if (!filteredClaims.length) { alert('No data to export!'); return; }
+    const data = filteredClaims.map(c => {
+        const now=new Date(), exp=c.expiresAt<now;
+        let status='Claimed'; if(c.redeemed) status='Redeemed'; else if(exp) status='Expired';
+        return { 
+            Date: fmtDate(c.claimedAt), 
+            Customer: c.advertiserName||'Unknown', 
+            Product: c.productName||'Unknown',
+            Location: c.hostName||'Unknown', 
+            'Coupon Code': c.couponCode||'N/A', 
+            Status: status,
+            Redeemed: c.redeemed?'Yes':'No', 
+            'Redeemed At': c.redeemedAt?fmtDate(c.redeemedAt):'',
+            'Expires At': fmtDate(c.expiresAt) 
+        };
+    });
+    
+    // ========== ADD COPYRIGHT HEADER ==========
+    const finalData = [
+        ['Bondos4Ever © 2026 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
+        [''],
+        ...data.map(row => Object.values(row))
+    ];
+    
+    // Get headers from first data row
+    const headers = Object.keys(data[0] || {});
+    const finalSheet = XLSX.utils.aoa_to_sheet(finalData);
+    
+    // Set column widths
+    finalSheet['!cols'] = [
+        {wch:20}, {wch:25}, {wch:20}, {wch:20}, {wch:18}, {wch:12}, {wch:10}, {wch:20}, {wch:20}
+    ];
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, finalSheet, 'Claims');
+    XLSX.writeFile(wb, `claims_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
 
-    window.exportClaimsToPDF = function() {
-        if (!filteredClaims.length) { alert('No data to export!'); return; }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-        
-        let claimed = 0;
-        let redeemed = 0;
-        let expired = 0;
-        const now = new Date();
-        
-        filteredClaims.forEach(c => {
-            const isExpired = c.expiresAt < now;
-            if (c.redeemed) {
-                redeemed++;
-                claimed++;
-            } else if (isExpired) {
-                expired++;
-                claimed++;
-            } else {
-                claimed++;
-            }
-        });
-        
-        const rows = filteredClaims.map(c => {
-            const isExpired = c.expiresAt < now;
-            let st = 'Claimed';
-            if (c.redeemed) st = 'Redeemed';
-            else if (isExpired) st = 'Expired';
-            return [
-                fmtDate(c.claimedAt), 
-                c.advertiserName || 'Unknown', 
-                c.productName || 'Unknown',
-                c.hostName || 'Unknown', 
-                c.couponCode || 'N/A', 
-                st, 
-                c.redeemed ? 'Yes' : 'No',
-                c.redeemedAt ? fmtDate(c.redeemedAt) : '-', 
-                fmtDate(c.expiresAt)
-            ];
-        });
-        
-        const nowDate = new Date();
-        const year = nowDate.getFullYear();
-        const month = String(nowDate.getMonth() + 1).padStart(2, '0');
-        const day = String(nowDate.getDate()).padStart(2, '0');
-        const hours = String(nowDate.getHours()).padStart(2, '0');
-        const minutes = String(nowDate.getMinutes()).padStart(2, '0');
-        const seconds = String(nowDate.getSeconds()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-        
-        const uniqueAdvertisers = [...new Set(filteredClaims.map(c => c.advertiserName).filter(Boolean))];
-        const uniqueProducts = [...new Set(filteredClaims.map(c => c.productName).filter(Boolean))];
-        
-        let fileName = '';
-        
-        if (uniqueAdvertisers.length === 1 && uniqueProducts.length === 1) {
-            const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const productName = uniqueProducts[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            fileName = `${customerName}_${productName}_claimscouponsreport_${dateStr}.pdf`;
-        } else if (uniqueAdvertisers.length === 1 && uniqueProducts.length > 1) {
-            const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            fileName = `${customerName}_all_products_claimscouponsreport_${dateStr}.pdf`;
+window.exportClaimsToPDF = function() {
+    if (!filteredClaims.length) { alert('No data to export!'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    
+    let claimed = 0;
+    let redeemed = 0;
+    let expired = 0;
+    const now = new Date();
+    
+    filteredClaims.forEach(c => {
+        const isExpired = c.expiresAt < now;
+        if (c.redeemed) {
+            redeemed++;
+            claimed++;
+        } else if (isExpired) {
+            expired++;
+            claimed++;
         } else {
-            fileName = `all_customers_claimscouponsreport_${dateStr}.pdf`;
+            claimed++;
         }
-        
-        doc.setFontSize(18);
-        doc.setTextColor(74, 158, 255);
-        doc.text('Coupon Claims Report', 14, 15);
-        
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Generated: ${formatCompactDate(nowDate)}`, 14, 22);
-        doc.text(`Claimed: ${claimed} | Redeemed: ${redeemed} | Expired: ${expired}`, 14, 29);
-        
-        doc.autoTable({
-            head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']],
-            body: rows,
-            startY: 36,
-            theme: 'grid',
-            headStyles: { fillColor: [74, 158, 255], textColor: 255, fontStyle: 'bold', halign: 'center' },
-            bodyStyles: { fontSize: 8, cellPadding: 3 },
-            alternateRowStyles: { fillColor: [240, 242, 248] },
-            margin: { left: 14, right: 14 }
-        });
-        
-        doc.save(fileName);
-    };
-
+    });
+    
+    const rows = filteredClaims.map(c => {
+        const isExpired = c.expiresAt < now;
+        let st = 'Claimed';
+        if (c.redeemed) st = 'Redeemed';
+        else if (isExpired) st = 'Expired';
+        return [
+            fmtDate(c.claimedAt), 
+            c.advertiserName || 'Unknown', 
+            c.productName || 'Unknown',
+            c.hostName || 'Unknown', 
+            c.couponCode || 'N/A', 
+            st, 
+            c.redeemed ? 'Yes' : 'No',
+            c.redeemedAt ? fmtDate(c.redeemedAt) : '-', 
+            fmtDate(c.expiresAt)
+        ];
+    });
+    
+    const nowDate = new Date();
+    const year = nowDate.getFullYear();
+    const month = String(nowDate.getMonth() + 1).padStart(2, '0');
+    const day = String(nowDate.getDate()).padStart(2, '0');
+    const hours = String(nowDate.getHours()).padStart(2, '0');
+    const minutes = String(nowDate.getMinutes()).padStart(2, '0');
+    const seconds = String(nowDate.getSeconds()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+    
+    const uniqueAdvertisers = [...new Set(filteredClaims.map(c => c.advertiserName).filter(Boolean))];
+    const uniqueProducts = [...new Set(filteredClaims.map(c => c.productName).filter(Boolean))];
+    
+    let fileName = '';
+    
+    if (uniqueAdvertisers.length === 1 && uniqueProducts.length === 1) {
+        const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const productName = uniqueProducts[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        fileName = `${customerName}_${productName}_claimscouponsreport_${dateStr}.pdf`;
+    } else if (uniqueAdvertisers.length === 1 && uniqueProducts.length > 1) {
+        const customerName = uniqueAdvertisers[0].replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        fileName = `${customerName}_all_products_claimscouponsreport_${dateStr}.pdf`;
+    } else {
+        fileName = `all_customers_claimscouponsreport_${dateStr}.pdf`;
+    }
+    
+    doc.setFontSize(18);
+    doc.setTextColor(74, 158, 255);
+    doc.text('Coupon Claims Report', 14, 15);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated: ${formatCompactDate(nowDate)}`, 14, 22);
+    doc.text(`Claimed: ${claimed} | Redeemed: ${redeemed} | Expired: ${expired}`, 14, 29);
+    
+    doc.autoTable({
+        head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']],
+        body: rows,
+        startY: 36,
+        theme: 'grid',
+        headStyles: { fillColor: [74, 158, 255], textColor: 255, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [240, 242, 248] },
+        margin: { left: 14, right: 14 }
+    });
+    
+    // ========== ADD COPYRIGHT FOOTER ON ALL PAGES ==========
+    const pageCount = doc.internal.getNumberOfPages();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        const footerY = doc.internal.pageSize.getHeight() - 10;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(14, footerY - 3, pageWidth - 14, footerY - 3);
+        doc.setFontSize(7);
+        doc.setTextColor(149, 165, 166);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)', pageWidth / 2, footerY, { align: 'center' });
+    }
+    // ========== END COPYRIGHT FOOTER ==========
+    
+    doc.save(fileName);
+};
     function fmtDate(date) {
         if (!date) return 'Unknown';
         const d = new Date(date);
