@@ -484,12 +484,12 @@
 
             <div class="header">
                 <h1>Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System V 10.0 (Testing Phase)</h1>
-                <div class="header-right">
-                    <span class="auto-refresh-badge" id="autoRefreshStatus">🔄 Auto-refresh: ON (10s)</span>
-                    <span class="user-badge" id="userBadge">Not logged in</span>
-                    <button class="btn-purple" onclick="createAdvertiserAccount()">➕ Create New Advertiser Account</button>
-                    <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">Logout</button>
-                </div>
+<div class="header-right">
+    <button class="btn-sm" id="autoRefreshToggle" onclick="toggleAutoRefresh()" style="background:#28a745; padding:5px 12px;">🔄 Auto-refresh: ON</button>
+    <span class="user-badge" id="userBadge">Not logged in</span>
+    <button class="btn-purple" onclick="createAdvertiserAccount()">➕ Create New Advertiser Account</button>
+    <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">Logout</button>
+</div>
             </div>
 
             <div class="tabs">
@@ -621,12 +621,15 @@
                     </div>
                 </div>
 
-                <div id="tab-proofs" class="tab-pane">
-                    <div class="section-title">⛓️ Blockchain Hash Log</div>
-                    <div id="proofsList" class="campaigns-list">
-                        <div class="loading-block"><div class="spinner-large"></div>Loading...</div>
-                    </div>
-                </div>
+<div id="tab-proofs" class="tab-pane">
+    <div class="section-title">⛓️ Blockchain Hash Log</div>
+    <div style="margin-bottom: 15px;">
+        <input type="text" id="hashLogSearch" class="filter-input" placeholder="🔍 Search by campaign ID, customer, product, or station..." style="width: 100%;" onkeyup="filterHashLog()">
+    </div>
+    <div id="proofsList" class="campaigns-list">
+        <div class="loading-block"><div class="spinner-large"></div>Loading...</div>
+    </div>
+</div>
 
                 <div id="tab-stats" class="tab-pane">
                     <div class="section-title">📊 Ad System Statistics</div>
@@ -668,37 +671,51 @@
                     </div>
                 </div>
 
-                <div id="tab-coupon-campaigns" class="tab-pane">
-                    <div class="section-title">🎟️ Coupon Campaigns</div>
-                    <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
-                        <div class="stat-card"><h3>Active Campaigns</h3><div class="stat-number purple" id="activeCampaigns">0</div></div>
-                        <div class="stat-card"><h3>Total Claims</h3><div class="stat-number purple" id="couponTotalClaims">0</div></div>
-                        <div class="stat-card"><h3>Today's Claims</h3><div class="stat-number purple" id="todayClaims">0</div></div>
-                        <div class="stat-card"><h3>Total Redeemed</h3><div class="stat-number purple" id="redeemedCount">0</div></div>
-                    </div>
-<div class="info-box">
-    <div class="section-title" style="margin-bottom:14px;font-size:16px;">📦 Create New Campaign</div>
-    <div class="create-form">
-        <div class="form-group">
-            <label>Advertiser Name</label>
-            <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
+<div id="tab-coupon-campaigns" class="tab-pane">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+        <div class="section-title" style="margin:0;">🎟️ Coupon Campaigns</div>
+        <div style="display:flex; gap:8px;">
+            <button class="btn-excel" onclick="exportCouponCampaignsToExcel()">📊 Export Excel</button>
+            <button class="btn-pdf" onclick="exportCouponCampaignsToPDF()">📄 Export PDF</button>
         </div>
-        <div class="form-group">
-            <label>Station Name</label>
-            <div style="display: flex; gap: 10px;">
-                <select id="newCampaignStation" required style="flex: 1;">
-                    <option value="" disabled selected>Select a station</option>
-                </select>
-                <button type="button" class="btn-secondary" onclick="addNewStation()" style="white-space: nowrap;">➕ Add New Station</button>
+    </div>
+    
+    <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
+        <div class="stat-card"><h3>Active Campaigns</h3><div class="stat-number purple" id="activeCampaigns">0</div></div>
+        <div class="stat-card"><h3>Total Claims</h3><div class="stat-number purple" id="couponTotalClaims">0</div></div>
+        <div class="stat-card"><h3>Today's Claims</h3><div class="stat-number purple" id="todayClaims">0</div></div>
+        <div class="stat-card"><h3>Total Redeemed</h3><div class="stat-number purple" id="redeemedCount">0</div></div>
+    </div>
+    
+    <div class="info-box">
+        <div class="section-title" style="margin-bottom:14px;font-size:16px;">📦 Create New Campaign</div>
+        <div class="create-form">
+            <div class="form-group">
+                <label>Advertiser Name</label>
+                <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
             </div>
+            <div class="form-group">
+                <label>Station Name</label>
+                <div style="display: flex; gap: 10px;">
+                    <select id="newCampaignStation" required style="flex: 1;">
+                        <option value="" disabled selected>Select a station</option>
+                    </select>
+                    <button type="button" class="btn-secondary" onclick="addNewStation()" style="white-space: nowrap;">➕ Add New Station</button>
+                </div>
+            </div>
+            <button class="btn-primary" onclick="createCouponCampaign()" style="white-space:nowrap;">➕ Create Campaign</button>
         </div>
-        <button class="btn-primary" onclick="createCouponCampaign()" style="white-space:nowrap;">➕ Create Campaign</button>
+    </div>
+    
+    <!-- Search input -->
+    <div style="margin-bottom: 15px;">
+        <input type="text" id="couponCampaignSearch" class="filter-input" placeholder="🔍 Search by advertiser name, station, or product..." style="width: 100%;" onkeyup="filterCouponCampaigns()">
+    </div>
+    
+    <div id="couponCampaignsList">
+        <div class="loading-block"><div class="spinner-large"></div>Loading campaigns...</div>
     </div>
 </div>
-                    <div id="couponCampaignsList">
-                        <div class="loading-block"><div class="spinner-large"></div>Loading campaigns...</div>
-                    </div>
-                </div>
 
                 <div id="tab-coupon-claims" class="tab-pane">
                     <div class="section-title">📋 Claim History</div>
@@ -1037,18 +1054,29 @@ function updateStationDropdowns() {
 
     // AUTO REFRESH
     let autoRefreshInterval = null;
-    function startAutoRefresh() {
-        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-        document.getElementById('autoRefreshStatus').textContent = '🔄 Auto-refresh: ON (10s)';
-        autoRefreshInterval = setInterval(() => {
-            loadAdData(); loadCouponData();
-        }, 10000);
+function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+        loadAdData(); loadCouponData();
+    }, 10000);
+}
+function stopAutoRefresh() {
+    if (autoRefreshInterval) { 
+        clearInterval(autoRefreshInterval); 
+        autoRefreshInterval = null; 
     }
-    function stopAutoRefresh() {
-        if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
-        const el = document.getElementById('autoRefreshStatus');
-        if (el) el.textContent = '⏸️ Auto-refresh: OFF';
+}
+    window.toggleAutoRefresh = function() {
+    if (autoRefreshInterval) {
+        stopAutoRefresh();
+        document.getElementById('autoRefreshToggle').textContent = '⏸️ Auto-refresh: OFF';
+        document.getElementById('autoRefreshToggle').style.background = '#dc3545';
+    } else {
+        startAutoRefresh();
+        document.getElementById('autoRefreshToggle').textContent = '🔄 Auto-refresh: ON';
+        document.getElementById('autoRefreshToggle').style.background = '#28a745';
     }
+};
 
     // TAB SWITCHING
     window.switchTab = function(tab) {
@@ -1249,6 +1277,9 @@ html += '<button class="btn-sm" style="background:#28a745;padding:5px 12px;font-
 }
 
 function displayProofs() {
+        // Clear search input when reloading
+    const searchInput = document.getElementById('hashLogSearch');
+    if (searchInput) searchInput.value = '';
     const list = document.getElementById('proofsList');
     if (!list) return;
     if (allProofs.length === 0) {
@@ -1302,7 +1333,39 @@ function displayProofs() {
     
     list.innerHTML = html;
 }
-
+function filterHashLog() {
+    const searchTerm = document.getElementById('hashLogSearch').value.toLowerCase();
+    const proofsContainer = document.getElementById('proofsList');
+    if (!proofsContainer) return;
+    
+    const allProofItems = proofsContainer.querySelectorAll('.campaign-item');
+    if (allProofItems.length === 0) return;
+    
+    let visibleCount = 0;
+    allProofItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        if (searchTerm === '' || text.includes(searchTerm)) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Show message if no results
+    let noResultsMsg = document.getElementById('noHashResults');
+    if (visibleCount === 0 && searchTerm !== '') {
+        if (!noResultsMsg) {
+            noResultsMsg = document.createElement('div');
+            noResultsMsg.id = 'noHashResults';
+            noResultsMsg.className = 'loading-block';
+            noResultsMsg.innerHTML = '🔍 No matching hash records found.';
+            proofsContainer.appendChild(noResultsMsg);
+        }
+    } else if (noResultsMsg) {
+        noResultsMsg.remove();
+    }
+}
     function updateAdStatistics() {
         let total=0, active=0, upcoming=0, expired=0, images=0;
         allAdCampaigns.forEach(c => {
@@ -3018,8 +3081,7 @@ window.exportAdToExcel = function() {
     
     // Build final array with: copyright rows + headers + data
     const finalData = [
-        ['Bondos4Ever © 2026 📊 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
-        [''],
+        ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
         headers,  // This adds the column headers back!
         ...data
     ];
@@ -3477,6 +3539,9 @@ window.generateProductQRCode = async function(advertiserName, productName) {
     }
 
     function renderCouponCampaignsList() {
+            // Clear search input when reloading
+    const searchInput = document.getElementById('couponCampaignSearch');
+    if (searchInput) searchInput.value = '';
         const container = document.getElementById('couponCampaignsList');
         if (!container) return;
         if (allCouponCampaigns.length === 0) {
@@ -3581,7 +3646,39 @@ window.generateProductQRCode = async function(advertiserName, productName) {
             }
         }
     }
-
+function filterCouponCampaigns() {
+    const searchTerm = document.getElementById('couponCampaignSearch').value.toLowerCase();
+    const container = document.getElementById('couponCampaignsList');
+    if (!container) return;
+    
+    const cards = container.querySelectorAll('.coupon-campaign-card');
+    if (cards.length === 0) return;
+    
+    let visibleCount = 0;
+    cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        if (searchTerm === '' || text.includes(searchTerm)) {
+            card.style.display = '';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Show message if no results
+    let noResultsMsg = document.getElementById('noCampaignResults');
+    if (visibleCount === 0 && searchTerm !== '') {
+        if (!noResultsMsg) {
+            noResultsMsg = document.createElement('div');
+            noResultsMsg.id = 'noCampaignResults';
+            noResultsMsg.className = 'loading-block';
+            noResultsMsg.innerHTML = '🔍 No matching coupon campaigns found.';
+            container.appendChild(noResultsMsg);
+        }
+    } else if (noResultsMsg) {
+        noResultsMsg.remove();
+    }
+}
     function updateClaimFilterDropdowns() {
         const adF = document.getElementById('adFilter');
         const prF = document.getElementById('productFilter');
@@ -3754,8 +3851,7 @@ window.exportClaimsToExcel = function() {
     
     // Build final array with: copyright rows + headers + data
     const finalData = [
-        ['Bondos4Ever © 2026 📊 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
-        [''],
+        ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
         headers,
         ...data
     ];
@@ -3876,6 +3972,132 @@ window.exportClaimsToPDF = function() {
     
     doc.save(fileName);
 };
+// Export Coupon Campaigns to Excel
+window.exportCouponCampaignsToExcel = function() {
+    if (!allCouponCampaigns.length) { alert('No coupon campaigns to export!'); return; }
+    
+    const headers = ['Advertiser Name', 'Station', 'Total Products', 'Total Redeemed', 'Total Remaining', 'Status', 'Created At'];
+    
+    const data = allCouponCampaigns.map(campaign => {
+        let totalProducts = 0;
+        let totalRedeemed = 0;
+        let totalRemaining = 0;
+        
+        if (campaign.products && campaign.products.length > 0) {
+            campaign.products.forEach(product => {
+                totalProducts += product.totalProducts || 0;
+                totalRedeemed += product.redeemedCount || 0;
+                totalRemaining += (product.remaining || (product.totalProducts - (product.redeemedCount || 0)));
+            });
+        }
+        
+        const status = campaign.isActive !== false ? 'Active' : 'Deactivated';
+        const createdAt = campaign.createdAt?.toDate ? formatCompactDate(campaign.createdAt.toDate()) : 'Unknown';
+        
+        return [
+            campaign.advertiserName || 'Unknown',
+            campaign.station || 'N/A',
+            totalProducts,
+            totalRedeemed,
+            totalRemaining,
+            status,
+            createdAt
+        ];
+    });
+    
+    const finalData = [
+        ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
+        [''],
+        headers,
+        ...data
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(finalData);
+    ws['!cols'] = [{wch:25}, {wch:15}, {wch:12}, {wch:12}, {wch:12}, {wch:12}, {wch:22}];
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Coupon Campaigns');
+    XLSX.writeFile(wb, `coupon_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
+
+// Export Coupon Campaigns to PDF
+window.exportCouponCampaignsToPDF = function() {
+    if (!allCouponCampaigns.length) { alert('No coupon campaigns to export!'); return; }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const now = new Date();
+    
+    // Prepare data
+    const rows = allCouponCampaigns.map(campaign => {
+        let totalProducts = 0;
+        let totalRedeemed = 0;
+        let totalRemaining = 0;
+        let productsList = '';
+        
+        if (campaign.products && campaign.products.length > 0) {
+            campaign.products.forEach(product => {
+                totalProducts += product.totalProducts || 0;
+                totalRedeemed += product.redeemedCount || 0;
+                totalRemaining += (product.remaining || (product.totalProducts - (product.redeemedCount || 0)));
+                productsList += `${product.productName}(${product.redeemedCount||0}/${product.totalProducts}) `;
+            });
+        } else {
+            productsList = 'No products';
+        }
+        
+        const status = campaign.isActive !== false ? 'Active' : 'Deactivated';
+        
+        return [
+            campaign.advertiserName || 'Unknown',
+            campaign.station || 'N/A',
+            totalProducts,
+            totalRedeemed,
+            totalRemaining,
+            status,
+            productsList.substring(0, 50)
+        ];
+    });
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(74, 158, 255);
+    doc.text('Coupon Campaigns Report', 14, 15);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated: ${formatCompactDate(now)}`, 14, 22);
+    doc.text(`Total Campaigns: ${allCouponCampaigns.length}`, 14, 29);
+    
+    // Table
+    doc.autoTable({
+        head: [['Advertiser', 'Station', 'Total', 'Redeemed', 'Remaining', 'Status', 'Products']],
+        body: rows,
+        startY: 36,
+        theme: 'grid',
+        headStyles: { fillColor: [74, 158, 255], textColor: 255, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [240, 242, 248] },
+        margin: { left: 14, right: 14 }
+    });
+    
+    // Footer on all pages
+    const pageCount = doc.internal.getNumberOfPages();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        const footerY = doc.internal.pageSize.getHeight() - 10;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(14, footerY - 3, pageWidth - 14, footerY - 3);
+        doc.setFontSize(7);
+        doc.setTextColor(149, 165, 166);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)', pageWidth / 2, footerY, { align: 'center' });
+    }
+    
+    doc.save(`coupon_campaigns_${new Date().toISOString().slice(0,10)}.pdf`);
+};
+    
     function fmtDate(date) {
         if (!date) return 'Unknown';
         const d = new Date(date);
