@@ -591,12 +591,12 @@
                             <button class="btn-refresh" onclick="manualRefresh()">🔄 Refresh</button>
                         </div>
                     </div>
-                    <div class="filter-bar">
-                        <button class="filter-btn active" onclick="filterCampaigns('all')">All</button>
-                        <button class="filter-btn" onclick="filterCampaigns('active')">Active</button>
-                        <button class="filter-btn" onclick="filterCampaigns('upcoming')">Upcoming</button>
-                        <button class="filter-btn" onclick="filterCampaigns('expired')">Expired</button>
-                    </div>
+<div class="filter-bar">
+    <button class="filter-btn active" onclick="filterCampaigns('all')">All</button>
+    <button class="filter-btn" onclick="filterCampaigns('active')">Active</button>
+    <button class="filter-btn" onclick="filterCampaigns('upcoming')">Upcoming</button>
+    <button class="filter-btn" onclick="filterCampaigns('expired')">Expired</button>
+</div>
 <div class="filter-bar" style="margin-top:8px;" id="stationFilterButtons">
     <button class="filter-btn station-filter" onclick="filterByStation('all')">All Stations</button>
     <!-- Station buttons will be added dynamically -->
@@ -1177,9 +1177,10 @@ async function loadAdCampaigns() {
     try {
         const snap = await db.collection('customers').orderBy('created_at','desc').get();
         allAdCampaigns = [];
+        let adCounter = 1;
         snap.forEach(doc => {
             const data = doc.data();
-            const campaign = { id: doc.id, ...data };
+            const campaign = { id: doc.id, ...data, permanentAdNumber: adCounter++ };
             if (!campaign.start_datetime) {
                 console.warn('Campaign missing start_datetime:', campaign.id);
             }
@@ -1194,8 +1195,6 @@ async function loadAdCampaigns() {
             }
             allAdCampaigns.push(campaign);
         });
-        // Store original order for consistent AD numbering
-        window.originalCampaignOrder = allAdCampaigns.map(c => c.id);
         displayAdCampaigns();
     } catch(e) { 
         console.error('loadAdCampaigns:', e);
@@ -1205,7 +1204,6 @@ async function loadAdCampaigns() {
         }
     }
 }
-
     async function loadProofs() {
         try {
             const snap = await db.collection('blockchain').orderBy('created_at','desc').get();
@@ -1712,6 +1710,7 @@ window.clearAdFilters = function() {
     });
     applyAdFilters();
 };
+    
 function applyAdFilters() {
     const list = document.getElementById('campaignsAdList');
     if (!list) return;
@@ -1731,7 +1730,7 @@ function applyAdFilters() {
         // 2. Station filter
         if (stationFilter !== 'all' && c.station !== stationFilter) return false;
         
-        // 3. Customer/Advertiser name filter
+        // 3. Customer name filter
         if (advName) {
             const customerName = (c.name || '').toLowerCase();
             if (!customerName.includes(advName)) return false;
@@ -1746,12 +1745,8 @@ function applyAdFilters() {
         return true;
     });
     
-    // Sort filtered campaigns by original order (created_at desc)
-    campaigns.sort((a, b) => {
-        const indexA = allAdCampaigns.findIndex(c => c.id === a.id);
-        const indexB = allAdCampaigns.findIndex(c => c.id === b.id);
-        return indexA - indexB;
-    });
+    // Keep original order (by permanentAdNumber)
+    campaigns.sort((a, b) => (a.permanentAdNumber || 999) - (b.permanentAdNumber || 999));
     
     // Update stats display
     const filteredCount = campaigns.length;
@@ -1780,9 +1775,8 @@ function applyAdFilters() {
     
     let html = '';
     campaigns.forEach((campaign) => {
-        // AD number based on position in original allAdCampaigns (not filtered)
-        const originalIndex = allAdCampaigns.findIndex(c => c.id === campaign.id);
-        const adNumber = originalIndex + 1;
+        // Use permanent AD number stored in campaign object
+        const adNumber = campaign.permanentAdNumber || (allAdCampaigns.findIndex(c => c.id === campaign.id) + 1);
         html += buildAdCampaignHTML(campaign, adNumber);
     });
     list.innerHTML = html;
@@ -1791,11 +1785,10 @@ function applyAdFilters() {
 window.filterCampaigns = function(filter) {
     currentFilter = filter;
     // Update active state on status filter buttons
-    document.querySelectorAll('.filter-bar:first-of-type .filter-btn').forEach(btn => {
-        const btnText = btn.textContent.toLowerCase();
-        if (filter === 'all' && btnText === 'all') {
-            btn.classList.add('active');
-        } else if (btnText === filter) {
+    const filterButtons = document.querySelectorAll('.filter-bar:first-of-type .filter-btn');
+    filterButtons.forEach(btn => {
+        const btnFilter = btn.textContent.toLowerCase().trim();
+        if (filter === btnFilter) {
             btn.classList.add('active');
         } else {
             btn.classList.remove('active');
@@ -2948,13 +2941,13 @@ updateData.update_history = updates;
         fullPlanText = 'Professional (6d×8hrs weekly = 192hrs/month / $54)';
     }
     
-// Find ORIGINAL dates from genesis hashes ONLY
+// Find ORIGINAL dates from genesis hashes ONLY (these are the creation timestamps)
 let originalStartDate = null;
 let originalEndDate = null;
 let currentStartDate = c.start_datetime ? new Date(c.start_datetime) : null;
 let currentEndDate = c.end_datetime ? new Date(c.end_datetime) : null;
 
-// Get original dates from genesis hashes (these never change)
+// Get original dates from genesis hashes' created_at (when the hash was generated)
 if (originalStartHashObj && originalStartHashObj.created_at) {
     originalStartDate = originalStartHashObj.created_at.toDate ? originalStartHashObj.created_at.toDate() : null;
 }
@@ -2962,25 +2955,16 @@ if (originalEndHashObj && originalEndHashObj.created_at) {
     originalEndDate = originalEndHashObj.created_at.toDate ? originalEndHashObj.created_at.toDate() : null;
 }
 
-// If genesis hash has timestamp in the hash record, use that for original date
-if (!originalStartDate && originalStartHashObj && originalStartHashObj.timestamp) {
-    originalStartDate = new Date(originalStartHashObj.timestamp);
+// Fallback to campaign creation date if genesis hash not found
+if (!originalStartDate && c.created_at) {
+    originalStartDate = c.created_at.toDate ? c.created_at.toDate() : null;
 }
-if (!originalEndDate && originalEndHashObj && originalEndHashObj.timestamp) {
-    originalEndDate = new Date(originalEndHashObj.timestamp);
-}
-
-// IMPORTANT: Do NOT fallback to current dates
-// If no original dates found, mark as 'N/A'
-if (!originalStartDate) {
-    originalStartDate = null;
-}
-if (!originalEndDate) {
-    originalEndDate = null;
+if (!originalEndDate && c.created_at) {
+    originalEndDate = c.created_at.toDate ? c.created_at.toDate() : null;
 }
 
-const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'Not available (no genesis hash)';
-const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'Not available (no genesis hash)';
+const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'Not available';
+const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'Not available';
 const currentStartStr = currentStartDate ? formatCompactDate(currentStartDate) : 'N/A';
 const currentEndStr = currentEndDate ? formatCompactDate(currentEndDate) : 'N/A';
     
