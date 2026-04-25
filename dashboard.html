@@ -475,7 +475,7 @@
 
     <div id="loginScreen">
         <div class="login-box">
-            <h2>🔐 Unified Dashboard</h2>
+            <h2>🔐 Access Dashboard</h2>
             <p>Bondos4Ever © 2026 🖥️🎯 Local Digital Ad & Coupon Marketing System V 10.0 (Testing Phase)</p>
             <input type="password" id="passwordInput" placeholder="Enter dashboard password" onkeypress="if(event.key==='Enter')handleLogin()">
             <button class="login-btn-main" id="loginBtn" onclick="handleLogin()">
@@ -489,7 +489,7 @@
     <div id="dashboardContent">
         <div class="container">
                 <div class="header">
-       <h1>Bondos4Ever © 2026 🖥️🎯 Local Digital Ad & Coupon Marketing System V 10.0 (Testing Phase)</h1>
+       <h1 align="center">Bondos4Ever © 2026 🖥️🎯 Local Digital Ad & Coupon Marketing System V 10.0 (Testing Phase)</h1>
     <div style="display: flex; align-items: center; gap: 15px;">
         <button class="btn-sm" id="autoRefreshToggle" onclick="toggleAutoRefresh()" style="background:#dc3545; padding:5px 12px;">⏸️ Auto-refresh: OFF</button>
         <span class="user-badge" id="userBadge">Not logged in</span>
@@ -1006,7 +1006,7 @@ function updateStationDropdowns() {
         loadStations();
 auth.signInAnonymously().then(cred => {
     currentUser = cred.user;
-    document.getElementById('userBadge').textContent = `ID: ${cred.user.uid}`;
+    document.getElementById('userBadge').textContent = `Login ID: ${cred.user.uid}`;
     document.getElementById('userId').textContent = cred.user.uid;
 }).catch(() => { document.getElementById('userBadge').textContent = 'Guest'; });
         setDefaultDates();
