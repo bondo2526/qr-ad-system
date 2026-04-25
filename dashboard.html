@@ -674,11 +674,7 @@
 <div id="tab-coupon-campaigns" class="tab-pane">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
         <div class="section-title" style="margin:0;">🎟️ Coupon Campaigns</div>
-        <div style="display:flex; gap:8px;">
-            <button class="btn-excel" onclick="exportCouponCampaignsToExcel()">📊 Export Excel</button>
-            <button class="btn-pdf" onclick="exportCouponCampaignsToPDF()">📄 Export PDF</button>
-        </div>
-    </div>
+   </div>
     
     <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
         <div class="stat-card"><h3>Active Campaigns</h3><div class="stat-number purple" id="activeCampaigns">0</div></div>
@@ -704,6 +700,8 @@
                 </div>
             </div>
             <button class="btn-primary" onclick="createCouponCampaign()" style="white-space:nowrap;">➕ Create Campaign</button>
+            <button class="btn-excel" onclick="exportCouponCampaignsToExcel()">📊 Export Excel</button>
+            <button class="btn-pdf" onclick="exportCouponCampaignsToPDF()">📄 Export PDF</button>
         </div>
     </div>
     
@@ -4007,7 +4005,6 @@ window.exportCouponCampaignsToExcel = function() {
     
     const finalData = [
         ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
-        [''],
         headers,
         ...data
     ];
