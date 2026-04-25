@@ -487,8 +487,7 @@
             <div class="header">
                 <h1>Bondos4Ever © 2026 🖥️🎯 Local Digital Ad & Coupon Marketing System V 10.0 (Testing Phase)</h1>
 <div class="header-right">
-    <button class="btn-sm" id="autoRefreshToggle" onclick="toggleAutoRefresh()" style="background:#28a745; padding:5px 12px;">🔄 Auto-refresh: ON</button>
-    <span class="user-badge" id="userBadge">Not logged in</span>
+<button class="btn-sm" id="autoRefreshToggle" onclick="toggleAutoRefresh()" style="background:#dc3545; padding:5px 12px;">⏸️ Auto-refresh: OFF</button>    <span class="user-badge" id="userBadge">Not logged in</span>
     <button class="btn-purple" onclick="createAdvertiserAccount()">➕ Create New Advertiser Account</button>
     <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">Logout</button>
 </div>
@@ -623,10 +622,13 @@
                     </div>
                 </div>
 
-                <div id="tab-proofs" class="tab-pane">
+<div id="tab-proofs" class="tab-pane">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
         <div class="section-title" style="margin:0;">⛓️ Blockchain Hash Log</div>
-        <button class="btn-excel" onclick="exportHashLogToExcel()">📊 Export Excel</button>
+        <div style="display:flex; gap:8px;">
+            <button class="btn-excel" onclick="exportHashLogToExcel()">📊 Export Excel</button>
+            <button class="btn-pdf" onclick="exportHashLogToPDF()">📄 Export PDF</button>
+        </div>
     </div>
     <div style="margin-bottom: 15px;">
         <input type="text" id="hashLogSearch" class="filter-input" placeholder="🔍 Search by campaign ID, customer, product, or station..." style="width: 100%;" onkeyup="filterHashLog()">
@@ -634,7 +636,7 @@
     <div id="proofsList" class="campaigns-list">
         <div class="loading-block"><div class="spinner-large"></div>Loading...</div>
     </div>
-    </div>
+</div>
 
                 <div id="tab-stats" class="tab-pane">
                     <div class="section-title">📊 Ad System Statistics</div>
@@ -1004,7 +1006,6 @@ function updateStationDropdowns() {
         setDefaultDates();
         loadAdData();
         loadCouponData();
-        startAutoRefresh();
     }
 
     // CREATE NEW ADVERTISERS ACCOUNTS
@@ -1062,22 +1063,24 @@ function startAutoRefresh() {
     autoRefreshInterval = setInterval(() => {
         loadAdData(); loadCouponData();
     }, 10000);
+    document.getElementById('autoRefreshToggle').textContent = '🔄 Auto-refresh: ON';
+    document.getElementById('autoRefreshToggle').style.background = '#28a745';
 }
+
 function stopAutoRefresh() {
     if (autoRefreshInterval) { 
         clearInterval(autoRefreshInterval); 
         autoRefreshInterval = null; 
     }
+    document.getElementById('autoRefreshToggle').textContent = '⏸️ Auto-refresh: OFF';
+    document.getElementById('autoRefreshToggle').style.background = '#dc3545';
 }
-    window.toggleAutoRefresh = function() {
+
+window.toggleAutoRefresh = function() {
     if (autoRefreshInterval) {
         stopAutoRefresh();
-        document.getElementById('autoRefreshToggle').textContent = '⏸️ Auto-refresh: OFF';
-        document.getElementById('autoRefreshToggle').style.background = '#dc3545';
     } else {
         startAutoRefresh();
-        document.getElementById('autoRefreshToggle').textContent = '🔄 Auto-refresh: ON';
-        document.getElementById('autoRefreshToggle').style.background = '#28a745';
     }
 };
 
@@ -1369,19 +1372,46 @@ function filterHashLog() {
         noResultsMsg.remove();
     }
 }
-// Export Hash Log to Excel
+// Export Hash Log to Excel with filter support
 window.exportHashLogToExcel = function() {
     if (!allProofs.length) { alert('No hash records to export!'); return; }
     
+    // Get search term from filter input
+    const searchTerm = document.getElementById('hashLogSearch').value.toLowerCase().trim();
+    
+    // Filter data based on search term
+    let filteredProofs = allProofs;
+    let filenamePrefix = 'hash_logs';
+    
+    if (searchTerm) {
+        // Filter by campaign ID or customer name or product name or station
+        filteredProofs = allProofs.filter(p => {
+            const campaignMatch = p.campaign_id?.toLowerCase().includes(searchTerm);
+            const customerMatch = p.customer_name?.toLowerCase().includes(searchTerm);
+            const productMatch = p.product_name?.toLowerCase().includes(searchTerm);
+            const stationMatch = p.station_name?.toLowerCase().includes(searchTerm);
+            return campaignMatch || customerMatch || productMatch || stationMatch;
+        });
+        
+        // Create filename from search term (clean special chars)
+        filenamePrefix = searchTerm.replace(/[^a-z0-9_-]/gi, '_');
+        
+        if (filteredProofs.length === 0) {
+            alert(`No hash records found for "${searchTerm}"`);
+            return;
+        }
+    }
+    
     const now = new Date();
     const formattedDate = formatCompactDate(now);
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
     
     const headers = [
         'Campaign ID', 'Customer Name', 'Product Name', 'Station Name',
         'Hash Type', 'Hash Value', 'Previous Hash', 'Status', 'Created At'
     ];
     
-    const data = allProofs.map(p => {
+    const data = filteredProofs.map(p => {
         const hashTypeLabel = p.type === 'genesis' ? '🔷 GENESIS' : '🟡 UPDATED';
         const hashLabel = p.hash_type === 'start' ? 'START HASH' : 'END HASH';
         const fullType = `${hashTypeLabel} - ${hashLabel}`;
@@ -1410,6 +1440,8 @@ window.exportHashLogToExcel = function() {
     const finalData = [
         ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
         [`Generated: ${formattedDate}`],
+        [searchTerm ? `Filter: ${searchTerm}` : 'All Records'],
+        [`Total Records: ${filteredProofs.length}`],
         [''],
         headers,
         ...data
@@ -1423,8 +1455,120 @@ window.exportHashLogToExcel = function() {
     
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Blockchain Hash Log');
-    XLSX.writeFile(wb, `hash_log_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `${filenamePrefix}_hash_logs_${timestamp}.xlsx`);
 };
+    // Export Hash Log to PDF with filter support
+window.exportHashLogToPDF = function() {
+    if (!allProofs.length) { alert('No hash records to export!'); return; }
+    
+    // Get search term from filter input
+    const searchTerm = document.getElementById('hashLogSearch').value.toLowerCase().trim();
+    
+    // Filter data based on search term
+    let filteredProofs = allProofs;
+    let filenamePrefix = 'hash_logs';
+    
+    if (searchTerm) {
+        filteredProofs = allProofs.filter(p => {
+            const campaignMatch = p.campaign_id?.toLowerCase().includes(searchTerm);
+            const customerMatch = p.customer_name?.toLowerCase().includes(searchTerm);
+            const productMatch = p.product_name?.toLowerCase().includes(searchTerm);
+            const stationMatch = p.station_name?.toLowerCase().includes(searchTerm);
+            return campaignMatch || customerMatch || productMatch || stationMatch;
+        });
+        
+        filenamePrefix = searchTerm.replace(/[^a-z0-9_-]/gi, '_');
+        
+        if (filteredProofs.length === 0) {
+            alert(`No hash records found for "${searchTerm}"`);
+            return;
+        }
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const now = new Date();
+    const formattedDate = formatCompactDate(now);
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
+    
+    // Prepare data for table
+    const rows = filteredProofs.map(p => {
+        const hashTypeLabel = p.type === 'genesis' ? 'GENESIS' : 'UPDATED';
+        const hashLabel = p.hash_type === 'start' ? 'START' : 'END';
+        const fullType = `${hashTypeLabel} ${hashLabel}`;
+        const createdDate = p.created_at?.toDate ? formatCompactDate(p.created_at.toDate()) : 'Unknown';
+        
+        return [
+            p.campaign_id?.substring(0, 12) || 'N/A',
+            p.customer_name?.substring(0, 15) || 'Unknown',
+            p.product_name?.substring(0, 15) || 'Unknown',
+            p.station_name || 'N/A',
+            fullType,
+            p.hash ? p.hash.substring(0, 20) + '...' : 'N/A',
+            p.type === 'genesis' ? 'Original' : 'Updated',
+            createdDate
+        ];
+    });
+    
+    // Sort by created date (newest first)
+    rows.sort((a, b) => {
+        const dateA = new Date(a[7]);
+        const dateB = new Date(b[7]);
+        return dateB - dateA;
+    });
+    
+    // Header
+    doc.setFontSize(16);
+    doc.setTextColor(74, 158, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Blockchain Hash Log Report', 14, 15);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${formattedDate}`, 14, 22);
+    doc.text(`Filter: ${searchTerm || 'All Records'}`, 14, 29);
+    doc.text(`Total Records: ${filteredProofs.length}`, 14, 36);
+    
+    // Table
+    doc.autoTable({
+        head: [['Campaign ID', 'Customer', 'Product', 'Station', 'Hash Type', 'Hash (truncated)', 'Status', 'Created At']],
+        body: rows,
+        startY: 42,
+        theme: 'grid',
+        headStyles: { fillColor: [74, 158, 255], textColor: 255, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 7, cellPadding: 2 },
+        alternateRowStyles: { fillColor: [240, 242, 248] },
+        columnStyles: {
+            0: { cellWidth: 25 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 30 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 22 },
+            5: { cellWidth: 40 },
+            6: { cellWidth: 15 },
+            7: { cellWidth: 25 }
+        },
+        margin: { left: 10, right: 10 }
+    });
+    
+    // Footer on all pages
+    const pageCount = doc.internal.getNumberOfPages();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        const footerY = doc.internal.pageSize.getHeight() - 10;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(10, footerY - 3, pageWidth - 10, footerY - 3);
+        doc.setFontSize(7);
+        doc.setTextColor(149, 165, 166);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)', pageWidth / 2, footerY, { align: 'center' });
+    }
+    
+    doc.save(`${filenamePrefix}_hash_logs_${timestamp}.pdf`);
+};
+    
     function updateAdStatistics() {
         let total=0, active=0, upcoming=0, expired=0, images=0;
         allAdCampaigns.forEach(c => {
@@ -4160,7 +4304,183 @@ window.exportCouponCampaignsToExcel = function() {
     XLSX.utils.book_append_sheet(wb, ws, 'Coupon Campaigns');
     XLSX.writeFile(wb, `coupon_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
+    // Export Coupon Campaigns to PDF with filter support
+window.exportCouponCampaignsToPDF = function() {
+    if (!allCouponCampaigns.length) { alert('No coupon campaigns to export!'); return; }
     
+    // Get search term from filter input
+    const searchTerm = document.getElementById('couponCampaignSearch').value.toLowerCase().trim();
+    
+    // Filter campaigns based on search term
+    let filteredCampaigns = allCouponCampaigns;
+    let filenamePrefix = 'all_campaigns';
+    
+    if (searchTerm) {
+        filteredCampaigns = allCouponCampaigns.filter(campaign => {
+            const advertiserMatch = campaign.advertiserName?.toLowerCase().includes(searchTerm);
+            const stationMatch = campaign.station?.toLowerCase().includes(searchTerm);
+            // Also search in product names
+            const productMatch = campaign.products?.some(p => p.productName?.toLowerCase().includes(searchTerm));
+            return advertiserMatch || stationMatch || productMatch;
+        });
+        
+        // Create filename from search term
+        filenamePrefix = searchTerm.replace(/[^a-z0-9_-]/gi, '_');
+        
+        if (filteredCampaigns.length === 0) {
+            alert(`No coupon campaigns found for "${searchTerm}"`);
+            return;
+        }
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const now = new Date();
+    const formattedDate = formatCompactDate(now);
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
+    
+    let yPos = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    
+    // Helper to add new page
+    function checkNewPage(needed) {
+        if (yPos + needed > pageHeight - 15) {
+            doc.addPage();
+            yPos = 15;
+            return true;
+        }
+        return false;
+    }
+    
+    // Header
+    doc.setFontSize(16);
+    doc.setTextColor(74, 158, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Coupon Campaigns Report', 105, yPos, { align: 'center' });
+    yPos += 7;
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${formattedDate}`, 20, yPos);
+    doc.text(`Filter: ${searchTerm || 'All Campaigns'}`, pageWidth - 20, yPos, { align: 'right' });
+    yPos += 5;
+    
+    doc.text(`Total Campaigns: ${filteredCampaigns.length}`, 20, yPos);
+    yPos += 8;
+    
+    // Process each campaign
+    for (const campaign of filteredCampaigns) {
+        checkNewPage(40);
+        
+        let totalProducts = 0;
+        let totalRedeemed = 0;
+        let totalRemaining = 0;
+        
+        if (campaign.products && campaign.products.length > 0) {
+            campaign.products.forEach(product => {
+                totalProducts += product.totalProducts || 0;
+                totalRedeemed += product.redeemedCount || 0;
+                totalRemaining += (product.remaining || (product.totalProducts - (product.redeemedCount || 0)));
+            });
+        }
+        
+        const status = campaign.isActive !== false ? 'Active' : 'Deactivated';
+        const createdAt = campaign.createdAt?.toDate ? formatCompactDate(campaign.createdAt.toDate()) : 'Unknown';
+        
+        // Campaign header
+        doc.setFontSize(12);
+        doc.setTextColor(74, 158, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${campaign.advertiserName || 'Unknown'} (${status})`, 20, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(9);
+        doc.setTextColor(52, 73, 94);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Station: ${campaign.station || 'N/A'}`, 20, yPos);
+        doc.text(`Total Products: ${totalProducts}`, 80, yPos);
+        doc.text(`Redeemed: ${totalRedeemed}`, 130, yPos);
+        doc.text(`Remaining: ${totalRemaining}`, 170, yPos);
+        yPos += 5;
+        doc.text(`Created: ${createdAt}`, 20, yPos);
+        yPos += 8;
+        
+        // Products table
+        if (campaign.products && campaign.products.length > 0) {
+            // Table header
+            doc.setFillColor(243, 156, 18);
+            doc.rect(20, yPos, 170, 6, 'F');
+            doc.setFontSize(8);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Product Name', 22, yPos + 4);
+            doc.text('Total', 100, yPos + 4);
+            doc.text('Redeemed', 120, yPos + 4);
+            doc.text('Remaining', 140, yPos + 4);
+            doc.text('Status', 160, yPos + 4);
+            yPos += 6;
+            
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            
+            for (const product of campaign.products) {
+                checkNewPage(10);
+                
+                const rem = product.remaining || (product.totalProducts - (product.redeemedCount || 0));
+                const isCampaignActive = campaign.isActive !== false;
+                const isProductActive = product.isActive !== false;
+                let productStatus = '';
+                
+                if (!isCampaignActive) productStatus = 'Campaign Deactivated';
+                else if (!isProductActive) productStatus = 'Product Deactivated';
+                else if (rem > 0) productStatus = 'Active';
+                else productStatus = 'Sold Out';
+                
+                let statusColor = '';
+                if (productStatus === 'Active') statusColor = '#28a745';
+                else if (productStatus === 'Sold Out') statusColor = '#dc3545';
+                else statusColor = '#ffc107';
+                
+                doc.text(product.productName || 'Unknown', 22, yPos + 3);
+                doc.text(String(product.totalProducts || 0), 100, yPos + 3);
+                doc.text(String(product.redeemedCount || 0), 120, yPos + 3);
+                doc.text(String(rem), 140, yPos + 3);
+                doc.setTextColor(statusColor);
+                doc.text(productStatus, 160, yPos + 3);
+                doc.setTextColor(0, 0, 0);
+                
+                yPos += 5;
+            }
+        } else {
+            doc.setFontSize(9);
+            doc.setTextColor(150, 150, 150);
+            doc.text('No products available', 20, yPos);
+            yPos += 5;
+        }
+        
+        yPos += 8;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(20, yPos - 4, pageWidth - 20, yPos - 4);
+    }
+    
+    // Footer on all pages
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        const footerY = doc.internal.pageSize.getHeight() - 10;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(20, footerY - 3, pageWidth - 20, footerY - 3);
+        doc.setFontSize(7);
+        doc.setTextColor(149, 165, 166);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)', pageWidth / 2, footerY, { align: 'center' });
+    }
+    
+    doc.save(`${filenamePrefix}_coupon_campaigns_${timestamp}.pdf`);
+};
     function fmtDate(date) {
         if (!date) return 'Unknown';
         const d = new Date(date);
