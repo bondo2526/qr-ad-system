@@ -486,7 +486,7 @@
 
             <div class="header">
                 <h1>Bondos4Ever © 2026 🖥️🎯 Local Digital Ad & Coupon Marketing System V 10.0 (Testing Phase)</h1>
-<div class="header-right">
+<div class="header-right" style="margin-left: auto;">
 <button class="btn-sm" id="autoRefreshToggle" onclick="toggleAutoRefresh()" style="background:#dc3545; padding:5px 12px;">⏸️ Auto-refresh: OFF</button>    <span class="user-badge" id="userBadge">Not logged in</span>
     <button class="btn-purple" onclick="createAdvertiserAccount()">➕ Create New Customer Account</button>
     <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">Logout</button>
@@ -998,11 +998,11 @@ function updateStationDropdowns() {
         document.getElementById('dashboardContent').style.display = 'block';
         document.getElementById('lastLoginTime').textContent = formatCompactDate(new Date());
         loadStations();
-        auth.signInAnonymously().then(cred => {
-            currentUser = cred.user;
-            document.getElementById('userBadge').textContent = `ID: ${cred.user.uid.slice(0,6)}...`;
-            document.getElementById('userId').textContent = cred.user.uid.slice(0,8) + '...';
-        }).catch(() => { document.getElementById('userBadge').textContent = 'Guest'; });
+auth.signInAnonymously().then(cred => {
+    currentUser = cred.user;
+    document.getElementById('userBadge').textContent = `ID: ${cred.user.uid}`;
+    document.getElementById('userId').textContent = cred.user.uid;
+}).catch(() => { document.getElementById('userBadge').textContent = 'Guest'; });
         setDefaultDates();
         loadAdData();
         loadCouponData();
@@ -3925,7 +3925,7 @@ function filterCouponCampaigns() {
         const adF = document.getElementById('adFilter');
         const prF = document.getElementById('productFilter');
         if (!adF||!prF) return;
-        adF.innerHTML = '<option value="">All Advertisers</option>';
+        adF.innerHTML = '<option value="">All Customers</option>';
         prF.innerHTML = '<option value="">All Products</option>';
         Array.from(advertisersList).sort().forEach(ad => {
             const o=document.createElement('option'); o.value=o.textContent=ad; adF.appendChild(o);
