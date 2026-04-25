@@ -172,7 +172,7 @@
         
         <div id="blocked" class="hidden">
             <h1 class="blocked">⛔ Already Claimed</h1>
-            <h3 id="blockedAdName"></h3>
+            <h3  style="text-align: center; font-weight: bold;" id="blockedAdName"></h3>
             
             <div class="coupon-section">
                 <p><strong>Your previously claimed coupon:</strong></p>
@@ -587,7 +587,7 @@ console.log("Loaded claim data:", { currentAd, currentProduct, currentHost });
             const hours = Math.floor(diff / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            document.getElementById('countdown').innerHTML = `<div style="font-size: 28px;">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</div><p>Time until you can claim again (${CONFIG.BLOCK_HOURS} hours)</p>`;
+            document.getElementById('countdown').innerHTML = `<div style="font-size: 28px;">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</div><p>Time until you can claim again <br>(${CONFIG.BLOCK_HOURS} hours)</p>`;
             setTimeout(updateCountdown, 1000);
         }
         updateCountdown();
