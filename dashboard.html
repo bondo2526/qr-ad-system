@@ -3057,7 +3057,15 @@ if (hasLatestUpdate) {
 window.exportAdToExcel = function() {
     if (!allAdCampaigns.length) { alert('No data to export'); return; }
     
-    // First, prepare the data with headers
+    // Helper function to get full plan description
+    function getFullPlanDescription(planName) {
+        const plan = (planName || 'Light').toLowerCase();
+        if (plan === 'light') return 'Light (2 days × 4 hrs weekly = 32 hrs/month / $35)';
+        if (plan === 'standard') return 'Standard (4 days × 6 hrs weekly = 96 hrs/month / $48)';
+        if (plan === 'professional') return 'Professional (6 days × 8 hrs weekly = 192 hrs/month / $54)';
+        return planName || 'Light';
+    }
+    
     const headers = [
         'Campaign ID', 'Station Name', 'Customer Name', 'Product Name', 
         'Pricing Plan', 'Start Date/Time', 'End Date/Time', 'Status', 
@@ -3069,7 +3077,7 @@ window.exportAdToExcel = function() {
         c.station || 'N/A',
         c.name || 'Unknown',
         c.product_name || 'Not specified',
-        (c.pricing_plan || c.plan_name || 'Light').toUpperCase(),
+        getFullPlanDescription(c.pricing_plan || c.plan_name || 'Light'),  // Full description
         c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
         c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
         getAdStatus(c).toUpperCase(),
@@ -3077,19 +3085,16 @@ window.exportAdToExcel = function() {
         c.hashes?.end?.hash || 'PENDING'
     ]);
     
-    // Build final array with: copyright rows + headers + data
     const finalData = [
         ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
-        headers,  // This adds the column headers back!
+        headers,
         ...data
     ];
     
     const ws = XLSX.utils.aoa_to_sheet(finalData);
-    
-    // Set column widths
     ws['!cols'] = [
         {wch:25}, {wch:15}, {wch:20}, {wch:20}, 
-        {wch:15}, {wch:22}, {wch:22}, {wch:12}, 
+        {wch:45}, {wch:22}, {wch:22}, {wch:12}, 
         {wch:45}, {wch:45}
     ];
     
@@ -3823,7 +3828,7 @@ window.exportClaimsToExcel = function() {
     if (!filteredClaims.length) { alert('No data to export!'); return; }
     
     const headers = [
-        'Date', 'Customer', 'Product', 'Location', 
+        'Date', 'Advertiser', 'Product', 'Location', 
         'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires At'
     ];
     
@@ -3847,7 +3852,6 @@ window.exportClaimsToExcel = function() {
         ];
     });
     
-    // Build final array with: copyright rows + headers + data
     const finalData = [
         ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
         headers,
@@ -3855,8 +3859,6 @@ window.exportClaimsToExcel = function() {
     ];
     
     const ws = XLSX.utils.aoa_to_sheet(finalData);
-    
-    // Set column widths
     ws['!cols'] = [
         {wch:20}, {wch:25}, {wch:20}, {wch:20}, 
         {wch:18}, {wch:12}, {wch:10}, {wch:20}, {wch:20}
@@ -3970,13 +3972,18 @@ window.exportClaimsToPDF = function() {
     
     doc.save(fileName);
 };
-// Export Coupon Campaigns to Excel
+    
+// Export Coupon Campaigns to Excel with Product Details (Same as UI)
 window.exportCouponCampaignsToExcel = function() {
     if (!allCouponCampaigns.length) { alert('No coupon campaigns to export!'); return; }
     
-    const headers = ['Advertiser Name', 'Station', 'Total Products', 'Total Redeemed', 'Total Remaining', 'Status', 'Created At'];
+    // Create a separate sheet for each campaign with product details
+    const wb = XLSX.utils.book_new();
+    const now = new Date();
     
-    const data = allCouponCampaigns.map(campaign => {
+    // Summary Sheet
+    const summaryHeaders = ['Advertiser Name', 'Station', 'Total Products', 'Total Redeemed', 'Total Remaining', 'Status', 'Created At'];
+    const summaryData = allCouponCampaigns.map(campaign => {
         let totalProducts = 0;
         let totalRedeemed = 0;
         let totalRemaining = 0;
@@ -4003,96 +4010,86 @@ window.exportCouponCampaignsToExcel = function() {
         ];
     });
     
-    const finalData = [
+    // Add Summary Sheet
+    const summarySheet = XLSX.utils.aoa_to_sheet([
         ['Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
-        headers,
-        ...data
-    ];
+        [''],
+        ['COUPON CAMPAIGNS SUMMARY REPORT'],
+        ['Generated:', formatCompactDate(now)],
+        ['Total Campaigns:', allCouponCampaigns.length],
+        [''],
+        summaryHeaders,
+        ...summaryData
+    ]);
+    summarySheet['!cols'] = [{wch:25}, {wch:15}, {wch:12}, {wch:12}, {wch:12}, {wch:12}, {wch:22}];
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
     
-    const ws = XLSX.utils.aoa_to_sheet(finalData);
-    ws['!cols'] = [{wch:25}, {wch:15}, {wch:12}, {wch:12}, {wch:12}, {wch:12}, {wch:22}];
+    // Product Details Sheet (Same as UI table)
+    const productHeaders = ['Advertiser', 'Station', 'Product Name', 'Total', 'Redeemed', 'Remaining', 'Status', 'Action'];
+    const productData = [];
     
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Coupon Campaigns');
-    XLSX.writeFile(wb, `coupon_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
-};
-
-// Export Coupon Campaigns to PDF
-window.exportCouponCampaignsToPDF = function() {
-    if (!allCouponCampaigns.length) { alert('No coupon campaigns to export!'); return; }
-    
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const now = new Date();
-    
-    // Prepare data
-    const rows = allCouponCampaigns.map(campaign => {
-        let totalProducts = 0;
-        let totalRedeemed = 0;
-        let totalRemaining = 0;
-        let productsList = '';
+    for (const campaign of allCouponCampaigns) {
+        const isCampaignActive = campaign.isActive !== false;
+        const station = campaign.station || 'N/A';
+        const advertiserName = campaign.advertiserName || 'Unknown';
         
         if (campaign.products && campaign.products.length > 0) {
-            campaign.products.forEach(product => {
-                totalProducts += product.totalProducts || 0;
-                totalRedeemed += product.redeemedCount || 0;
-                totalRemaining += (product.remaining || (product.totalProducts - (product.redeemedCount || 0)));
-                productsList += `${product.productName}(${product.redeemedCount||0}/${product.totalProducts}) `;
-            });
+            for (const product of campaign.products) {
+                const rem = product.remaining || (product.totalProducts - (product.redeemedCount || 0));
+                const isProductActive = product.isActive !== false;
+                let status = '';
+                let action = '';
+                
+                if (!isCampaignActive) {
+                    status = 'Campaign Deactivated';
+                    action = 'N/A';
+                } else if (!isProductActive) {
+                    status = 'Product Deactivated';
+                    action = 'Activate';
+                } else if (rem > 0) {
+                    status = 'Active';
+                    action = 'Deactivate';
+                } else {
+                    status = 'Sold Out';
+                    action = 'N/A';
+                }
+                
+                productData.push([
+                    advertiserName,
+                    station,
+                    product.productName || 'Unknown',
+                    product.totalProducts || 0,
+                    product.redeemedCount || 0,
+                    rem,
+                    status,
+                    action
+                ]);
+            }
         } else {
-            productsList = 'No products';
+            productData.push([
+                advertiserName,
+                station,
+                'No products',
+                0,
+                0,
+                0,
+                isCampaignActive ? 'No products added' : 'Campaign Deactivated',
+                'Add Product'
+            ]);
         }
-        
-        const status = campaign.isActive !== false ? 'Active' : 'Deactivated';
-        
-        return [
-            campaign.advertiserName || 'Unknown',
-            campaign.station || 'N/A',
-            totalProducts,
-            totalRedeemed,
-            totalRemaining,
-            status,
-            productsList.substring(0, 50)
-        ];
-    });
-    
-    // Header
-    doc.setFontSize(18);
-    doc.setTextColor(74, 158, 255);
-    doc.text('Coupon Campaigns Report', 14, 15);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${formatCompactDate(now)}`, 14, 22);
-    doc.text(`Total Campaigns: ${allCouponCampaigns.length}`, 14, 29);
-    
-    // Table
-    doc.autoTable({
-        head: [['Advertiser', 'Station', 'Total', 'Redeemed', 'Remaining', 'Status', 'Products']],
-        body: rows,
-        startY: 36,
-        theme: 'grid',
-        headStyles: { fillColor: [74, 158, 255], textColor: 255, fontStyle: 'bold', halign: 'center' },
-        bodyStyles: { fontSize: 8, cellPadding: 3 },
-        alternateRowStyles: { fillColor: [240, 242, 248] },
-        margin: { left: 14, right: 14 }
-    });
-    
-    // Footer on all pages
-    const pageCount = doc.internal.getNumberOfPages();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        const footerY = doc.internal.pageSize.getHeight() - 10;
-        doc.setDrawColor(200, 200, 200);
-        doc.line(14, footerY - 3, pageWidth - 14, footerY - 3);
-        doc.setFontSize(7);
-        doc.setTextColor(149, 165, 166);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Bondos4Ever © 2026 | Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)', pageWidth / 2, footerY, { align: 'center' });
     }
     
-    doc.save(`coupon_campaigns_${new Date().toISOString().slice(0,10)}.pdf`);
+    const productSheet = XLSX.utils.aoa_to_sheet([
+        ['PRODUCT DETAILS (Same as UI Table)'],
+        [''],
+        productHeaders,
+        ...productData
+    ]);
+    productSheet['!cols'] = [{wch:25}, {wch:15}, {wch:25}, {wch:10}, {wch:10}, {wch:10}, {wch:22}, {wch:12}];
+    XLSX.utils.book_append_sheet(wb, productSheet, 'Product Details');
+    
+    // Save file
+    XLSX.writeFile(wb, `coupon_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
     
     function fmtDate(date) {
