@@ -1173,36 +1173,38 @@ window.toggleAutoRefresh = function() {
         updateAdStatistics();
     }
 
-    async function loadAdCampaigns() {
-        try {
-            const snap = await db.collection('customers').orderBy('created_at','desc').get();
-            allAdCampaigns = [];
-            snap.forEach(doc => {
-                const data = doc.data();
-                const campaign = { id: doc.id, ...data };
-                if (!campaign.start_datetime) {
-                    console.warn('Campaign missing start_datetime:', campaign.id);
-                }
-                if (!campaign.end_datetime) {
-                    console.warn('Campaign missing end_datetime:', campaign.id);
-                }
-                if (campaign.update_history && !campaign.updates) {
-                    campaign.updates = campaign.update_history;
-                }
-                if (!campaign.images) {
-                    campaign.images = [];
-                }
-                allAdCampaigns.push(campaign);
-            });
-            displayAdCampaigns();
-        } catch(e) { 
-            console.error('loadAdCampaigns:', e);
-            const list = document.getElementById('campaignsAdList');
-            if (list) {
-                list.innerHTML = '<div class="loading-block" style="color:#dc3545;">❌ Error loading campaigns: ' + e.message + '</div>';
+async function loadAdCampaigns() {
+    try {
+        const snap = await db.collection('customers').orderBy('created_at','desc').get();
+        allAdCampaigns = [];
+        snap.forEach(doc => {
+            const data = doc.data();
+            const campaign = { id: doc.id, ...data };
+            if (!campaign.start_datetime) {
+                console.warn('Campaign missing start_datetime:', campaign.id);
             }
+            if (!campaign.end_datetime) {
+                console.warn('Campaign missing end_datetime:', campaign.id);
+            }
+            if (campaign.update_history && !campaign.updates) {
+                campaign.updates = campaign.update_history;
+            }
+            if (!campaign.images) {
+                campaign.images = [];
+            }
+            allAdCampaigns.push(campaign);
+        });
+        // Store original order for consistent AD numbering
+        window.originalCampaignOrder = allAdCampaigns.map(c => c.id);
+        displayAdCampaigns();
+    } catch(e) { 
+        console.error('loadAdCampaigns:', e);
+        const list = document.getElementById('campaignsAdList');
+        if (list) {
+            list.innerHTML = '<div class="loading-block" style="color:#dc3545;">❌ Error loading campaigns: ' + e.message + '</div>';
         }
     }
+}
 
     async function loadProofs() {
         try {
@@ -1658,13 +1660,19 @@ window.exportHashLogToPDF = function() {
         }
     }
   
-    window.filterByStation = function(st) {
-        currentStationFilter = st;
-        document.querySelectorAll('.filter-bar:nth-of-type(2) .filter-btn, #tab-campaigns .filter-bar:last-of-type .filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.textContent.replace(/\s/g,'') === st.replace(/\s/g,'') || (st==='all' && btn.textContent.includes('All Stations')));
-        });
-        displayAdCampaigns();
-    };
+window.filterByStation = function(st) {
+    currentStationFilter = st;
+    // Update active state on station filter buttons
+    document.querySelectorAll('.station-filter').forEach(btn => {
+        const btnText = btn.textContent;
+        if (btnText === st || (st === 'all' && btnText === 'All Stations')) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    applyAdFilters();
+};
 
     let advNameFilterValue = '';
     let productNameFilterValue = '';
@@ -1679,46 +1687,70 @@ window.exportHashLogToPDF = function() {
         applyAdFilters();
     };
 
-    window.clearAdFilters = function() {
-        document.getElementById('advNameFilter').value = '';
-        document.getElementById('productNameFilter').value = '';
-        advNameFilterValue = '';
-        productNameFilterValue = '';
-        applyAdFilters();
-    };
-
+window.clearAdFilters = function() {
+    document.getElementById('advNameFilter').value = '';
+    document.getElementById('productNameFilter').value = '';
+    advNameFilterValue = '';
+    productNameFilterValue = '';
+    // Also reset status and station filters
+    currentFilter = 'all';
+    currentStationFilter = 'all';
+    // Update button active states
+    document.querySelectorAll('.filter-bar:first-of-type .filter-btn').forEach(btn => {
+        if (btn.textContent.toLowerCase() === 'all') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    document.querySelectorAll('.station-filter').forEach(btn => {
+        if (btn.textContent === 'All Stations') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    applyAdFilters();
+};
 function applyAdFilters() {
     const list = document.getElementById('campaignsAdList');
     if (!list) return;
     
-    // Get all filter values
+    // Get ALL filter values
     const statusFilter = currentFilter;
     const stationFilter = currentStationFilter;
     const advName = document.getElementById('advNameFilter')?.value.toLowerCase() || '';
     const productName = document.getElementById('productNameFilter')?.value.toLowerCase() || '';
     
-    // Apply ALL filters together
+    // Apply ALL filters together (AND logic)
     let campaigns = allAdCampaigns.filter(c => {
-        // Status filter
+        // 1. Status filter
         const st = getAdStatus(c);
         if (statusFilter !== 'all' && st !== statusFilter) return false;
         
-        // Station filter
+        // 2. Station filter
         if (stationFilter !== 'all' && c.station !== stationFilter) return false;
         
-        // Advertiser/Customer name filter
+        // 3. Customer/Advertiser name filter
         if (advName) {
             const customerName = (c.name || '').toLowerCase();
             if (!customerName.includes(advName)) return false;
         }
         
-        // Product name filter
+        // 4. Product name filter
         if (productName) {
             const prodName = (c.product_name || '').toLowerCase();
             if (!prodName.includes(productName)) return false;
         }
         
         return true;
+    });
+    
+    // Sort filtered campaigns by original order (created_at desc)
+    campaigns.sort((a, b) => {
+        const indexA = allAdCampaigns.findIndex(c => c.id === a.id);
+        const indexB = allAdCampaigns.findIndex(c => c.id === b.id);
+        return indexA - indexB;
     });
     
     // Update stats display
@@ -1731,6 +1763,7 @@ function applyAdFilters() {
     if (filteredCountSpan) filteredCountSpan.textContent = filteredCount;
     if (totalCountSpan) totalCountSpan.textContent = totalCount;
     
+    // Show/hide stats bar
     if (statsDiv) {
         if (advName || productName || statusFilter !== 'all' || stationFilter !== 'all') {
             statsDiv.style.display = 'block';
@@ -1747,6 +1780,7 @@ function applyAdFilters() {
     
     let html = '';
     campaigns.forEach((campaign) => {
+        // AD number based on position in original allAdCampaigns (not filtered)
         const originalIndex = allAdCampaigns.findIndex(c => c.id === campaign.id);
         const adNumber = originalIndex + 1;
         html += buildAdCampaignHTML(campaign, adNumber);
@@ -1754,13 +1788,21 @@ function applyAdFilters() {
     list.innerHTML = html;
 }
 
-    window.filterCampaigns = function(filter) {
-        currentFilter = filter;
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.textContent.toLowerCase().includes(filter === 'all' ? 'all' : filter));
-        });
-        applyAdFilters();
-    };
+window.filterCampaigns = function(filter) {
+    currentFilter = filter;
+    // Update active state on status filter buttons
+    document.querySelectorAll('.filter-bar:first-of-type .filter-btn').forEach(btn => {
+        const btnText = btn.textContent.toLowerCase();
+        if (filter === 'all' && btnText === 'all') {
+            btn.classList.add('active');
+        } else if (btnText === filter) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    applyAdFilters();
+};
 
     window.manualRefresh = async function() { 
         await loadAdData(); 
@@ -2906,12 +2948,13 @@ updateData.update_history = updates;
         fullPlanText = 'Professional (6d×8hrs weekly = 192hrs/month / $54)';
     }
     
-// Find ORIGINAL dates
+// Find ORIGINAL dates from genesis hashes ONLY
 let originalStartDate = null;
 let originalEndDate = null;
 let currentStartDate = c.start_datetime ? new Date(c.start_datetime) : null;
 let currentEndDate = c.end_datetime ? new Date(c.end_datetime) : null;
 
+// Get original dates from genesis hashes (these never change)
 if (originalStartHashObj && originalStartHashObj.created_at) {
     originalStartDate = originalStartHashObj.created_at.toDate ? originalStartHashObj.created_at.toDate() : null;
 }
@@ -2919,22 +2962,27 @@ if (originalEndHashObj && originalEndHashObj.created_at) {
     originalEndDate = originalEndHashObj.created_at.toDate ? originalEndHashObj.created_at.toDate() : null;
 }
 
-// If no genesis hash found, try to get from campaign's original data
-if (!originalStartDate && c.hashes?.start?.timestamp) {
-    originalStartDate = new Date(c.hashes.start.timestamp);
+// If genesis hash has timestamp in the hash record, use that for original date
+if (!originalStartDate && originalStartHashObj && originalStartHashObj.timestamp) {
+    originalStartDate = new Date(originalStartHashObj.timestamp);
 }
-if (!originalEndDate && c.hashes?.end?.timestamp) {
-    originalEndDate = new Date(c.hashes.end.timestamp);
+if (!originalEndDate && originalEndHashObj && originalEndHashObj.timestamp) {
+    originalEndDate = new Date(originalEndHashObj.timestamp);
 }
 
-// Fallback to current dates only if absolutely nothing exists
-if (!originalStartDate) originalStartDate = currentStartDate;
-if (!originalEndDate) originalEndDate = currentEndDate;
-    
-    const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'N/A';
-    const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'N/A';
-    const currentStartStr = currentStartDate ? formatCompactDate(currentStartDate) : 'N/A';
-    const currentEndStr = currentEndDate ? formatCompactDate(currentEndDate) : 'N/A';
+// IMPORTANT: Do NOT fallback to current dates
+// If no original dates found, mark as 'N/A'
+if (!originalStartDate) {
+    originalStartDate = null;
+}
+if (!originalEndDate) {
+    originalEndDate = null;
+}
+
+const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'Not available (no genesis hash)';
+const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'Not available (no genesis hash)';
+const currentStartStr = currentStartDate ? formatCompactDate(currentStartDate) : 'N/A';
+const currentEndStr = currentEndDate ? formatCompactDate(currentEndDate) : 'N/A';
     
     let status = 'UPCOMING';
     let statusColor = [255, 193, 7];
