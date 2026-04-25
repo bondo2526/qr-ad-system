@@ -170,16 +170,17 @@
                 <button class="btn btn-logout" onclick="logout()">🚪 Logout</button>
             </div>
             
-            <div class="manual-input-section">
-                <input type="text" id="manualCode" placeholder="Enter coupon code here" onkeypress="handleManualCodeEnter(event)">
-                <div class="action-buttons">
-                    <button class="btn btn-validate" onclick="validateManualCode()">✅ Validate Code</button>
-                    <button class="btn btn-reset" onclick="resetScanner()">🔄 Reset</button>
-                        <!-- COPYRIGHT HERE -->
-    <div style="text-align: center; margin-top: 25px; font-size: 11px; color: #aaa;">
-       Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System V 10.0 <br>(Testing Phase)
+<div class="manual-input-section">
+    <input type="text" id="manualCode" placeholder="Enter coupon code here" onkeypress="handleManualCodeEnter(event)">
+    <div class="action-buttons">
+        <button class="btn btn-validate" onclick="validateManualCode()">✅ Validate Code</button>
+        <button class="btn btn-reset" onclick="resetScanner()">🔄 Reset</button>
     </div>
-            </div>
+    <!-- COPYRIGHT HERE - Now OUTSIDE action-buttons, will display on new line -->
+    <div style="text-align: center; margin-top: 25px; font-size: 11px; color: #aaa;">
+        Bondos4Ever © 2026 📊 Local Digital Ad & Coupon Marketing System V 10.0<br>(Testing Phase)
+    </div>
+</div>
             
             <div id="resultSection" class="hidden">
                 <div class="coupon-display" id="scannedCoupon"></div>
