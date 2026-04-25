@@ -2995,41 +2995,46 @@ if (hasLatestUpdate) {
     
 window.exportAdToExcel = function() {
     if (!allAdCampaigns.length) { alert('No data to export'); return; }
-    const data = allAdCampaigns.map(c => ({
-        'Campaign ID': c.id,
-        'Station Name': c.station || 'N/A',
-        'Customer Name': c.name || 'Unknown',
-        'Product Name': c.product_name || 'Not specified',
-        'Pricing Plan': (c.pricing_plan || c.plan_name || 'Light').toUpperCase(),
-        'Start Date/Time': c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
-        'End Date/Time': c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
-        'Status': getAdStatus(c).toUpperCase(),
-        'Start Hash': c.hashes?.start?.hash || 'PENDING',
-        'End Hash': c.hashes?.end?.hash || 'PENDING'
-    }));
     
-    const ws = XLSX.utils.json_to_sheet(data);
-    
-    // ========== ADD COPYRIGHT HEADER ==========
-    // Add copyright text at the top
-    const copyrightText = [['Bondos4Ever © 2026 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'], ['']];
-    const copyrightSheet = XLSX.utils.aoa_to_sheet(copyrightText);
-    
-    // Merge the copyright header with data
-    const finalData = [
-        ['Bondos4Ever © 2026 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
-        [''],
-        ...data.map(row => Object.values(row))
+    // First, prepare the data with headers
+    const headers = [
+        'Campaign ID', 'Station Name', 'Customer Name', 'Product Name', 
+        'Pricing Plan', 'Start Date/Time', 'End Date/Time', 'Status', 
+        'Start Hash', 'End Hash'
     ];
-    const finalSheet = XLSX.utils.aoa_to_sheet(finalData);
+    
+    const data = allAdCampaigns.map(c => [
+        c.id,
+        c.station || 'N/A',
+        c.name || 'Unknown',
+        c.product_name || 'Not specified',
+        (c.pricing_plan || c.plan_name || 'Light').toUpperCase(),
+        c.start_datetime ? formatCompactDate(new Date(c.start_datetime)) : 'N/A',
+        c.end_datetime ? formatCompactDate(new Date(c.end_datetime)) : 'N/A',
+        getAdStatus(c).toUpperCase(),
+        c.hashes?.start?.hash || 'PENDING',
+        c.hashes?.end?.hash || 'PENDING'
+    ]);
+    
+    // Build final array with: copyright rows + headers + data
+    const finalData = [
+        ['Bondos4Ever © 2026 📊 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
+        [''],
+        headers,  // This adds the column headers back!
+        ...data
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(finalData);
     
     // Set column widths
-    finalSheet['!cols'] = [
-        {wch:25}, {wch:15}, {wch:20}, {wch:20}, {wch:15}, {wch:22}, {wch:22}, {wch:12}, {wch:45}, {wch:45}
+    ws['!cols'] = [
+        {wch:25}, {wch:15}, {wch:20}, {wch:20}, 
+        {wch:15}, {wch:22}, {wch:22}, {wch:12}, 
+        {wch:45}, {wch:45}
     ];
     
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, finalSheet, 'Ad Campaigns');
+    XLSX.utils.book_append_sheet(wb, ws, 'Ad Campaigns');
     XLSX.writeFile(wb, `ad_campaigns_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
 
@@ -3721,40 +3726,50 @@ window.generateProductQRCode = async function(advertiserName, productName) {
 
 window.exportClaimsToExcel = function() {
     if (!filteredClaims.length) { alert('No data to export!'); return; }
-    const data = filteredClaims.map(c => {
-        const now=new Date(), exp=c.expiresAt<now;
-        let status='Claimed'; if(c.redeemed) status='Redeemed'; else if(exp) status='Expired';
-        return { 
-            Date: fmtDate(c.claimedAt), 
-            Customer: c.advertiserName||'Unknown', 
-            Product: c.productName||'Unknown',
-            Location: c.hostName||'Unknown', 
-            'Coupon Code': c.couponCode||'N/A', 
-            Status: status,
-            Redeemed: c.redeemed?'Yes':'No', 
-            'Redeemed At': c.redeemedAt?fmtDate(c.redeemedAt):'',
-            'Expires At': fmtDate(c.expiresAt) 
-        };
-    });
     
-    // ========== ADD COPYRIGHT HEADER ==========
-    const finalData = [
-        ['Bondos4Ever © 2026 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
-        [''],
-        ...data.map(row => Object.values(row))
+    const headers = [
+        'Date', 'Customer', 'Product', 'Location', 
+        'Coupon Code', 'Status', 'Redeemed', 'Redeemed At', 'Expires At'
     ];
     
-    // Get headers from first data row
-    const headers = Object.keys(data[0] || {});
-    const finalSheet = XLSX.utils.aoa_to_sheet(finalData);
+    const data = filteredClaims.map(c => {
+        const now = new Date();
+        const exp = c.expiresAt < now;
+        let status = 'Claimed';
+        if (c.redeemed) status = 'Redeemed';
+        else if (exp) status = 'Expired';
+        
+        return [
+            fmtDate(c.claimedAt),
+            c.advertiserName || 'Unknown',
+            c.productName || 'Unknown',
+            c.hostName || 'Unknown',
+            c.couponCode || 'N/A',
+            status,
+            c.redeemed ? 'Yes' : 'No',
+            c.redeemedAt ? fmtDate(c.redeemedAt) : '',
+            fmtDate(c.expiresAt)
+        ];
+    });
+    
+    // Build final array with: copyright rows + headers + data
+    const finalData = [
+        ['Bondos4Ever © 2026 📊 Local Digital Ad and Coupon Marketing System V 10.0 (Testing Phase)'],
+        [''],
+        headers,
+        ...data
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(finalData);
     
     // Set column widths
-    finalSheet['!cols'] = [
-        {wch:20}, {wch:25}, {wch:20}, {wch:20}, {wch:18}, {wch:12}, {wch:10}, {wch:20}, {wch:20}
+    ws['!cols'] = [
+        {wch:20}, {wch:25}, {wch:20}, {wch:20}, 
+        {wch:18}, {wch:12}, {wch:10}, {wch:20}, {wch:20}
     ];
     
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, finalSheet, 'Claims');
+    XLSX.utils.book_append_sheet(wb, ws, 'Claims');
     XLSX.writeFile(wb, `claims_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
 
