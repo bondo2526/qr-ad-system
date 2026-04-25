@@ -218,7 +218,11 @@
         .filter-bar { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
         .filter-btn { padding:7px 18px; border:1px solid #3a4050; background:#2a2f38; color:#a0a0a0; border-radius:20px; cursor:pointer; transition:all .3s; font-size:13px; }
         .filter-btn:hover { background:#3a4050; color:white; }
-        .filter-btn.active { background:#4a9eff; color:white; border-color:#4a9eff; }
+.filter-btn.active {
+    background: #4a9eff !important;
+    color: white !important;
+    border-color: #4a9eff !important;
+}
         .station-filter {
             transition: all 0.3s ease;
             position: relative;
@@ -913,25 +917,25 @@ function updateStationDropdowns() {
         }
     });
 }
-// Update station filter buttons dynamically
 function updateStationFilters() {
     const container = document.getElementById('stationFilterButtons');
     if (!container) return;
     
     // Keep only the "All Stations" button
-    container.innerHTML = '<button class="filter-btn station-filter" onclick="filterByStation(\'all\')">All Stations</button>';
+    container.innerHTML = '<button class="filter-btn station-filter active" onclick="filterByStation(\'all\')">All Stations</button>';
     
     // Add buttons for each station
     stationsList.forEach(station => {
         const btn = document.createElement('button');
         btn.className = 'filter-btn station-filter';
         btn.textContent = station;
-        btn.onclick = () => filterByStation(station);
+        btn.onclick = (function(s) { 
+            return function() { filterByStation(s); }; 
+        })(station);
         container.appendChild(btn);
     });
 }
     
-// Add new station
 // Add new station
 window.addNewStation = async function() {
     const newStation = prompt('Enter new station name:', '');
@@ -1175,7 +1179,7 @@ window.toggleAutoRefresh = function() {
 
 async function loadAdCampaigns() {
     try {
-        const snap = await db.collection('customers').orderBy('created_at','desc').get();
+        const snap = await db.collection('customers').orderBy('created_at', 'asc').get();  // Changed to 'asc' (oldest first)
         allAdCampaigns = [];
         let adCounter = 1;
         snap.forEach(doc => {
@@ -1661,9 +1665,12 @@ window.exportHashLogToPDF = function() {
 window.filterByStation = function(st) {
     currentStationFilter = st;
     // Update active state on station filter buttons
-    document.querySelectorAll('.station-filter').forEach(btn => {
+    const stationBtns = document.querySelectorAll('#stationFilterButtons .station-filter');
+    stationBtns.forEach(btn => {
         const btnText = btn.textContent;
-        if (btnText === st || (st === 'all' && btnText === 'All Stations')) {
+        if (st === 'all' && btnText === 'All Stations') {
+            btn.classList.add('active');
+        } else if (btnText === st) {
             btn.classList.add('active');
         } else {
             btn.classList.remove('active');
@@ -1693,21 +1700,25 @@ window.clearAdFilters = function() {
     // Also reset status and station filters
     currentFilter = 'all';
     currentStationFilter = 'all';
-    // Update button active states
+    
+    // Update status filter button active states
     document.querySelectorAll('.filter-bar:first-of-type .filter-btn').forEach(btn => {
-        if (btn.textContent.toLowerCase() === 'all') {
+        if (btn.textContent.toLowerCase().trim() === 'all') {
             btn.classList.add('active');
         } else {
             btn.classList.remove('active');
         }
     });
-    document.querySelectorAll('.station-filter').forEach(btn => {
+    
+    // Update station filter button active states
+    document.querySelectorAll('#stationFilterButtons .station-filter').forEach(btn => {
         if (btn.textContent === 'All Stations') {
             btn.classList.add('active');
         } else {
             btn.classList.remove('active');
         }
     });
+    
     applyAdFilters();
 };
     
@@ -1745,7 +1756,7 @@ function applyAdFilters() {
         return true;
     });
     
-    // Keep original order (by permanentAdNumber)
+    // Keep original order (by permanentAdNumber - oldest first)
     campaigns.sort((a, b) => (a.permanentAdNumber || 999) - (b.permanentAdNumber || 999));
     
     // Update stats display
@@ -1775,8 +1786,8 @@ function applyAdFilters() {
     
     let html = '';
     campaigns.forEach((campaign) => {
-        // Use permanent AD number stored in campaign object
-        const adNumber = campaign.permanentAdNumber || (allAdCampaigns.findIndex(c => c.id === campaign.id) + 1);
+        // Use permanent AD number (oldest = 1, newest = N)
+        const adNumber = campaign.permanentAdNumber;
         html += buildAdCampaignHTML(campaign, adNumber);
     });
     list.innerHTML = html;
@@ -2941,32 +2952,60 @@ updateData.update_history = updates;
         fullPlanText = 'Professional (6d×8hrs weekly = 192hrs/month / $54)';
     }
     
-// Find ORIGINAL dates from genesis hashes ONLY (these are the creation timestamps)
+// Find ORIGINAL campaign dates (from first version of the campaign)
 let originalStartDate = null;
 let originalEndDate = null;
 let currentStartDate = c.start_datetime ? new Date(c.start_datetime) : null;
 let currentEndDate = c.end_datetime ? new Date(c.end_datetime) : null;
 
-// Get original dates from genesis hashes' created_at (when the hash was generated)
-if (originalStartHashObj && originalStartHashObj.created_at) {
-    originalStartDate = originalStartHashObj.created_at.toDate ? originalStartHashObj.created_at.toDate() : null;
+// Get original dates from the campaign's FIRST start_datetime and end_datetime
+// This should come from the genesis hash record if it stored the original dates
+if (originalStartHashObj && originalStartHashObj.timestamp) {
+    originalStartDate = new Date(originalStartHashObj.timestamp);
 }
-if (originalEndHashObj && originalEndHashObj.created_at) {
-    originalEndDate = originalEndHashObj.created_at.toDate ? originalEndHashObj.created_at.toDate() : null;
-}
-
-// Fallback to campaign creation date if genesis hash not found
-if (!originalStartDate && c.created_at) {
-    originalStartDate = c.created_at.toDate ? c.created_at.toDate() : null;
-}
-if (!originalEndDate && c.created_at) {
-    originalEndDate = c.created_at.toDate ? c.created_at.toDate() : null;
+if (originalEndHashObj && originalEndHashObj.timestamp) {
+    originalEndDate = new Date(originalEndHashObj.timestamp);
 }
 
-const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'Not available';
-const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'Not available';
+// If not found in genesis hash, try to get from update history - first entry
+if (!originalStartDate && updates && updates.length > 0) {
+    // Look for the oldest update that changed Start Date
+    for (let i = updates.length - 1; i >= 0; i--) {
+        const update = updates[i];
+        if (update.changed_field === 'Start Date' && update.old_value) {
+            // Parse old value from string like "Start Date: "Fri 24/4/2026 04:21 PM" → "..."
+            const match = update.old_value.match(/(\w+ \d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2} [AP]M)/);
+            if (match) {
+                originalStartDate = new Date(match[1]);
+                break;
+            }
+        }
+    }
+    if (!originalEndDate) {
+        for (let i = updates.length - 1; i >= 0; i--) {
+            const update = updates[i];
+            if (update.changed_field === 'End Date' && update.old_value) {
+                const match = update.old_value.match(/(\w+ \d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2} [AP]M)/);
+                if (match) {
+                    originalEndDate = new Date(match[1]);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+// If still not found, fallback to current dates (but this shouldn't happen)
+if (!originalStartDate) originalStartDate = currentStartDate;
+if (!originalEndDate) originalEndDate = currentEndDate;
+
+const originalStartStr = originalStartDate ? formatCompactDate(originalStartDate) : 'N/A';
+const originalEndStr = originalEndDate ? formatCompactDate(originalEndDate) : 'N/A';
 const currentStartStr = currentStartDate ? formatCompactDate(currentStartDate) : 'N/A';
 const currentEndStr = currentEndDate ? formatCompactDate(currentEndDate) : 'N/A';
+
+// Check if dates have been changed
+const datesChanged = (originalStartStr !== currentStartStr) || (originalEndStr !== currentEndStr);
     
     let status = 'UPCOMING';
     let statusColor = [255, 193, 7];
