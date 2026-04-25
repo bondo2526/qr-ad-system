@@ -488,7 +488,7 @@
                 <h1>Bondos4Ever © 2026 🖥️🎯 Local Digital Ad & Coupon Marketing System V 10.0 (Testing Phase)</h1>
 <div class="header-right">
 <button class="btn-sm" id="autoRefreshToggle" onclick="toggleAutoRefresh()" style="background:#dc3545; padding:5px 12px;">⏸️ Auto-refresh: OFF</button>    <span class="user-badge" id="userBadge">Not logged in</span>
-    <button class="btn-purple" onclick="createAdvertiserAccount()">➕ Create New Advertiser Account</button>
+    <button class="btn-purple" onclick="createAdvertiserAccount()">➕ Create New Customer Account</button>
     <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">Logout</button>
 </div>
             </div>
@@ -531,7 +531,7 @@
 </div>
                         <div class="form-group">
                             <label>Customer Name</label>
-                            <input type="text" id="customerName" placeholder="Advertiser Name Goes Here" required oninput="updateHashPreviews()">
+                            <input type="text" id="customerName" placeholder="Customer Name Goes Here" required oninput="updateHashPreviews()">
                         </div>  
                         <div class="form-group">
                             <label>Product Name</label>
@@ -602,8 +602,8 @@
                     <div class="adv-prod-filter-box" style="background: #1a1e24; border-radius: 10px; padding: 15px; margin: 15px 0; border: 1px solid #3a4050;">
                         <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 200px;">
-                                <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #4a9eff;">🔍 Advertiser Name</label>
-                                <input type="text" id="advNameFilter" class="filter-input" placeholder="Search by advertiser name..." style="width: 100%;" onkeyup="filterByAdvName()">
+                                <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #4a9eff;">🔍 Customer Name</label>
+                                <input type="text" id="advNameFilter" class="filter-input" placeholder="Search by customer name..." style="width: 100%;" onkeyup="filterByAdvName()">
                             </div>
                             <div style="flex: 1; min-width: 200px;">
                                 <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #4a9eff;">📦 Product Name</label>
@@ -694,7 +694,7 @@
         <div class="section-title" style="margin-bottom:14px;font-size:16px;">📦 Create New Campaign</div>
         <div class="create-form">
             <div class="form-group">
-                <label>Advertiser Name</label>
+                <label>Customer Name</label>
                 <input type="text" id="newAdvertiserName" placeholder="e.g., Wellness Pharmacy">
             </div>
             <div class="form-group">
@@ -714,7 +714,7 @@
     
     <!-- Search input -->
     <div style="margin-bottom: 15px;">
-        <input type="text" id="couponCampaignSearch" class="filter-input" placeholder="🔍 Search by advertiser name, station, or product..." style="width: 100%;" onkeyup="filterCouponCampaigns()">
+        <input type="text" id="couponCampaignSearch" class="filter-input" placeholder="🔍 Search by customer name, station, or product..." style="width: 100%;" onkeyup="filterCouponCampaigns()">
     </div>
     
     <div id="couponCampaignsList">
@@ -727,17 +727,17 @@
                     <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:18px;">
                         <div class="stat-card"><h3>🏆 Top Product</h3><div class="stat-number purple" id="topProduct" style="font-size:22px;">-</div></div>
                         <div class="stat-card"><h3>📍 Top Location</h3><div class="stat-number purple" id="topLocation" style="font-size:22px;">-</div></div>
-                        <div class="stat-card"><h3>📢 Top Advertiser</h3><div class="stat-number purple" id="topAdvertiser" style="font-size:22px;">-</div></div>
+                        <div class="stat-card"><h3>📢 Top Customer</h3><div class="stat-number purple" id="topAdvertiser" style="font-size:22px;">-</div></div>
                     </div>
                     <div class="controls-bar">
-                        <input type="text" id="searchInput" class="filter-input" placeholder="Search advertiser, product, location, coupon..." onkeyup="filterClaimsTable()">
+                        <input type="text" id="searchInput" class="filter-input" placeholder="Search customer, product, location, coupon..." onkeyup="filterClaimsTable()">
                         <div class="date-range">
                             <input type="date" id="dateFrom" class="date-input" onchange="filterByClaimDate()">
                             <span>to</span>
                             <input type="date" id="dateTo" class="date-input" onchange="filterByClaimDate()">
                         </div>
                         <select id="adFilter" class="filter-input" onchange="filterClaimsTable()">
-                            <option value="">All Advertisers</option>
+                            <option value="">All Customers</option>
                         </select>
                         <select id="productFilter" class="filter-input" onchange="filterClaimsTable()">
                             <option value="">All Products</option>
@@ -759,7 +759,7 @@
                     <div id="claimsTableWrapper" style="display:none;background:#2a2f38;border-radius:12px;padding:18px;border:1px solid #3a4050;overflow-x:auto;">
                         <table class="claims-table" id="claimsTable">
                             <thead>
-                                <tr><th>Date</th><th>Advertiser</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires At</th></tr>
+                                <tr><th>Date</th><th>Customer</th><th>Product</th><th>Location</th><th>Coupon Code</th><th>Status</th><th>Redeemed</th><th>Redeemed At</th><th>Expires At</th></tr>
                             </thead>
                             <tbody id="claimsBody"></tbody>
                         </table>
@@ -1200,13 +1200,14 @@ function buildAdCampaignHTML(c, adNumber) {
         // Compact layout - similar to image provided
         html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">';
         
-        // Left side - Main info
-        html += '<div style="flex:2;min-width:200px;">';
-        html += '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">';
-        html += '<span style="background: linear-gradient(135deg, #4a9eff, #6f42c1); color: white; font-weight: bold; font-size: 16px; padding: 3px 10px; border-radius: 20px;">AD #' + adNumber + '</span>';
-        html += '<span style="font-size:26px;font-weight:bold;color:white;">' + (c.name || 'Unknown') + '</span>';
-        html += '<span style="font-size:18px;color:#4a9eff;">📦 ' + (c.product_name || 'Not specified') + '</span>';
-        html += '</div>';
+// Left side - Main info
+html += '<div style="flex:2;min-width:200px;">';
+html += '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">';
+html += '<span style="background: linear-gradient(135deg, #4a9eff, #6f42c1); color: white; font-weight: bold; font-size: 16px; padding: 3px 10px; border-radius: 20px;">AD #' + adNumber + '</span>';
+html += '<span style="font-size:26px;font-weight:bold;color:white;">' + (c.name || 'Unknown') + '</span>';
+html += '<span style="font-size:18px;color:#4a9eff;">📦 ' + (c.product_name || 'Not specified') + '</span>';
+html += '<span style="font-family:monospace; font-size:12px; color:#6c757d; background:#1a1e24; padding:3px 8px; border-radius:6px;">🆔 ' + (c.id) + '</span>';
+html += '</div>';
         
         // Pricing plan line
         const planName = (c.pricing_plan || 'light').toUpperCase();
@@ -3409,7 +3410,7 @@ window.createCouponCampaign = async function() {
     const station = stationSelect ? stationSelect.value : '';
     
     if (!name) { 
-        alert('❌ Please enter Advertiser Name'); 
+        alert('❌ Please enter Customer Name'); 
         return; 
     }
     
@@ -3421,7 +3422,7 @@ window.createCouponCampaign = async function() {
     try {
         const advDoc = await db.collection('advertisers').doc(name).get();
         if (!advDoc.exists) {
-            alert(`❌ Advertiser "${name}" not found!\n\nPlease create the advertiser account first using "Create New Advertiser Account" button.`);
+            alert(`❌ Customer "${name}" not found!\n\nPlease create the customer account first using "Create New Customer Account" button.`);
             return;
         }
         
@@ -3628,7 +3629,7 @@ window.generateClaimLink = async function(advertiserName, productName, location)
             const userConfirm = confirm(
                 `⚠️ QR CODE ALREADY EXISTS!\n\n` +
                 `Product: ${productName}\n` +
-                `Advertiser: ${advertiserName}\n` +
+                `Customer: ${advertiserName}\n` +
                 `Existing QR Link: ${existingUrl}\n\n` +
                 `Do you want to create a NEW QR code anyway? (This will create a second link for the same product)`
             );
@@ -3661,7 +3662,7 @@ window.generateClaimLink = async function(advertiserName, productName, location)
         console.log("✅ New QR Link generated!");
         
         await navigator.clipboard.writeText(claimUrl);
-        alert(`✅ NEW QR Code created and link copied!\n\nLink: ${claimUrl}\n\nProduct: ${productName}\nAdvertiser: ${advertiserName}`);
+        alert(`✅ NEW QR Code created and link copied!\n\nLink: ${claimUrl}\n\nProduct: ${productName}\nCustomer: ${advertiserName}`);
         
         return claimUrl;
         
@@ -3732,7 +3733,7 @@ window.generateProductQRCode = async function(advertiserName, productName) {
                 </head>
                 <body>
                     <h2>📱 Scan to Claim Coupon</h2>
-                    <p>Advertiser: <strong>${advertiserName}</strong></p>
+                    <p>Customer: <strong>${advertiserName}</strong></p>
                     <p>Product: <strong>${productName}</strong></p>
                     <p>Location: <strong>${station}</strong></p>
                     <div class="qr-container">
@@ -4187,7 +4188,7 @@ window.exportClaimsToPDF = function() {
     doc.text(`Claimed: ${claimed} | Redeemed: ${redeemed} | Expired: ${expired}`, 14, 29);
     
     doc.autoTable({
-        head: [['Date', 'Advertiser', 'Product', 'Location', 'Coupon', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']],
+        head: [['Date', 'Customer', 'Product', 'Location', 'Coupon', 'Status', 'Redeemed', 'Redeemed At', 'Expires At']],
         body: rows,
         startY: 36,
         theme: 'grid',
